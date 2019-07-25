@@ -8,8 +8,37 @@ public class Insumo {
 	private double precioUnidad;
 	private String manejacanasta;
 	private int cantidaxcanasta;
+	private String nombreContenedor;
+	private String categoria;
+	private boolean control_cantidad;
+	private double costoUnidad;
 	
 	
+	
+	public String getNombreContenedor() {
+		return nombreContenedor;
+	}
+	public void setNombreContenedor(String nombreContenedor) {
+		this.nombreContenedor = nombreContenedor;
+	}
+	public String getCategoria() {
+		return categoria;
+	}
+	public void setCategoria(String categoria) {
+		this.categoria = categoria;
+	}
+	public boolean isControl_cantidad() {
+		return control_cantidad;
+	}
+	public void setControl_cantidad(boolean control_cantidad) {
+		this.control_cantidad = control_cantidad;
+	}
+	public double getCostoUnidad() {
+		return costoUnidad;
+	}
+	public void setCostoUnidad(double costoUnidad) {
+		this.costoUnidad = costoUnidad;
+	}
 	public String getManejacanasta() {
 		return manejacanasta;
 	}

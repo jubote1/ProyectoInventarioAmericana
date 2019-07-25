@@ -26,18 +26,21 @@ public class TiendaDAO {
 		Logger logger = Logger.getLogger("log_file");
 		ArrayList<Tienda> tiendas = new ArrayList<>();
 		ConexionBaseDatos con = new ConexionBaseDatos();
-		Connection con1 = con.obtenerConexionBDPrincipal();
+		Connection con1 = con.obtenerConexionBDPedidos();
 		try
 		{
 			Statement stm = con1.createStatement();
 			String consulta = "select * from tienda";
-			
 			logger.info(consulta);
 			ResultSet rs = stm.executeQuery(consulta);
 			while(rs.next()){
 				int idTienda = rs.getInt("idtienda");
 				String nombre = rs.getString("nombre");
-				Tienda tien = new Tienda(idTienda, nombre, "");
+				String dsn = rs.getString("dsn");
+				String url = rs.getString("url");
+				int pos = rs.getInt("pos");
+				String hosbd = rs.getString("hosbd");
+				Tienda tien = new Tienda(idTienda, nombre, dsn, url, pos, hosbd);
 				tiendas.add(tien);
 			}
 			rs.close();
@@ -45,14 +48,11 @@ public class TiendaDAO {
 			con1.close();
 		}catch (Exception e){
 			logger.info(e.toString());
-			System.out.println("falle consultando tiendas");
 			try
 			{
 				con1.close();
 			}catch(Exception e1)
 			{
-				logger.info(e1.toString());
-				System.out.println("falle consultando tiendas");
 			}
 		}
 		return(tiendas);

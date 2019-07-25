@@ -59,7 +59,7 @@ public class PedidoDAO {
 			String consulta = "select b.idcliente, CONCAT(b.nombre ,'-',b.apellido,'-',b.nombrecompania) as nombre , b.telefono, c.nombre nombretienda, count(*) numeropedidos, max(a.fechapedido) fechamaxima, min(a.fechapedido) fechaminima,"
 					+ "(select count(1) from oferta_cliente d where d.idcliente = b.idcliente ) as ofertas ," 
 					+ "(select count(1) from oferta_cliente d where d.idcliente = b.idcliente and d.utilizada = 'N' ) as ofertasvigentes "
-					+ " from pedido a, cliente b, tienda c where a.idcliente = b.idcliente and b.idtienda = c.idtienda and fechapedido >= '" + fecha + "' " + 
+					+ " from pedido a, cliente b, tienda c where a.total_neto > 0 and a.idcliente = b.idcliente and b.idtienda = c.idtienda and fechapedido >= '" + fecha + "' " + 
 					" group by b.idcliente, b.nombre, b.telefono, c.nombre " +
 					 " having count(*) > " + cantidadPedidos;
 			
@@ -194,14 +194,14 @@ public class PedidoDAO {
 		try
 		{
 			Statement stm = con1.createStatement();
-			String consulta = "select b.nombre, a.total_neto, a.fechapedido, a.idpedido, a.numposheader, f.observacion, g.idforma_pago from pedido a, tienda b, razon_x_tienda e, marcacion_pedido f, pedido_forma_pago g "
+			String consulta = "select b.nombre, a.total_neto, a.fechapedido, a.idpedido, a.numposheader, f.observacion, g.idforma_pago, f.descuento, f.motivo from pedido a, tienda b, razon_x_tienda e, marcacion_pedido f, pedido_forma_pago g "
 					+"where a.idtienda = b.idtienda and b.idtienda = e.idtienda and e.idrazon = " + idRazon +"  and a.idpedido = f.idpedido "
 					+"and f.idmarcacion = 1 and a.fechapedido >= '" + fechaAnterior + "' and a.fechapedido <= '" + fechaActual + "' and a.idpedido = g.idpedido order by b.nombre, fechapedido";
 			logger.info(consulta);
 			ResultSet rs = stm.executeQuery(consulta);
-			String[] resTemp = new String[7];
+			String[] resTemp = new String[9];
 			while(rs.next()){
-				resTemp = new String[7];
+				resTemp = new String[9];
 				resTemp[0] = rs.getString("nombre");
 				resTemp[1] = rs.getString("total_neto");
 				resTemp[2] = rs.getString("fechapedido");
@@ -209,6 +209,8 @@ public class PedidoDAO {
 				resTemp[4] = rs.getString("numposheader");
 				resTemp[5] = rs.getString("observacion");
 				resTemp[6] = rs.getString("idforma_pago");
+				resTemp[7] = rs.getString("descuento");
+				resTemp[8] = rs.getString("motivo");
 				pedidosDomCOM.add(resTemp);
 			}
 			rs.close();

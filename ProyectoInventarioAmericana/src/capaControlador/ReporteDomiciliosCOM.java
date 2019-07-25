@@ -139,12 +139,19 @@ public class ReporteDomiciliosCOM {
 					+  "<td><strong># Pedido Contact</strong></td>"
 					+  "<td><strong># Pedido Tienda</strong></td>"
 					+  "<td><strong># Pedido Domicilios.com</strong></td>"
+					+  "<td><strong>Descuento</strong></td>"
+					+  "<td><strong>Mot/Desc</strong></td>"
 					+  "<td><strong>Forma de Pago</strong></td>"
 					+  "</tr>";
 			String[] resTemp;
 			double totalPedidosSemana = 0;
 			//Variable donde llevaremos la cuenta de los pedidos ONLINE
 			double totalPagoOnLine = 0;
+			//Llevare el control del total de descuentos
+			double totalDescuentos = 0;
+			//Variable donde iremos almacenando cada uno de los descuentos
+			double descuento = 0;
+			double totalPedido = 0;
 			//Variable donde almacenamos la forma de pago
 			String formaPago = "";
 			int idFormaPago = 0;
@@ -152,6 +159,14 @@ public class ReporteDomiciliosCOM {
 			{
 				resTemp = (String[]) pedidosDomCOM.get(y);
 				idFormaPago = Integer.parseInt(resTemp[6]);
+				try 
+				{
+					descuento = Double.parseDouble(resTemp[7]);
+				}catch(Exception e)
+				{
+					descuento = 0;
+				}
+				totalPedido = Double.parseDouble(resTemp[1]) - descuento;
 				if(idFormaPago == 1)
 				{
 					formaPago = "EFE";
@@ -161,14 +176,20 @@ public class ReporteDomiciliosCOM {
 				}else if(idFormaPago == 3)
 				{
 					formaPago = "ONLINE";
-					totalPagoOnLine = totalPagoOnLine + Double.parseDouble(resTemp[1]);
+					totalPagoOnLine = totalPagoOnLine + totalPedido;
 				}
-				respuesta = respuesta + "<tr><td>" + resTemp[0] + "</td><td>" + formatea.format(Double.parseDouble(resTemp[1])) + "</td><td>" + resTemp[2] + "</td><td>" + resTemp[3] + "</td><td>" + resTemp[4] + "</td><td>" + resTemp[5] + "</td><td>" + formaPago + "</td></tr>";
-				totalPedidosSemana = totalPedidosSemana + Double.parseDouble(resTemp[1]);
+				respuesta = respuesta + "<tr><td>" + resTemp[0] + "</td><td>" + formatea.format(totalPedido) + "</td><td>" + resTemp[2] + "</td><td>" + resTemp[3] + "</td><td>" + resTemp[4] + "</td><td>" + resTemp[5] + "</td><td>" + formatea.format(descuento) + "</td><td>" + resTemp[8] + "</td><td>"  + formaPago + "</td></tr>";
+				totalPedidosSemana = totalPedidosSemana + totalPedido;
+				//Validamos si el descuento es mayor a cero para acumularlo
+				if(descuento > 0 )
+				{
+					totalDescuentos = totalDescuentos + descuento;
+				}
 			}
 			respuesta = respuesta + "</table> <br/>";
-			respuesta = respuesta + "<b>TOTAL PEDIDOS SEMANA " + formatea.format(totalPedidosSemana) +"</b>";
-			respuesta = respuesta + "<b>TOTAL PEDIDOS PAGO-ONLINE " + formatea.format(totalPagoOnLine) +"</b>";
+			respuesta = respuesta + "<b>TOTAL PEDIDOS SEMANA " + formatea.format(totalPedidosSemana) +"</b><br/>";
+			respuesta = respuesta + "<b>TOTAL PEDIDOS PAGO-ONLINE " + formatea.format(totalPagoOnLine) +"</b><br/>";
+			respuesta = respuesta + "<b>TOTAL DE DESCUENTOS EN LA SEMANA " + formatea.format(totalDescuentos) +"</b><br/>";
 			
 			//Continuamos con las anulaciones que deben realizarse por razón zocial y por rango de fechas
 			ArrayList<MarcacionAnulacionPedido> marAnulaciones = MarcacionAnulacionPedidoDAO.consultarMarcacionAnulacion(fechaAnterior, fechaActual, razTemp.getIdRazon());
