@@ -5,6 +5,7 @@ var tiendas;
 var urlTienda ="";
 var inventarios;
 var bandera = false;
+var dataTableDespacho;
 
 
 // Se arma el valor de la variable global server, con base en la cual se realiza llamado a los servicios.
@@ -23,11 +24,26 @@ $(document).ready(function() {
 //Se obtiene el listado de tiendas con el fin de seleccionar la tienda a surtir.
 
 $(function(){
-	
+
 	getListaTiendas();
 	
 	
 });
+
+$('body').keyup(function(e) {
+	if(e.keyCode==38)//38 para arriba
+      mover(e,-1);
+    if(e.keyCode==40)//40 para abajo
+      mover(e,1);
+ });
+
+
+function mover(event, to) {
+   let list = $('input');
+   let index = list.index($(event.target));
+   index = (index + to) % list.length;
+   list.eq(index).focus();
+}
 
 
 
@@ -85,7 +101,6 @@ function calcularInventario()
 	    		dataType: 'json', 
 	    		async: false, 
 	    		success: function(data1){ 
-	    				console.log(data1);
 	    				inventarios = data1;
 	    				bandera = true;
 	    				var inventario;
@@ -93,7 +108,7 @@ function calcularInventario()
 						var strInv='';
 						
 						strInv += '<table id="inventariosurtir" class="table table-bordered">';
-						strInv += '<thead><tr><th COLSPAN="2"><img src="LogoPizzaAmericanapeque.png" class="img-circle" /></th>';
+						strInv += '<thead><tr><th COLSPAN="2"><img src="LogoAmericana.png" class="img-circle" /></th>';
 						strInv += '<th COLSPAN="4"> <h2>'+ "PRODUCTOS A LLEVAR TIENDA " + tienda + " " + fechasurtir +'</h2></th></tr>'
 						strInv += '<tr><th>Nom/Insumo</th><th>Cant/Req</th><th>Cant/Tienda</th><th>Cantidad a Surtir</th><th>Empaque</th><th>Unidad Medida</th></tr></thead>';
 				        strInv += '<tbody>';
@@ -108,7 +123,7 @@ function calcularInventario()
 							strInv +='<td> ';
 							strInv +='<label>' + inventario.cantidadtienda + '</label> </td>';
 							strInv +='<td> ';
-							strInv += '<input type="text" name="' + inventario.cantidadcanastas + '"" value="' + inventario.cantidadllevar +'" id="'+ "cant" + inventario.idinsumo +'" maxlength="5" size="5" onchange="modificarContenedor(this)"> </td>';
+							strInv += '<input type="text" name="' + inventario.cantidadcanastas + '"" value="' + inventario.cantidadllevar +'" id="'+ "cant" + inventario.idinsumo +'" maxlength="10" size="10" onchange="modificarContenedor(this)"> </td>';
 							if(inventario.cantidadcanastas > 0)
 							{
 								strInv +='<td><input type="text" value="' + inventario.cantidadcanastas + inventario.nombrecontenedor +'" id="'+ "cont" + inventario.idinsumo +'" maxlength="15" size="15" readonly></td>';
@@ -121,6 +136,10 @@ function calcularInventario()
 							strInv +='<td><label>' + inventario.unidadmedida + '</label> </td>';
 							strInv +='</tr> ';
 						}
+						strInv +='<tr><td COLSPAN="6">';
+						strInv +='<label for="comment">Observacion:</label>';
+						strInv +='<textarea class="form-control" rows="3" id="observacion"></textarea>';
+						strInv +='</td></tr>';
 						strInv +='<tr><td COLSPAN="2"><input type="button" class="btn btn-primary btn-sd" value="Confirmar Inventario" onclick="confirmarInventario()"> </td>';
 						strInv +='<td COLSPAN="2"><input type="button" class="btn btn-danger btn-sd" value="Reiniciar Inventario" onclick="reiniciarInventario()"> </td><td COLSPAN="2"></td></tr>';
 						strInv +='</tbody> ';
@@ -137,7 +156,7 @@ function modificarContenedor(objeto)
 {
 	var idInsumoModificado = $(objeto).attr('id');
 	var valorModificado = $(objeto).val();
-	idInsumoModificado = idInsumoModificado.substring(4, 5);
+	idInsumoModificado = idInsumoModificado.substring(4, idInsumoModificado.length );
 	for(var i = 0; i < inventarios.length;i++)
 	{
 		if(inventarios[i].idinsumo == idInsumoModificado)
@@ -163,15 +182,55 @@ function modificarContenedor(objeto)
 			}
 		}
 	}
-	alert(idInsumoModificado);
 }
+
+//Función para validar las cantidades a enviar antes de realizar la inserción consumiendo los servicios.
+function validarCantidades()
+{
+	var mensajeError = '';
+	for (var i = 0; i < inventarios.length; i++)
+	{
+		var inventario = inventarios[i];
+		var valorCampo = $("#cant"+inventario.idinsumo).val();
+		if(valorCampo != "0")
+		{
+			if(!validarSiNumero(valorCampo))
+			{
+				mensajeError = mensajeError + ' ' +  inventario.nombreinsumo;
+			}
+			
+		}
+	}
+	return(mensajeError);	
+}
+
+function validarSiNumero(numero)
+{
+    if (!/^([0-9])*$/.test(numero))
+     {
+     	return(false);
+     }else
+     {
+     	return(true);
+     }
+  }
 
 //Opción que implementará la lógica para la confirmación de un inventario y de guardar la información despachada para la tienda
 function confirmarInventario()
 {
 	if(!bandera)
 	{
-		alert("No se han cargado inventarios para confirmar");
+		$.alert("No se han cargado inventarios para confirmar");
+		return;
+	}
+	//Se validan que los valores diferentes de cero sean numéricos
+	var mensajeError = validarCantidades()
+	if(mensajeError.length == 0)
+	{
+
+	}else
+	{
+		$.alert("Se tienen valores incorrectos en los insumos : " + mensajeError);
 		return;
 	}
 	
@@ -184,6 +243,11 @@ function confirmarInventario()
 	var fechasurtir = $("#fechasurtir").val();
 	var idtienda = $("#selectTiendas option:selected").attr('id');
 	var tienda = $("#selectTiendas").val();
+	var observacion = encodeURIComponent($("#observacion").val().substring(0,500));
+	// Variable que almacenará si se tuvieron o no errores en el proceso
+	var huboErroresDespacho = false;
+	var huboErroresDetalle = false;
+	var insumosErorres = "";
 	$.confirm({
 				'title'		: 'Confirmacion de Inventario a Enviar a Tienda',
 				'content'	: 'Desea el envío del intentario a la Tienda ' + tienda + '<br> Con Fecha '+ fechasurtir,
@@ -195,13 +259,18 @@ function confirmarInventario()
 						'action': function(){
 
 								$.ajax({ 
-								    		url: server + 'InsertarDespachoTienda?fechasurtir=' + fechasurtir + "&idtienda=" + idtienda, 
+								    		url: server + 'InsertarDespachoTienda?fechasurtir=' + fechasurtir + "&idtienda=" + idtienda + "&observacion=" + observacion, 
 								    		dataType: 'json', 
 								    		async: false, 
 								    		success: function(data1){ 
 								    			respuesta = data1[0];
 								    			var iddespacho = respuesta.iddespacho;
-								    			for (var i = 0; i < inventarios.length; i++)
+								    			if (iddespacho == 0)
+								    			{
+								    				huboErroresDespacho = true;
+								    			}else
+								    			{
+								    				for (var i = 0; i < inventarios.length; i++)
 													{
 														var inventario = inventarios[i];
 														if($("#cant"+inventario.idinsumo).val() > 0)
@@ -221,14 +290,35 @@ function confirmarInventario()
 													    			detalle = data2[0];
 													    			if(detalle.iddespachodetalle == 0)
 													    			{
-													    				$.alert('No se insertó de manera correcta uno de los items del Inventario');
+													    				insumosErorres = insumosErrores + " " + inventario.nombreinsumo;
+													    				huboErroresDetalle = true;
+													    				
 													    			}
 													    		}
 													    	});
 														}
 													}
-													reiniciarInventario();
-													$.alert('Se ha ingresado correctamente el Inventario para La Tienda');
+													
+								    			}
+								    			if(huboErroresDespacho)
+								    			{
+								    				$.alert('Se tuvieron errores insertando el despacho');
+								    			}else
+								    			{
+								    				if(huboErroresDetalle)
+								    				{
+								    					$.alert('No se insertó de manera correcta los siguientes insumos ' + insumosErrores);
+								    				}else
+								    				{
+								    					reiniciarInventario();
+														$.alert('Se ha ingresado correctamente el Inventario para La Tienda, con el despacho Número ' + iddespacho);
+														//Realiza el llamado asíncrono a la generación del archivo.
+														$.getJSON(server + 'GenerarArchivoDespachoTienda?idtienda=' + idtienda + '&iddespacho=' + iddespacho +  '&fecha=' + fechasurtir , function(data2){
+
+						    						});
+								    				}
+								    			}
+								    			
 								    		}
 								});
 						}
@@ -250,6 +340,7 @@ function reiniciarInventario()
 	inventarios = "";
 	var str = '';
 	$('#inventario').html(str);
+	$('#observacion').val(str);
 }
 
 // Método creado para confirmar que una fecha exista

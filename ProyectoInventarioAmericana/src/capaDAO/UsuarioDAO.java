@@ -23,7 +23,7 @@ public class UsuarioDAO {
 	{
 		Logger logger = Logger.getLogger("log_file");
 		ConexionBaseDatos con = new ConexionBaseDatos();
-		Connection con1 = con.obtenerConexionBDPrincipal();
+		Connection con1 = con.obtenerConexionBDPrincipalLocal();
 		try
 		{
 			Statement stm = con1.createStatement();
@@ -66,7 +66,7 @@ public class UsuarioDAO {
 	public static String validarAutenticacion(Usuario usuario)
 	{
 		ConexionBaseDatos con = new ConexionBaseDatos();
-		Connection con1 = con.obtenerConexionBDPrincipal();
+		Connection con1 = con.obtenerConexionBDPrincipalLocal();
 		String resultado = "";
 		try
 		{

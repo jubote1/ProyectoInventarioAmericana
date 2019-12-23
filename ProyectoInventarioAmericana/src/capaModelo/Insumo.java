@@ -76,7 +76,8 @@ public class Insumo {
 		this.precioUnidad = precioUnidad;
 	}
 	public Insumo(int idinsumo, String nombre, String unidadMedida, double precioUnidad, String manejacanasta,
-			int cantidaxcanasta) {
+			int cantidaxcanasta, String nombreContenedor, String categoria, boolean control_cantidad,
+			double costoUnidad) {
 		super();
 		this.idinsumo = idinsumo;
 		this.nombre = nombre;
@@ -84,7 +85,13 @@ public class Insumo {
 		this.precioUnidad = precioUnidad;
 		this.manejacanasta = manejacanasta;
 		this.cantidaxcanasta = cantidaxcanasta;
+		this.nombreContenedor = nombreContenedor;
+		this.categoria = categoria;
+		this.control_cantidad = control_cantidad;
+		this.costoUnidad = costoUnidad;
 	}
+
+	
 	
 	
 	

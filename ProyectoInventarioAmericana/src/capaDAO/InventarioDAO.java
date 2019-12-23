@@ -28,12 +28,12 @@ public class InventarioDAO {
 	{
 		Logger logger = Logger.getLogger("log_file");
 		ConexionBaseDatos con = new ConexionBaseDatos();
-		Connection con1 = con.obtenerConexionBDPrincipal();
+		Connection con1 = con.obtenerConexionBDPrincipalLocal();
 		ArrayList <InsumoRequeridoTienda> insumosRequeridos = new ArrayList();
 		try
 		{
 			Statement stm = con1.createStatement();
-			String consulta = "select a.idinsumo, a.idtienda, a.cantidad, b.unidad_medida, b.manejacanastas, b.cantidadxcanasta, b.nombrecontenedor, a.cantidad_minima, b.nombre_insumo from insumo_requerido_tienda a, insumo b where a.idinsumo = b.idinsumo and a.idtienda = " + idtien + " and a.diasemana =" + diasemana;
+			String consulta = "select a.idinsumo, a.idtienda, a.cantidad, b.unidad_medida, b.manejacanastas, b.cantidadxcanasta, b.nombrecontenedor, a.cantidad_minima, b.nombre_insumo from insumo_requerido_tienda a, insumo b where a.idinsumo = b.idinsumo and a.idtienda = " + idtien + " and a.diasemana =" + diasemana + " order by b.orden";
 			logger.info(consulta);
 			ResultSet rs = stm.executeQuery(consulta);
 			int idinsumo;
@@ -146,7 +146,7 @@ public class InventarioDAO {
 	{
 		Logger logger = Logger.getLogger("log_file");
 		ConexionBaseDatos con = new ConexionBaseDatos();
-		Connection con1 = con.obtenerConexionBDPrincipal();
+		Connection con1 = con.obtenerConexionBDPrincipalLocal();
 		ArrayList <InsumoTienda> insumosTienda = new ArrayList();
 		
 		try
@@ -217,7 +217,7 @@ public class InventarioDAO {
 	{
 		Logger logger = Logger.getLogger("log_file");
 		ConexionBaseDatos con = new ConexionBaseDatos();
-		Connection con1 = con.obtenerConexionBDPrincipal();
+		Connection con1 = con.obtenerConexionBDPrincipalLocal();
 		ArrayList <InsumoTienda> insumosTienda = new ArrayList();
 		try
 		{
@@ -257,101 +257,13 @@ public class InventarioDAO {
 	
 	}
 	
-	public static int InsertarDetalleInsumoDespachoTienda(int iddespacho,int idinsumo,double cantidad, String contenedor)
-	{
-		Logger logger = Logger.getLogger("log_file");
-		int idDespachoDetalle = 0;
-		ConexionBaseDatos con = new ConexionBaseDatos();
-		Connection con1 = con.obtenerConexionBDPrincipal();
-				
-		try
-		{
-			Statement stm = con1.createStatement();
-			String insert = "insert into insumo_despacho_tienda_detalle (iddespacho,idinsumo, cantidad, contenedor) values (" + iddespacho + ", " + idinsumo  + ", " + cantidad +" , '" + contenedor +"' )"; 
-			logger.info(insert);
-			stm.executeUpdate(insert);
-			ResultSet rs = stm.getGeneratedKeys();
-			if (rs.next()){
-				idDespachoDetalle=rs.getInt(1);
-				
-	        }
-	        rs.close();
-			stm.close();
-			con1.close();
-		}
-		catch (Exception e){
-			logger.error(e.toString());
-			try
-			{
-				con1.close();
-			}catch(Exception e1)
-			{
-			}
-			return(0);
-		}
-		return(idDespachoDetalle);
-	}
-	
-	/**
-	 * Método de la capa de acceso a datos que se encarga de la inserción de despacho de pedido, teniendo en cuenta que la tabla hace las veces
-	 * de encabezado del despacho de insumos para la tienda.
-	 * @param idtienda Se recibe el idtienda de la tienda asociada al inventario.
-	 * @param fechasurtir Fecha que determina la fecha de llevado de los insumos a la tienda
-	 * @return Retorna un enterio con el iddespacho que representa como el encabezado del detalle de los insumos que se llevará a la tienda
-	 */
-	public static int InsertarInsumoDespachoTienda(int idtienda, String fechasurtir)
-	{
-		Logger logger = Logger.getLogger("log_file");
-		int idDespacho = 0;
-		ConexionBaseDatos con = new ConexionBaseDatos();
-		Connection con1 = con.obtenerConexionBDPrincipal();
-		Date fechaTemporal = new Date();
-		DateFormat formatoFinal = new SimpleDateFormat("yyyy-MM-dd");
-		String fechaSurtirFinal ="";
-		try
-		{
-			fechaTemporal = new SimpleDateFormat("dd/MM/yyyy").parse(fechasurtir);
-			fechaSurtirFinal = formatoFinal.format(fechaTemporal);
-			
-		}catch(Exception e){
-			logger.error(e.toString());
-			return(0);
-		}
-		
-		try
-		{
-			Statement stm = con1.createStatement();
-			String insert = "insert into insumo_despacho_tienda (idtienda,fecha_despacho) values (" + idtienda + ", '" + fechaSurtirFinal  + "' )"; 
-			logger.info(insert);
-			stm.executeUpdate(insert);
-			ResultSet rs = stm.getGeneratedKeys();
-			if (rs.next()){
-				idDespacho=rs.getInt(1);
-				System.out.println(idDespacho);
-	        }
-	        rs.close();
-			stm.close();
-			con1.close();
-		}
-		catch (Exception e){
-			logger.error(e.toString());
-			try
-			{
-				con1.close();
-			}catch(Exception e1)
-			{
-			}
-			return(0);
-		}
-		return(idDespacho);
-		
-	}
 
+	
 	public static ArrayList<InsumoDespachadoTienda> ConsultarInventariosDespachados(int idtien, String fecha)
 	{
 		Logger logger = Logger.getLogger("log_file");
 		ConexionBaseDatos con = new ConexionBaseDatos();
-		Connection con1 = con.obtenerConexionBDPrincipal();
+		Connection con1 = con.obtenerConexionBDPrincipalLocal();
 		ArrayList <InsumoDespachadoTienda> insumosDespachadosTienda = new ArrayList();
 		//Tratamiento de la fecha para consulta
 		Date fechaTemporal = new Date();

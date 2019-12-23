@@ -4,13 +4,16 @@
 		<title>Consultar Inventarios Despachados</title>
 		<meta charset="utf-8" />
 		  <link href="css/bootstrap.min.css" rel="stylesheet" type="text/css" />
-		  <link href="css/jquery-ui.min.css" rel="stylesheet" type="text/css" />		
-		  <link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.13/css/jquery.dataTables.css">
+		  <link href="css/all.min.css" rel="stylesheet" type="text/css" />
+		  <link href="css/jquery-ui.min.css" rel="stylesheet" type="text/css" />
+		  <link rel="stylesheet" type="text/css" href="css/jquery.dataTables.min.css">
 		  <script type="text/javascript" src="js/jquery-1.11.0.min.js"></script> 
 		  <script type="text/javascript" src="js/bootstrap.min.js"></script>
-		  <script type="text/javascript" src="js/jquery.table2excel.min.js"></script>
-		  <script type="text/javascript" charset="utf8" src="//cdn.datatables.net/1.10.13/js/jquery.dataTables.js"></script>
-		  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-confirm/3.1.0/jquery-confirm.min.css">	
+		  <script type="text/javascript" src="js/push.min.js"></script> 
+		  <script type="text/javascript" charset="utf8" src="js/jquery.dataTables.js"></script>
+		  <script src='js/bootstrapValidator.min.js'></script>
+   		  <script src='js/language/es_ES.min.js'></script>
+		  <link rel="stylesheet" href="css/jquery-confirm.min.css">	
 		<style>
 			table{
 			  table-layout: fixed;
@@ -82,8 +85,12 @@
 						<tbody>
 							
 								<tr>
-										<td class="active">Fecha a Surtir</td>
-										<td><input type="text" id="fechasurtir" name="fechasurtir" class="form-control" placeholder="Fecha a Surtir"></td>
+										<td class="active">Fecha a Surtir Desde</td>
+										<td><input type="text" id="fechasurtirdesde" name="fechasurtirdesde" class="form-control" placeholder="Fecha a Surtir Desde"></td>
+										<td class="active">Fecha a Surtir Hasta</td>
+										<td><input type="text" id="fechasurtirhasta" name="fechasurtirhasta" class="form-control" placeholder="Fecha a Surtir Hasta"></td>
+								</tr>
+								<tr>
 										<td class="active">Tienda</td>
 										<td>
 											<select id="selectTiendas" class="form-control"></select>
@@ -93,17 +100,48 @@
 											
 						</tbody>
 					</table>
-						<input type="button" class="btn btn-primary btn-md" value="CONSULTAR DESPACHO" onclick="consultarInventarioDespachado()">
-						<input type="button" class="btn btn-primary btn-md" value="IMPRIMIR" onclick="imprimirDivInventario('divinventario')">
-						<input type="button" class="btn btn-primary btn-md" value="GENERAR EXCEL" onclick="generarExcel()">
-				
+						<input type="button" class="btn btn-primary btn-md" value="CONSULTAR DESPACHO" onclick="consultarDespachos()">	
 			</form>
 		</div>
+		<div class="container" >
+        				<table id="grid-despachos" class="table table-condensed table-hover table-striped" cellspacing="0" width="100%">
+								        <thead>
+								            <tr>
+								                <th data-column-id="iddespacho">Id Despacho</th>
+								                <th data-column-id="tienda">Tienda</th>
+								                <th data-column-id="idtienda">Id Tienda</th>
+								                <th data-column-id="fechareal">Fecha Despacho</th>
+								                <th data-column-id="fechasurtir">Fecha Surtir</th>
+								                <th data-column-id="estado">Estado</th>
+								                <th data-column-id="observacion">Observacion</th>
+								                <th width="90">Consultar</th>
+								            </tr>
+								        </thead>
+								      	<tbody>
+								      			
+								      	</tbody>
+						</table>
+		</div>
+		<!-- ESTO ES PARA LA EDICIÓN DEL DESPACHO -->
+						<div class="modal fade" id="modDespacho" tabindex="-1" role="dialog" aria-labelledby="addLabel">
+							 <div class="modal-dialog modal-xl" role="document">
+							    <div class="modal-content">
+							      <div class="modal-header">
+							      	<h4 class="modal-title" id="addLabel">Modificar Despacho</h4>
+							        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+							      </div>
+							      <form id='modificarDespacho'>
+								  </form>
+							    </div>
+							</div>
+						</div>
+					<!-- ESTO ES PARA LA ADICIÓN -->
 		<div class="container" id="divinventario">
 			<form id="inventario">
 				
 			</form>
-					
+			<input type="button" class="btn btn-primary btn-md" value="IMPRIMIR" onclick="imprimirDivInventario('divinventario')">
+			<input type="button" class="btn btn-primary btn-md" value="GENERAR EXCEL" onclick="generarExcel()">		
 		</div>
 	</body>
 	<script src="js/consultarinventariosdespachados.js" type="text/javascript"></script>
@@ -112,7 +150,9 @@
 	<script src="js/jquery-ui.min.js"></script>
 	<script type="text/javascript" src="js/datepicker.js"></script>
 	<script>
-		$("#fechasurtir").datepicker($.datepicker.regional["es"]);
-		$("#fechasurtir").datepicker('setDate', new Date());
+		$("#fechasurtirdesde").datepicker($.datepicker.regional["es"]);
+		$("#fechasurtirdesde").datepicker('setDate', new Date());
+		$("#fechasurtirhasta").datepicker($.datepicker.regional["es"]);
+		$("#fechasurtirhasta").datepicker('setDate', new Date());
 	</script>
 </html>

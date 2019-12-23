@@ -16,7 +16,7 @@ public class InsumoRequeridoTiendaDAO {
 	{
 		Logger logger = Logger.getLogger("log_file");
 		ConexionBaseDatos con = new ConexionBaseDatos();
-		Connection con1 = con.obtenerConexionBDPrincipal();
+		Connection con1 = con.obtenerConexionBDPrincipalLocal();
 		boolean existeInsReq = false;
 		try
 		{

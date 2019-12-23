@@ -46,7 +46,7 @@ public class ParametrosDAO {
 		Logger logger = Logger.getLogger("log_file");
 		String valorTexto="";
 		ConexionBaseDatos con = new ConexionBaseDatos();
-		Connection con1 = con.obtenerConexionBDPrincipal();
+		Connection con1 = con.obtenerConexionBDPrincipalLocal();
 		try
 		{
 			Statement stm = con1.createStatement();

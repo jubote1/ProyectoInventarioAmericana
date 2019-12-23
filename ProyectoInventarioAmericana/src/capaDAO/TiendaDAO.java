@@ -26,7 +26,7 @@ public class TiendaDAO {
 		Logger logger = Logger.getLogger("log_file");
 		ArrayList<Tienda> tiendas = new ArrayList<>();
 		ConexionBaseDatos con = new ConexionBaseDatos();
-		Connection con1 = con.obtenerConexionBDPedidos();
+		Connection con1 = con.obtenerConexionBDPedidosLocal();
 		try
 		{
 			Statement stm = con1.createStatement();
@@ -146,7 +146,7 @@ public class TiendaDAO {
 		Logger logger = Logger.getLogger("log_file");
 		String nombreTienda="";
 		ConexionBaseDatos con = new ConexionBaseDatos();
-		Connection con1 = con.obtenerConexionBDPrincipal();
+		Connection con1 = con.obtenerConexionBDPrincipalLocal();
 		try
 		{
 			Statement stm = con1.createStatement();

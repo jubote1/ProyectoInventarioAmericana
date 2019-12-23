@@ -44,6 +44,7 @@ public class InsertarDespachoTienda extends HttpServlet {
 		Logger logger = Logger.getLogger("log_file");
 		HttpSession sesion = request.getSession(true);
 		String fechasurtir = request.getParameter("fechasurtir");
+		String observacion = request.getParameter("observacion");
         int idtienda;
         try
         {
@@ -55,7 +56,7 @@ public class InsertarDespachoTienda extends HttpServlet {
         	idtienda = 0;
         }
         InventarioCtrl inv = new InventarioCtrl();
-        String respuesta = inv.InsertarInsumoDespachoTienda(idtienda, fechasurtir);
+        String respuesta = inv.InsertarInsumoDespachoTienda(idtienda, fechasurtir, observacion);
         PrintWriter out = response.getWriter();
 		out.write(respuesta);
 	}

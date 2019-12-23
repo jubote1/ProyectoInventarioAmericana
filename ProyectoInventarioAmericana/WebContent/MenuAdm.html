@@ -1,25 +1,38 @@
-<nav id ="menuprincipal" class="navbar navbar-inverse">
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark" id ="menuprincipal">
 		  <div class="container-fluid">
 		    <div class="navbar-header">
-		      <a class="navbar-brand"><img src="LogoPizzaAmericanaPeque.png" class="img-circle" /></a>
-		      <a class="navbar-brand" href="pendiente.html">INVENTARIOS PIZZA AMERICANA</a>
+		      <a class="navbar-brand"><img src="LogoAmericana.png" class="img-circle" /></a>
+		      <a class="navbar-brand" href="CalcularInventario.html">INVENTARIOS PIZZA AMERICANA</a>
 		    </div>
-		    <ul class="nav navbar-nav">
-		      <li class="active"><a href="www.pizzaamericana.co">Home Pizza Americana</a></li>
-		      <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="#">Funciones<span class="caret"></span></a>
-		        <ul class="dropdown-menu">
-		          <li><a href="CalcularInventario.html">Despachar Inventario Tiendas</a></li>
-		          <li><a href="ConsultarInventarioActual.html">Consultar Inventario Actual</a></li>
-		          <li><a href="ConsultarInventariosDespachados.html">Consultar Inventarios Despachados</a></li>
-		        </ul>
-		      </li>
-		       <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="#">Parametrización<span class="caret"></span></a>
-		        <ul class="dropdown-menu">
-		          <li><a href="FijarInventariosSugeridos.html">Fijar Inventarios Sugeridos</a></li>
-		        </ul>
-		      </li>
-		     </ul>
-		     <P ALIGN="right">
-		     <LABEL id="usuariologin" style="color:white;"></LABEL></P>
+		    <div class="collapse navbar-collapse" id="navbarContenido">
+			    <ul class="navbar-nav mr-auto">
+			    	<li class="nav-item active">
+        				<a class="nav-link" href="http://www.pizzaamericana.co">Home Pizza Americana<span class="sr-only">(current)</span></a>
+     				 </li>
+     				 <li class="nav-item dropdown">
+				        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+				          Funciones
+				        </a>
+				        <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+				          <a class="dropdown-item" href="CalcularInventario.html">Despachar Inventario Tiendas</a>
+				          <a class="dropdown-item" href="ConsultarInventarioActual.html">Consultar Inventario Actual</a>
+				          <a class="dropdown-item" href="ConsultarInventariosDespachados.html">Consultar Inventarios Despachados</a>
+				          <div class="dropdown-divider"></div>
+				          <a class="dropdown-item" href="Insumos.html">Administrar Insumos</a>
+				        </div>
+				     </li>
+
+				      <li class="nav-item dropdown">
+				        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+				          Parametrización
+				        </a>
+				        <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+						  <a class="dropdown-item" href="FijarInventariosSugeridos.html">Fijar Inventarios Sugeridos</a>				          
+				        </div>
+				     </li> 
+			     </ul>
+			     <P ALIGN="right">
+			     <LABEL id="usuariologin" style="color:white;"></LABEL></P>
+			</div>
 		  </div>
 		</nav>

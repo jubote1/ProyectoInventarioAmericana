@@ -52,10 +52,88 @@ public class ConexionBaseDatos {
 		}
 		return(con);
 	}
+	
+	public Connection obtenerConexionBDGeneralLocal(){
+		try {
+		    Class.forName("com.mysql.jdbc.Driver").newInstance();
+		    
+
+		} catch (Exception e) {
+
+		    System.out.println(e.toString());
+
+		}
+		
+		Connection con = null;
+		//...
+
+		try {
+
+			con = DriverManager.getConnection(
+		            "jdbc:mysql://localhost/general?"
+		            + "user=root&password=4m32017");
+			
+//			con = DriverManager.getConnection(
+//		            "jdbc:mysql://192.168.0.25/general?"
+//		            + "user=root&password=4m32017");
+
+		    // Otros y operaciones sobre la base de datos...
+
+		} catch (SQLException ex) {
+
+		    // Mantener el control sobre el tipo de error
+		    System.out.println("SQLException: " + ex.getMessage());
+
+		}
+		return(con);
+	}
+	
 	/**
 	 * Método que implementa la conexión a la base de datos del sistema principal de contact center
 	 * @return
 	 */
+	public Connection obtenerConexionBDPrincipalLocal(){
+		try {
+			/**
+			 * Se realiza el registro del drive de Mysql
+			 */
+		    Class.forName("com.mysql.jdbc.Driver").newInstance();
+		    
+
+		} catch (Exception e) {
+
+		    System.out.println(e.toString());
+
+		}
+		
+		Connection con = null;
+		//...
+
+		try {
+
+			
+			/**
+			 * Se realiza la creación de la conexión a la base de datos
+			 */
+			con = DriverManager.getConnection(
+		            "jdbc:mysql://localhost/inventarioamericana?"
+		            + "user=root&password=4m32017");
+			
+//			con = DriverManager.getConnection(
+//		            "jdbc:mysql://192.168.0.25/inventarioamericana?"
+//		            + "user=root&password=4m32017");
+
+		    // Otros y operaciones sobre la base de datos...
+
+		} catch (SQLException ex) {
+
+		    // Mantener el control sobre el tipo de error
+		    System.out.println("SQLException: " + ex.getMessage());
+
+		}
+		return(con);
+	}
+	
 	public Connection obtenerConexionBDPrincipal(){
 		try {
 			/**
@@ -125,6 +203,45 @@ public class ConexionBaseDatos {
 			con = DriverManager.getConnection(
 		            "jdbc:mysql://192.168.0.25/pizzaamericana?"
 		            + "user=root&password=4m32017");
+
+		    // Otros y operaciones sobre la base de datos...
+
+		} catch (SQLException ex) {
+
+		    // Mantener el control sobre el tipo de error
+		    System.out.println("SQLException: " + ex.getMessage());
+
+		}
+		return(con);
+	}
+	
+	public Connection obtenerConexionBDPedidosLocal(){
+		try {
+			/**
+			 * Se realiza el registro del drive de Mysql
+			 */
+		    Class.forName("com.mysql.jdbc.Driver").newInstance();
+		    
+
+		} catch (Exception e) {
+
+		    System.out.println(e.toString());
+
+		}
+		
+		Connection con = null;
+		//...
+
+		try {
+
+			
+			con = DriverManager.getConnection(
+		            "jdbc:mysql://localhost/pizzaamericana?"
+		            + "user=root&password=4m32017");
+			
+//			con = DriverManager.getConnection(
+//		            "jdbc:mysql://192.168.0.25/pizzaamericana?"
+//		            + "user=root&password=4m32017");
 
 		    // Otros y operaciones sobre la base de datos...
 
