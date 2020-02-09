@@ -4,10 +4,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.ArrayList;
-
 import org.apache.log4j.Logger;
-
-import capaModelo.Cliente;
 import capaModelo.Insumo;
 
 

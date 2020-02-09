@@ -9,11 +9,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-
-import capaControlador.PedidoCtrl;
 import capaModelo.Insumo;
 import capaControlador.InventarioCtrl;
-import capaControlador.ParametrosCtrl;
 import org.apache.log4j.Logger;
 /**
  * Servlet implementation class CRUDEspecialidad

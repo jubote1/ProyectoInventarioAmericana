@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.Date;
 
 import org.apache.log4j.Logger;
-import capaModelo.Cliente;
 import capaModelo.Insumo;
 import capaModelo.InsumoDespachoTienda;
 
