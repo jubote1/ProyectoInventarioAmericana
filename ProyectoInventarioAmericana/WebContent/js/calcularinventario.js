@@ -95,13 +95,28 @@ function calcularInventario()
 		return;
 	}
 	// Si pasa a este punto es porque paso las validaciones
-	
+	var indInsumosDesact = false;
 	$.ajax({ 
 	    		url: server + 'CalcularInventarioTienda?fechasurtir=' + fechasurtir + "&idtienda=" + idtienda, 
 	    		dataType: 'json', 
 	    		async: false, 
 	    		success: function(data1){ 
 	    				inventarios = data1;
+	    				if(inventarios[0].nombreinsumo == undefined)
+						{
+							indInsumosDesact = true;
+						}
+						if(indInsumosDesact == true)
+						{
+							$.ajax({ 
+					    		url: server + "CalcularInventarioTiendaSinFecha?idtienda=" + idtienda + "&fechasurtir=" + fechasurtir, 
+					    		dataType: 'json', 
+					    		async: false, 
+					    		success: function(data2){ 
+					    				inventarios = data2;
+					    			}
+					    		});
+						}
 	    				bandera = true;
 	    				var inventario;
 						
@@ -136,12 +151,16 @@ function calcularInventario()
 							strInv +='<td><label>' + inventario.unidadmedida + '</label> </td>';
 							strInv +='</tr> ';
 						}
+						if(indInsumosDesact == true)
+						{
+							alert("Aparentemente las cantidades de inventario no están actualizados, FAVOR TENER CUIDADO");
+						}
 						strInv +='<tr><td COLSPAN="6">';
 						strInv +='<label for="comment">Observacion:</label>';
 						strInv +='<textarea class="form-control" rows="3" id="observacion"></textarea>';
 						strInv +='</td></tr>';
-						strInv +='<tr><td COLSPAN="2"><input type="button" class="btn btn-primary btn-sd" value="Confirmar Inventario" onclick="confirmarInventario()"> </td>';
-						strInv +='<td COLSPAN="2"><input type="button" class="btn btn-danger btn-sd" value="Reiniciar Inventario" onclick="reiniciarInventario()"> </td><td COLSPAN="2"></td></tr>';
+						strInv +='<tr><td COLSPAN="2"><input type="button" class="btn btn-primary btn-sd" id="confirmarinventario" value="Confirmar Inventario" onclick="confirmarInventario()"> </td>';
+						strInv +='<td COLSPAN="2"><input type="button" class="btn btn-danger btn-sd" id="reiniciarinventario" value="Reiniciar Inventario" onclick="reiniciarInventario()"> </td><td COLSPAN="2"></td></tr>';
 						strInv +='</tbody> ';
 						$('#inventario').html(strInv);
 					
@@ -223,6 +242,8 @@ function confirmarInventario()
 		$.alert("No se han cargado inventarios para confirmar");
 		return;
 	}
+	//Teniendo en cuenta que es un proceso demorado desactivaremos los botónes mientras tanto
+	desactivarBotones();
 	//Se validan que los valores diferentes de cero sean numéricos
 	var mensajeError = validarCantidades()
 	if(mensajeError.length == 0)
@@ -231,17 +252,115 @@ function confirmarInventario()
 	}else
 	{
 		$.alert("Se tienen valores incorrectos en los insumos : " + mensajeError);
+		activarBotones();
 		return;
 	}
 	
-	// Ser realiza la generación del excel con la información de lo que se surtira en la tienda -- comentamos para revisar  LA GENERACION
-	//$("#inventariosurtir").table2excel({
-	//    filename: "InventarioSurtir"
-	//  }); 
-	
-	//Ingresamos primero el encabezado del despacho del pedido
 	var fechasurtir = $("#fechasurtir").val();
 	var idtienda = $("#selectTiendas option:selected").attr('id');
+	
+	//Vamos a realizar la validación antes de confirmar si desea o no ingresar
+	$.ajax({ 
+	    		url: server + 'ExisteDespachoTiendaFecha?fechasurtir=' + fechasurtir + "&idtienda=" + idtienda, 
+	    		dataType: 'json', 
+	    		async: false, 
+	    		success: function(data3){ 
+	    			var existeDespacho = data3.existe;
+	    			if(existeDespacho == true)
+	    			{
+	    					$.confirm({
+								'title'		: 'Confirmación de Proceso Crítico',
+								'content'	: '<h4> <p style="color:#FF0000";> Desea confirmar el ingreso de otro despacho, teniendo en cuenta que para dicha tienda ya existe un despacho para la fecha? </p> </h4>',
+								'autoClose': 'No|8000',
+								'buttons'	: {
+									'Si'	: {
+										'class'	: 'blue',
+										'action': function(){
+											
+											//Agregamos el ingreso de la clave del usuario para confirmar el logueo
+											$.confirm({
+											    title: 'Confirmar Ingreso de Despacho',
+											    content: '' +
+											    '<form action="" class="formuConfirmarReinicio" id="formuConfirmarReinicio">' +
+											    '<div class="form-group">' +
+											    '<label>Ingrese Usuario</label>' +
+											    '<input type="text" placeholder="Usuario" name="usuario" class="usuario form-control" required />' +
+											    '<label>Ingrese Clave</label>' +
+											    '<input type="password" placeholder="Clave" name="clave" class="clave form-control" required />' +
+											    '</div>' +
+											    '</form>',
+											    buttons: {
+											        formSubmit: {
+											            text: 'Confirmar',
+											            btnClass: 'btn-blue',
+											            action: function () {
+											                var usuario = this.$content.find('.usuario').val();
+															var password = this.$content.find('.clave').val();
+															$.ajax({ 
+											    				url: server + 'GetIngresarAplicacion', 
+											    				dataType: 'text',
+											    				type: 'post', 
+											    				data: {'txtUsuario' : usuario , 'txtPassword' : password }, 
+											    				async: false, 
+											    				success: function(data){ 
+											    						resultado = data;
+											    						if (resultado == 'OK')
+																		{
+																			insertarDespachoInventario(fechasurtir, idtienda);
+																		}
+																		else
+																		{
+																			$.alert('No se ingresará el despacho debido a que el usuario y clave es incorrecta');
+																			activarBotones();
+																			return;
+																		}
+																	} 
+																});
+											            }
+											        },
+											        cancel: function () {
+											            //close
+											        },
+											    },
+											    onContentReady: function () {
+											        // bind to events
+											        var jc = this;
+											        this.$content.find('formuConfirmarReinicio').on('submit', function (e) {
+											            // if the user submits the form by pressing enter in the field.
+											            e.preventDefault();
+											            jc.$$formSubmit.trigger('click'); // reference the button and click it
+											        });
+											    }
+											});
+
+											//Validamos que el logueo sea exitoso para eliminar el pedido
+											
+										}
+									},
+									'No'	: {
+										'class'	: 'gray',
+										'action': function(){
+
+											$.alert('La acción de despacho del inventario fue cancelada');
+											activarBotones();
+											return;
+										}	// Nothing to do in this case. You can as well omit the action property.
+									}
+								}
+							});
+	    			}
+	    			else
+	    			{
+	    				insertarDespachoInventario(fechasurtir, idtienda);
+	    			}
+	    		}
+	    	});
+
+	
+}
+
+function insertarDespachoInventario(fechasurtir, idtienda)
+{
 	var tienda = $("#selectTiendas").val();
 	var observacion = encodeURIComponent($("#observacion").val().substring(0,500));
 	// Variable que almacenará si se tuvieron o no errores en el proceso
@@ -249,88 +368,89 @@ function confirmarInventario()
 	var huboErroresDetalle = false;
 	var insumosErorres = "";
 	$.confirm({
-				'title'		: 'Confirmacion de Inventario a Enviar a Tienda',
-				'content'	: 'Desea el envío del intentario a la Tienda ' + tienda + '<br> Con Fecha '+ fechasurtir,
-				'type': 'dark',
-   				'typeAnimated': true,
-				'buttons'	: {
-					'Si'	: {
-						'class'	: 'blue',
-						'action': function(){
+			'title'		: 'Confirmacion de Inventario a Enviar a Tienda',
+			'content'	: 'Desea el envío del intentario a la Tienda ' + tienda + '<br> Con Fecha '+ fechasurtir,
+			'type': 'dark',
+				'typeAnimated': true,
+			'buttons'	: {
+				'Si'	: {
+					'class'	: 'blue',
+					'action': function(){
 
-								$.ajax({ 
-								    		url: server + 'InsertarDespachoTienda?fechasurtir=' + fechasurtir + "&idtienda=" + idtienda + "&observacion=" + observacion, 
-								    		dataType: 'json', 
-								    		async: false, 
-								    		success: function(data1){ 
-								    			respuesta = data1[0];
-								    			var iddespacho = respuesta.iddespacho;
-								    			if (iddespacho == 0)
-								    			{
-								    				huboErroresDespacho = true;
-								    			}else
-								    			{
-								    				for (var i = 0; i < inventarios.length; i++)
+							$.ajax({ 
+							    		url: server + 'InsertarDespachoTienda?fechasurtir=' + fechasurtir + "&idtienda=" + idtienda + "&observacion=" + observacion, 
+							    		dataType: 'json', 
+							    		async: false, 
+							    		success: function(data1){ 
+							    			respuesta = data1[0];
+							    			var iddespacho = respuesta.iddespacho;
+							    			if (iddespacho == 0)
+							    			{
+							    				huboErroresDespacho = true;
+							    			}else
+							    			{
+							    				for (var i = 0; i < inventarios.length; i++)
+												{
+													var inventario = inventarios[i];
+													if($("#cant"+inventario.idinsumo).val() > 0)
 													{
-														var inventario = inventarios[i];
-														if($("#cant"+inventario.idinsumo).val() > 0)
+														var cantidad = $("#cant"+inventario.idinsumo).val();
+														var contenedor = $("#cont"+inventario.idinsumo).val();
+														if (contenedor == undefined || contenedor == null)
 														{
-															var cantidad = $("#cant"+inventario.idinsumo).val();
-															var contenedor = $("#cont"+inventario.idinsumo).val();
-															if (contenedor == undefined || contenedor == null)
-															{
-																contenedor = "";
-															}
-															var idinsumo = inventario.idinsumo;
-															$.ajax({ 
-													    		url: server + 'InsertarDetalleDespachoTienda?iddespacho=' + iddespacho + "&idinsumo=" + idinsumo + "&cantidad=" + cantidad + "&contenedor=" + contenedor, 
-													    		dataType: 'json', 
-													    		async: false, 
-													    		success: function(data2){
-													    			detalle = data2[0];
-													    			if(detalle.iddespachodetalle == 0)
-													    			{
-													    				insumosErorres = insumosErrores + " " + inventario.nombreinsumo;
-													    				huboErroresDetalle = true;
-													    				
-													    			}
-													    		}
-													    	});
+															contenedor = "";
 														}
+														var idinsumo = inventario.idinsumo;
+														$.ajax({ 
+												    		url: server + 'InsertarDetalleDespachoTienda?iddespacho=' + iddespacho + "&idinsumo=" + idinsumo + "&cantidad=" + cantidad + "&contenedor=" + contenedor, 
+												    		dataType: 'json', 
+												    		async: false, 
+												    		success: function(data2){
+												    			detalle = data2[0];
+												    			if(detalle.iddespachodetalle == 0)
+												    			{
+												    				insumosErorres = insumosErrores + " " + inventario.nombreinsumo;
+												    				huboErroresDetalle = true;
+												    				
+												    			}
+												    		}
+												    	});
 													}
-													
-								    			}
-								    			if(huboErroresDespacho)
-								    			{
-								    				$.alert('Se tuvieron errores insertando el despacho');
-								    			}else
-								    			{
-								    				if(huboErroresDetalle)
-								    				{
-								    					$.alert('No se insertó de manera correcta los siguientes insumos ' + insumosErrores);
-								    				}else
-								    				{
-								    					reiniciarInventario();
-														$.alert('Se ha ingresado correctamente el Inventario para La Tienda, con el despacho Número ' + iddespacho);
-														//Realiza el llamado asíncrono a la generación del archivo.
-														$.getJSON(server + 'GenerarArchivoDespachoTienda?idtienda=' + idtienda + '&iddespacho=' + iddespacho +  '&fecha=' + fechasurtir , function(data2){
+												}
+												
+							    			}
+							    			if(huboErroresDespacho)
+							    			{
+							    				$.alert('Se tuvieron errores insertando el despacho');
+							    			}else
+							    			{
+							    				if(huboErroresDetalle)
+							    				{
+							    					$.alert('No se insertó de manera correcta los siguientes insumos ' + insumosErrores);
+							    				}else
+							    				{
+							    					reiniciarInventario();
+													$.alert('Se ha ingresado correctamente el Inventario para La Tienda, con el despacho Número ' + iddespacho);
+													//Realiza el llamado asíncrono a la generación del archivo.
+													$.getJSON(server + 'GenerarArchivoDespachoTienda?idtienda=' + idtienda + '&iddespacho=' + iddespacho +  '&fecha=' + fechasurtir , function(data2){
 
-						    						});
-								    				}
-								    			}
-								    			
-								    		}
-								});
-						}
-					},
-					'No'	: {
-						'class'	: 'gray',
-						'action': function(){}	// Nothing to do in this case. You can as well omit the action property.
+					    						});
+							    				}
+							    			}
+							    			
+							    		}
+							});
 					}
+				},
+				'No'	: {
+					'class'	: 'gray',
+					'action': function(){}	// Nothing to do in this case. You can as well omit the action property.
 				}
-			});
-	
+			}
+		});
+		activarBotones();
 }
+
 
 function reiniciarInventario()
 {
@@ -369,5 +489,19 @@ function validarFechaMenorActual(date1, date2){
         return false;
       else
         return true;
+}
+
+function desactivarBotones()
+{
+	$('#calcularinventario').attr('disabled', true);
+	$('#confirmarinventario').attr('disabled', true);
+	$('#reiniciarinventario').attr('disabled', true);
+}
+
+function activarBotones()
+{
+	$('#calcularinventario').attr('disabled', false);
+	$('#confirmarinventario').attr('disabled', false);
+	$('#reiniciarinventario').attr('disabled', false);
 }
 

@@ -12,9 +12,16 @@ public class Insumo {
 	private String categoria;
 	private boolean control_cantidad;
 	private double costoUnidad;
+	private String controlTienda;
 	
 	
 	
+	public String getControlTienda() {
+		return controlTienda;
+	}
+	public void setControlTienda(String controlTienda) {
+		this.controlTienda = controlTienda;
+	}
 	public String getNombreContenedor() {
 		return nombreContenedor;
 	}
@@ -77,7 +84,7 @@ public class Insumo {
 	}
 	public Insumo(int idinsumo, String nombre, String unidadMedida, double precioUnidad, String manejacanasta,
 			int cantidaxcanasta, String nombreContenedor, String categoria, boolean control_cantidad,
-			double costoUnidad) {
+			double costoUnidad, String controlTienda) {
 		super();
 		this.idinsumo = idinsumo;
 		this.nombre = nombre;
@@ -89,6 +96,7 @@ public class Insumo {
 		this.categoria = categoria;
 		this.control_cantidad = control_cantidad;
 		this.costoUnidad = costoUnidad;
+		this.controlTienda = controlTienda;
 	}
 
 	

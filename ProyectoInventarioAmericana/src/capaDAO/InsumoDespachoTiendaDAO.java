@@ -60,6 +60,37 @@ public static boolean existeInsumoDespachadoTienda(int idTienda, String fecha)
 	return(resultado);
 }
 
+public static boolean existeInsumoDespachoTienda(int idTienda, String fecha)
+{
+	Logger logger = Logger.getLogger("log_file");
+	ConexionBaseDatos con = new ConexionBaseDatos();
+	Connection con1 = con.obtenerConexionBDPrincipalLocal();
+	boolean resultado = false;
+	try
+	{
+		Statement stm = con1.createStatement();
+		String consulta = "select * from  insumo_despacho_tienda where idtienda = " + idTienda + " and fecha_despacho = '" + fecha + "'";
+		logger.info(consulta);
+		ResultSet rs = stm.executeQuery(consulta);
+		while(rs.next()){
+			resultado = true;
+			break;
+		}
+		
+		stm.close();
+		con1.close();
+	}
+	catch (Exception e){
+		logger.error(e.toString());
+		try
+		{
+			con1.close();
+		}catch(Exception e1)
+		{
+		}
+	}
+	return(resultado);
+}
 
 public static String retornarEstadoDespacho(int idDespacho)
 {

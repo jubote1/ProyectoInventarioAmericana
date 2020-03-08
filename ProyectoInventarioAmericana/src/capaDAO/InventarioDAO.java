@@ -213,6 +213,53 @@ public class InventarioDAO {
 	
 	}
 	
+	public static ArrayList<InsumoTienda> ObtenerInsumosTiendaAutomaticoSinFecha(int idtien)
+	{
+		Logger logger = Logger.getLogger("log_file");
+		ConexionBaseDatos con = new ConexionBaseDatos();
+		Connection con1 = con.obtenerConexionBDPrincipalLocal();
+		ArrayList <InsumoTienda> insumosTienda = new ArrayList();
+		
+		try
+		{
+			Statement stm = con1.createStatement();
+			String consulta = "select a.idinsumo, a.cantidad, b.nombre_insumo, b.control_cantidad, a.fecha from insumo_tienda a, insumo b where a.idinsumo = b.idinsumo and idtienda = " + idtien;
+			logger.info(consulta);
+			ResultSet rs = stm.executeQuery(consulta);
+			int idinsumo;
+			double cantidad;
+			String nombreInsumo;
+			boolean banderaFechaAnterior = true;
+			int controlCantidad;
+			String fecha;
+			while(rs.next()){
+				banderaFechaAnterior = false;
+				idinsumo = Integer.parseInt(rs.getString("idinsumo"));
+				cantidad = Double.parseDouble(rs.getString("cantidad"));
+				nombreInsumo = rs.getString("nombre_insumo");
+				controlCantidad = rs.getInt("control_cantidad");
+				fecha = rs.getString("fecha");
+				InsumoTienda insTie = new InsumoTienda(idinsumo, idtien, cantidad, fecha, nombreInsumo,controlCantidad);
+				insumosTienda.add(insTie);
+			}
+			rs.close();
+			stm.close();
+			con1.close();
+		}
+		catch (Exception e){
+			try{
+				con1.close();
+				logger.error(e.toString());
+			}catch(Exception e1)
+			{
+				logger.error(e1.toString());
+			}
+			
+		}
+		return(insumosTienda);
+	
+	}
+	
 	public static ArrayList<InsumoTienda> ConsultarInsumosTienda(int idtien)
 	{
 		Logger logger = Logger.getLogger("log_file");

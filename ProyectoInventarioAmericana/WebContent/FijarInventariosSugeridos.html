@@ -17,8 +17,7 @@
 	</head>
 	<body>
 
-		<link id="Menu-file" href="Menu.html" rel="import" />
-		<link id="MenuAdm-file" href="MenuAdm.html" rel="import" />
+		<div id="cargarMenu"></div>
 		<script type="text/javascript">
 			
 			var getImport; 
@@ -40,17 +39,16 @@
 			switch(respuesta)
 		    		{
 		    			case 'OK':
-		    				getImport = document.querySelector('#Menu-file');
+		    				$('#cargarMenu').load("Menu.html");
 		    				break;
 		    			case 'OKA':
-		    				getImport = document.querySelector('#MenuAdm-file');
+		    				$('#cargarMenu').load("MenuAdm.html");
 		    				break;	
 		    			default:
 		    				location.href = server +"Index.html";
 		    				break;
 		    		}
-		    		getContent = getImport.import.querySelector('#menuprincipal');
-			    	document.body.appendChild(document.importNode(getContent, true));
+
 
 		</script>
 

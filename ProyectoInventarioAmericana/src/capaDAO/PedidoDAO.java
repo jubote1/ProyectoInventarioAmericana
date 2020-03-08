@@ -231,5 +231,43 @@ public class PedidoDAO {
 		return(pedidosDomCOM);
 	}
 	
+	public static ArrayList obtenerPedidosDomiciliosCOMTienda(int idRazon,String fechaAnterior, String fechaActual)
+	{
+		Logger logger = Logger.getLogger("log_file");
+		ArrayList pedidosDomCOMTiendas = new ArrayList();
+		ConexionBaseDatos con = new ConexionBaseDatos();
+		Connection con1 = con.obtenerConexionBDPedidos();
+		try
+		{
+			Statement stm = con1.createStatement();
+			String consulta = "select b.nombre, sum(a.total_neto) as total from pedido a, tienda b, razon_x_tienda e, marcacion_pedido f, pedido_forma_pago g "
+					+"where a.idtienda = b.idtienda and b.idtienda = e.idtienda and e.idrazon = " + idRazon +"  and a.idpedido = f.idpedido "
+					+"and f.idmarcacion = 1 and a.fechapedido >= '" + fechaAnterior + "' and a.fechapedido <= '" + fechaActual + "' and a.idpedido = g.idpedido group by b.nombre";
+			logger.info(consulta);
+			ResultSet rs = stm.executeQuery(consulta);
+			String[] resTemp = new String[2];
+			while(rs.next()){
+				resTemp = new String[9];
+				resTemp[0] = rs.getString("nombre");
+				resTemp[1] = Double.toString(rs.getDouble("total"));
+				pedidosDomCOMTiendas.add(resTemp);
+			}
+			rs.close();
+			stm.close();
+			con1.close();
+		}catch (Exception e){
+			logger.info(e.toString());
+			System.out.println("falle lanzando la consulta de domicilios.com");
+			try
+			{
+				con1.close();
+			}catch(Exception e1)
+			{
+				logger.info(e1.toString());
+				System.out.println("falle cerrando la conexion");
+			}
+		}
+		return(pedidosDomCOMTiendas);
+	}
 	
 }

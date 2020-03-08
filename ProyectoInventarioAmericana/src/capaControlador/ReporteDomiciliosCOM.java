@@ -129,6 +129,8 @@ public class ReporteDomiciliosCOM {
 			razTemp = razonesSociales.get(i);
 			//Con la razón social y con la fecha podemos ir a realizar la consulta de los pedidos de domicilios.com
 			ArrayList pedidosDomCOM = PedidoDAO.obtenerPedidosDomiciliosCOM(razTemp.getIdRazon(), fechaAnterior, fechaActual);
+			//Obtenemos un total por tienda de los pedidos
+			ArrayList pedidosDomCOMTienda = PedidoDAO.obtenerPedidosDomiciliosCOMTienda(razTemp.getIdRazon(), fechaAnterior, fechaActual);
 			//Procedemos a procesar la información y a enviar el correo con el reporte
 			String respuesta = "";
 			respuesta = respuesta + "<table border='2'> <tr> RESUMEN SEMANAL DOMICILIOS.COM RAZON SOCIAL " + razTemp.getNombreRazon() +  " </tr>";
@@ -190,6 +192,20 @@ public class ReporteDomiciliosCOM {
 			respuesta = respuesta + "<b>TOTAL PEDIDOS SEMANA " + formatea.format(totalPedidosSemana) +"</b><br/>";
 			respuesta = respuesta + "<b>TOTAL PEDIDOS PAGO-ONLINE " + formatea.format(totalPagoOnLine) +"</b><br/>";
 			respuesta = respuesta + "<b>TOTAL DE DESCUENTOS EN LA SEMANA " + formatea.format(totalDescuentos) +"</b><br/>";
+			
+			//Agregamos en este apartado el total de pedidos por tienda para poder extraer la comisión por tienda
+			respuesta = respuesta + "<table border='2'> <tr> TOTAL POR TIENDA " + razTemp.getNombreRazon() +  " </tr>";
+			respuesta = respuesta + "<tr>"
+					+  "<td><strong>Tiendao</strong></td>"
+					+  "<td><strong>Total Pedidos</strong></td>"
+					+"</tr>";
+			String[] resTotalTienda;
+			for(int j = 0; j < pedidosDomCOMTienda.size(); j++)
+			{
+				resTotalTienda = (String[]) pedidosDomCOMTienda.get(j);
+				respuesta = respuesta + "<tr><td>" + resTotalTienda[0] + "</td><td>" + formatea.format(Double.parseDouble(resTotalTienda[1])) + "</td></tr>";
+			}
+			respuesta = respuesta + "</table> <br/>";
 			
 			//Continuamos con las anulaciones que deben realizarse por razón zocial y por rango de fechas
 			ArrayList<MarcacionAnulacionPedido> marAnulaciones = MarcacionAnulacionPedidoDAO.consultarMarcacionAnulacion(fechaAnterior, fechaActual, razTemp.getIdRazon());

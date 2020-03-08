@@ -38,7 +38,7 @@ public static int insertarInsmo(Insumo insumo)
 		{
 			controlCantidad = 0;
 		}
-		String insert = "insert into insumo (nombre_insumo, unidad_medida, precio_unidad, manejacanastas, cantidadxcanasta, nombrecontenedor, categoria, control_cantidad, costo_unidad) values ('" + insumo.getNombre() + "', '" + insumo.getUnidadMedida() + "' , " + 0 + " , '"+ insumo.getManejacanasta() + "' , " + insumo.getCantidaxcanasta() + " , '" + insumo.getNombreContenedor() + "' , '" + insumo.getCategoria() + "' , " +  controlCantidad + " , " + insumo.getCostoUnidad() +")"; 
+		String insert = "insert into insumo (nombre_insumo, unidad_medida, precio_unidad, manejacanastas, cantidadxcanasta, nombrecontenedor, categoria, control_cantidad, costo_unidad, control_tienda) values ('" + insumo.getNombre() + "', '" + insumo.getUnidadMedida() + "' , " + 0 + " , '"+ insumo.getManejacanasta() + "' , " + insumo.getCantidaxcanasta() + " , '" + insumo.getNombreContenedor() + "' , '" + insumo.getCategoria() + "' , " +  controlCantidad + " , " + insumo.getCostoUnidad() + " , '" + insumo.getControlTienda() +"')"; 
 		stm.executeUpdate(insert);
 		ResultSet rs = stm.getGeneratedKeys();
 		if (rs.next()){
@@ -72,7 +72,7 @@ public static Insumo retornarInsumo(int idInsumo)
 	int idEspecialidadEli = 0;
 	ConexionBaseDatos con = new ConexionBaseDatos();
 	Connection con1 = con.obtenerConexionBDPrincipalLocal();
-	Insumo insumo = new Insumo(0, "", "", 0, "",0, "", "", false,0);
+	Insumo insumo = new Insumo(0, "", "", 0, "",0, "", "", false,0,"");
 	try
 	{
 		Statement stm = con1.createStatement();
@@ -89,6 +89,7 @@ public static Insumo retornarInsumo(int idInsumo)
 		boolean controlCantidad = false;
 		int intControlCantidad = 0;
 		double costoUnidad = 0;
+		String controlTienda= "N";
 		while(rs.next()){
 			nombre = rs.getString("nombre_insumo");
 			unidadMedida = rs.getString("unidad_medida");
@@ -118,9 +119,10 @@ public static Insumo retornarInsumo(int idInsumo)
 			{
 				costoUnidad = 0;
 			}
+			controlTienda = rs.getString("control_tienda");
 			break;
 		}
-		insumo = new Insumo(idInsumo, nombre, unidadMedida,precioUnidad,manejaCanasta, cantidadCanasta, nombreContenedor, categoria, controlCantidad, costoUnidad);
+		insumo = new Insumo(idInsumo, nombre, unidadMedida,precioUnidad,manejaCanasta, cantidadCanasta, nombreContenedor, categoria, controlCantidad, costoUnidad, controlTienda);
 		stm.close();
 		con1.close();
 	}
@@ -159,7 +161,7 @@ public static String editarInsumo(Insumo insumo)
 			intControlCantidad = 0;
 		}
 		String update = "update insumo set nombre_insumo ='" + insumo.getNombre() + "', unidad_medida =  '" + insumo.getUnidadMedida() 
-		+ "' , precio_unidad = " + insumo.getPrecioUnidad() + " , manejacanastas = '" + insumo.getManejacanasta() + "' , cantidadxcanasta = " + insumo.getCantidaxcanasta() + " , nombrecontenedor = '" + insumo.getNombreContenedor() + "' , categoria = '" + insumo.getCategoria() + "' , control_cantidad = " + intControlCantidad + " , costo_unidad = " + insumo.getCostoUnidad() + " where idinsumo = " + insumo.getIdinsumo(); 
+		+ "' , precio_unidad = " + insumo.getPrecioUnidad() + " , manejacanastas = '" + insumo.getManejacanasta() + "' , cantidadxcanasta = " + insumo.getCantidaxcanasta() + " , nombrecontenedor = '" + insumo.getNombreContenedor() + "' , categoria = '" + insumo.getCategoria() + "' , control_cantidad = " + intControlCantidad + " , costo_unidad = " + insumo.getCostoUnidad() + " , control_tienda = '" + insumo.getControlTienda() + "' where idinsumo = " + insumo.getIdinsumo(); 
 		logger.info(update);
 		stm.executeUpdate(update);
 		resultado = "exitoso";
@@ -186,7 +188,7 @@ public static ArrayList<Insumo> retornarInsumos()
 	int idEspecialidadEli = 0;
 	ConexionBaseDatos con = new ConexionBaseDatos();
 	Connection con1 = con.obtenerConexionBDPrincipalLocal();
-	Insumo insumo = new Insumo(0, "", "", 0, "",0, "", "", false,0);
+	Insumo insumo = new Insumo(0, "", "", 0, "",0, "", "", false,0, "");
 	ArrayList<Insumo> insumos = new ArrayList();
 	try
 	{
@@ -205,6 +207,7 @@ public static ArrayList<Insumo> retornarInsumos()
 		boolean controlCantidad = false;
 		int intControlCantidad = 0;
 		double costoUnidad = 0;
+		String controlTienda = "";
 		while(rs.next()){
 			idInsumo = rs.getInt("idinsumo");
 			nombre = rs.getString("nombre_insumo");
@@ -235,7 +238,8 @@ public static ArrayList<Insumo> retornarInsumos()
 			{
 				costoUnidad = 0;
 			}
-			insumo = new Insumo(idInsumo, nombre, unidadMedida,precioUnidad,manejaCanasta, cantidadCanasta, nombreContenedor, categoria, controlCantidad, costoUnidad);
+			controlTienda = rs.getString("control_tienda");
+			insumo = new Insumo(idInsumo, nombre, unidadMedida,precioUnidad,manejaCanasta, cantidadCanasta, nombreContenedor, categoria, controlCantidad, costoUnidad, controlTienda);
 			insumos.add(insumo);
 		}
 		

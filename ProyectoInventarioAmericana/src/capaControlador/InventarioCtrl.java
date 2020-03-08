@@ -129,6 +129,99 @@ public class InventarioCtrl {
 		return(listJSON.toString());
 	}
 	
+	public String CalcularInventarioTiendaSinFecha(int idtienda, String fecha)
+	{
+		//obtenemos día de la semana para recuperar inventario requerido de la tienda
+		// Creamos una instancia del calendario
+		GregorianCalendar cal = new GregorianCalendar();
+		int diasemana = 0;
+		JSONArray listJSON = new JSONArray();
+		String fechaFormato = "";
+		try
+		{
+			Date fecha1 = new SimpleDateFormat("dd/MM/yyyy").parse(fecha);
+			fechaFormato = new  SimpleDateFormat("yyyy-MM-dd").format(fecha1);
+			cal.setTime(fecha1);
+			diasemana = cal.get(Calendar.DAY_OF_WEEK);
+		}catch(Exception e)
+		{
+			System.out.println(e.toString());
+		}
+		ArrayList<InsumoTienda> insumosTienda = InventarioDAO.ObtenerInsumosTiendaAutomaticoSinFecha(idtienda);
+		ArrayList<InsumoRequeridoTienda> insRequeridosTienda = InventarioDAO.ObtenerInsumosRequeridosTienda(idtienda, diasemana);
+		for (InsumoRequeridoTienda insReqTienda : insRequeridosTienda)
+		{
+			JSONObject cadaJSON = new JSONObject();
+			cadaJSON.put("idinsumo", insReqTienda.getIdinsumo());
+			cadaJSON.put("requerido", insReqTienda.getCantidad());
+			cadaJSON.put("unidadmedida", insReqTienda.getUnidadMedida());
+			double cantidadLlevar = 0;
+			int cantidadxcanasta;
+			String manejacanastas;
+			for (InsumoTienda insTienda : insumosTienda)
+			{
+				if(insReqTienda.getIdinsumo() == insTienda.getIdinsumo())
+				{
+					cadaJSON.put("nombreinsumo", insTienda.getNombreInsumo());
+					cadaJSON.put("cantidadtienda", insTienda.getCantidad());
+					if(insReqTienda.getManejacanasta().equals("S"))
+					{
+						cantidadLlevar =  insReqTienda.getCantidad() - insTienda.getCantidad();
+						int canastas = (int)cantidadLlevar / insReqTienda.getCantidadxcanasta();
+						int residuocanastas = (int)cantidadLlevar % insReqTienda.getCantidadxcanasta();
+						if (residuocanastas > 0)
+						{
+							canastas++;
+							cantidadLlevar = insReqTienda.getCantidadxcanasta()*canastas;
+						}
+						cadaJSON.put("cantidadcanastas", canastas);
+					}
+					else
+					{
+						cantidadLlevar =  insReqTienda.getCantidad() - insTienda.getCantidad();
+						cadaJSON.put("cantidadcanastas", 0);
+					}
+									
+					if (cantidadLlevar < 0)
+					{
+						cantidadLlevar = 0;
+					}
+					break;
+				}
+				
+			}
+			cadaJSON.put("cantidadllevar", cantidadLlevar);
+			cadaJSON.put("nombrecontenedor", insReqTienda.getNombrecontenedor());
+			cadaJSON.put("cantidadxcanasta", insReqTienda.getCantidadxcanasta());
+			cadaJSON.put("manejacanastas", insReqTienda.getManejacanasta());
+			listJSON.add(cadaJSON);
+		}
+		
+		return(listJSON.toString());
+	}
+	
+	public String verificarExistenciaDespachoTienda(int idtienda, String fecha)
+	{
+		//obtenemos día de la semana para recuperar inventario requerido de la tienda
+		// Creamos una instancia del calendario
+		GregorianCalendar cal = new GregorianCalendar();
+		int diasemana = 0;
+		JSONObject respuesta = new JSONObject();
+		String fechaFormato = "";
+		try
+		{
+			Date fecha1 = new SimpleDateFormat("dd/MM/yyyy").parse(fecha);
+			fechaFormato = new  SimpleDateFormat("yyyy-MM-dd").format(fecha1);
+			cal.setTime(fecha1);
+			diasemana = cal.get(Calendar.DAY_OF_WEEK);
+		}catch(Exception e)
+		{
+			System.out.println(e.toString());
+		}
+		boolean existe = InsumoDespachoTiendaDAO.existeInsumoDespachoTienda(idtienda, fechaFormato);
+		respuesta.put("existe", existe);
+		return(respuesta.toJSONString());
+	}
 	
 	/**
 	 * Método que se encarga de la conformación del despacho para la modificación de este en caso de que se requiera
@@ -897,6 +990,7 @@ public String retornarInsumo(int idInsumo)
 	insumoResp.put("nombrecontenedor", insumo.getNombreContenedor());
 	insumoResp.put("categoria", insumo.getCategoria());
 	insumoResp.put("costounidad", insumo.getCostoUnidad());
+	insumoResp.put("controltienda", insumo.getControlTienda());
 	String controlCantidad  = "";
 	if(insumo.isControl_cantidad())
 	{

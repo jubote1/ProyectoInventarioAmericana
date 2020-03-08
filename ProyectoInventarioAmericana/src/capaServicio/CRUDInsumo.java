@@ -89,7 +89,8 @@ public class CRUDInsumo extends HttpServlet {
 				{
 					costoUnidad = 0;
 				}
-				Insumo insumo = new Insumo(0,nombre, unidadMedida,precioUnidad,manejaCanasta,cantidadCanasta,nombreContenedor,categoria, controlCantidad,costoUnidad);
+				String controlTienda = request.getParameter("controltienda");
+				Insumo insumo = new Insumo(0,nombre, unidadMedida,precioUnidad,manejaCanasta,cantidadCanasta,nombreContenedor,categoria, controlCantidad,costoUnidad, controlTienda);
 				respuesta = invCtrl.insertarInsumo(insumo);
 			}else if (operacion ==2)
 			{
@@ -132,7 +133,8 @@ public class CRUDInsumo extends HttpServlet {
 				{
 					costoUnidad = 0;
 				}
-				Insumo insumoEdit = new Insumo(idInsumoEdit,nombre, unidadMedida,precioUnidad,manejaCanasta,cantidadCanasta,nombreContenedor,categoria, controlCantidad,costoUnidad);
+				String controlTienda = request.getParameter("controltienda");
+				Insumo insumoEdit = new Insumo(idInsumoEdit,nombre, unidadMedida,precioUnidad,manejaCanasta,cantidadCanasta,nombreContenedor,categoria, controlCantidad,costoUnidad, controlTienda);
 				respuesta = invCtrl.editarInsumo(insumoEdit);
 			}else if (operacion ==3 )
 			{

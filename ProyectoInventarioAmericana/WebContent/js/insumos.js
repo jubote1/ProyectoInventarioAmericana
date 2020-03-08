@@ -97,8 +97,9 @@ function guardarInsumo()
 	var categoria = $('#selectcategoria').val();
 	var controlCantidad = $('#selectcontrolcantidad').val();
 	var costoUnidad = $('#costounidad').val();
+	var controlTienda = "N";
 	var idInsumo;
-	$.getJSON(server + 'CRUDInsumo?idoperacion=1&nombreinsumo=' + nombre + "&unidadmedida=" + unidadMedida + "&manejacanastas=" + manejaCanastas + "&cantidadcanasta=" + cantidadCanasta + "&nombrecontenedor=" + nombreContenedor + "&categoria=" + categoria + "&controlcantidad=" + controlCantidad + "&costounidad=" + costoUnidad , function(data){
+	$.getJSON(server + 'CRUDInsumo?idoperacion=1&nombreinsumo=' + nombre + "&unidadmedida=" + unidadMedida + "&manejacanastas=" + manejaCanastas + "&cantidadcanasta=" + cantidadCanasta + "&nombrecontenedor=" + nombreContenedor + "&categoria=" + categoria + "&controlcantidad=" + controlCantidad + "&costounidad=" + costoUnidad + "&controltienda=" + controlTienda , function(data){
 		var respuesta = data;
 		idInsumo= respuesta.idinsumo;
 				
@@ -163,7 +164,7 @@ function pintarInsumos()
 					"unidadmedida": data1[i].unidadmedida, 
 					"categoria": data1[i].categoria, 
 					"costounidad": data1[i].costounidad, 
-					"accion":'<button type="button" onclick="editarInsumo('+data1[i].idinsumo +')" class="btn btn-default btn-xs editButton" ' + 'data-id="' + data1[i].idinsumo + '" >Edicion</button>'
+					"accion":'<button type="button" onclick="editarInsumo('+data1[i].idinsumo +')" class="btn btn-default btn-xs editButton" ' + 'data-id="' + data1[i].idinsumo + '" ><i class="fas fa-edit">Editar</i></button>'
 				}).draw();
 				//table.row.add(data1[i]).draw();
 			}
@@ -191,7 +192,13 @@ function editarInsumo(idInsumo)
     						$("#selectcategoriaedit").val(respuesta.categoria);
     						$("#selectcontrolcantidadedit").val(respuesta.controlcantidad);
     						$("#costounidadedit").val(respuesta.costounidad);
-
+    						if(respuesta.controltienda == 'S')
+    						{
+    							$('#controltienda').prop('checked', true);
+    						}else
+    						{
+    							$('#controltienda').prop('checked', false);
+    						}
 				            // Show the dialog
 				            bootbox
 				                .dialog({
@@ -232,9 +239,14 @@ function confirmarEditarInsumo()
 			var categoriaEncode = encodeURIComponent(categoria);
 			var controlCantidad = $('#selectcontrolcantidadedit').val();
 			var costoUnidad = $('#costounidadedit').val();
+			var controlTienda = "N";
+			if($('#controltienda').is(':checked'))
+            {
+                controlTienda = "S";
+            }
 			// The url and method might be different in your application
             $.ajax({ 
-    				url: server + 'CRUDInsumo?idoperacion=2&nombreinsumo=' + nombreEncode + "&unidadmedida=" + unidadMedida + "&manejacanastas=" + manejaCanastas + "&cantidadcanasta=" + cantidadCanasta + "&nombrecontenedor=" + nombreContenedor + "&categoria=" + categoriaEncode + "&controlcantidad=" + controlCantidad + "&costounidad=" + costoUnidad + "&idinsumo=" + idInsumo , 
+    				url: server + 'CRUDInsumo?idoperacion=2&nombreinsumo=' + nombreEncode + "&unidadmedida=" + unidadMedida + "&manejacanastas=" + manejaCanastas + "&cantidadcanasta=" + cantidadCanasta + "&nombrecontenedor=" + nombreContenedor + "&categoria=" + categoriaEncode + "&controlcantidad=" + controlCantidad + "&costounidad=" + costoUnidad + "&idinsumo=" + idInsumo + "&controltienda=" + controlTienda , 
     				dataType: 'json', 
     				async: false, 
     				success: function(data){
