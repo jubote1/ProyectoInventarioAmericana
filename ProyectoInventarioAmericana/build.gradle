@@ -1,0 +1,63 @@
+buildscript {
+	repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.bmuschko:gradle-tomcat-plugin:2.5'
+    }
+}
+
+apply plugin: 'java-library'
+apply plugin: 'war'
+apply plugin: 'com.bmuschko.tomcat'
+
+//war.baseName = 'ProyectoInventarioAmericana'
+sourceSets.main.java.srcDirs = ['src/main/java']
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}    
+
+dependencies {
+   implementation  'log4j:log4j:1.2.16'
+   
+   implementation fileTree(dir: 'libs', include: '*.jar')
+   
+   // https://mvnrepository.com/artifact/commons-logging/commons-logging
+   implementation group: 'commons-logging', name: 'commons-logging', version: '1.1.1'
+   
+   // https://mvnrepository.com/artifact/javax.mail/mail
+   implementation group: 'javax.mail', name: 'mail', version: '1.4.7'
+      
+   // https://mvnrepository.com/artifact/mysql/mysql-connector-java
+   implementation group: 'mysql', name: 'mysql-connector-java', version: '8.0.19'
+   
+   // https://mvnrepository.com/artifact/org.apache.poi/poi
+   implementation group: 'org.apache.poi', name: 'poi', version: '4.0.0'
+   
+   // https://mvnrepository.com/artifact/org.apache.poi/poi-ooxml
+   implementation group: 'org.apache.poi', name: 'poi-ooxml', version: '4.0.0'
+   
+   // https://mvnrepository.com/artifact/org.apache.poi/poi-ooxml-schemas
+   implementation group: 'org.apache.poi', name: 'poi-ooxml-schemas', version: '4.0.0'
+      
+   // https://mvnrepository.com/artifact/javax.servlet/javax.servlet-api
+   providedCompile "javax.servlet:javax.servlet-api:4.0.0" 
+   
+} 
+
+dependencies {
+    def tomcatVersion = '9.0.1'
+    tomcat "org.apache.tomcat.embed:tomcat-embed-core:${tomcatVersion}",
+           "org.apache.tomcat.embed:tomcat-embed-logging-juli:9.0.0.M6",
+           "org.apache.tomcat.embed:tomcat-embed-jasper:${tomcatVersion}"
+}
+
+tomcat {
+    httpPort = 8080
+    tomcatRun.contextPath = '/ProyectoInventarioAmericana'
+    tomcatRunWar.contextPath = '/ProyectoInventarioAmericana'
+    httpProtocol = 'org.apache.coyote.http11.Http11Nio2Protocol'
+    ajpProtocol  = 'org.apache.coyote.ajp.AjpNio2Protocol'
+}
