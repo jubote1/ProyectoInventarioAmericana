@@ -11,9 +11,14 @@ public class InsumoDespachoTiendaDetalle {
 	private String lote;
 	private int estado;
 	private String color;
+	private String caducidadLote;
 	
-	
-	
+	public String getCaducidadLote() {
+		return caducidadLote;
+	}
+	public void setCaducidadLote(String caducidadLote) {
+		this.caducidadLote = caducidadLote;
+	}
 	public String getColor() {
 		return color;
 	}

@@ -62,6 +62,7 @@ public class ConsumoInventarioDAO {
 			{
 				consulta = consulta + " " + "and b.varianza_resumida = 1 ";
 			}
+			consulta = consulta + " order by b.orden asc";
 			logger.info(consulta);
 			ResultSet rs = stm.executeQuery(consulta);
 			int idInsumo = 0;
@@ -86,7 +87,7 @@ public class ConsumoInventarioDAO {
 			}
 			stm.close();
 			con1.close();
-			//Posteriormente vamos a realizar un procesamiento para organizar la información por día
+			//Posteriormente vamos a realizar un procesamiento para organizar la informaciï¿½n por dï¿½a
 			InsumoConsumido insumoConTemp;
 			InsumoConsumidoSemana insumoConSemTemp;
 			boolean encontrado;

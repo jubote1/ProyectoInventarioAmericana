@@ -14,7 +14,7 @@ import conexionINV.ConexionBaseDatos;
 
 
 /**
- * Clase que se encarga de implementar todos aquellos métodos que tienen una interacción directa con la base de datos
+ * Clase que se encarga de implementar todos aquellos mï¿½todos que tienen una interacciï¿½n directa con la base de datos
  * @author JuanDavid
  *
  */
@@ -22,8 +22,8 @@ public class InsumoDAO {
 	
 	
 /**
- * Método que se encarga de insertar en base de datos la información de la entidad Especialidad
- * @param Espe recibe como parámetro un objeto Modelo Especialidad con base en el cual se realiza la inserción de la
+ * Mï¿½todo que se encarga de insertar en base de datos la informaciï¿½n de la entidad Especialidad
+ * @param Espe recibe como parï¿½metro un objeto Modelo Especialidad con base en el cual se realiza la inserciï¿½n de la
  * especialidad.
  * @return Se retonra valor entero con el id de la especiliadad insertada.
  */
@@ -66,10 +66,10 @@ public static int insertarInsmo(Insumo insumo)
 }
 
 /**
- * Método que se encarga de retornar una especialidad dado un idespecialidad
- * @param idespecialidad recibe como parámetro un intero id especialidad y con base en esto, realiza la consulta
- * en base de datos y retorna la información.
- * @return Se retorna la información de la especialidad en un objeto Modelo Especialidad.
+ * Mï¿½todo que se encarga de retornar una especialidad dado un idespecialidad
+ * @param idespecialidad recibe como parï¿½metro un intero id especialidad y con base en esto, realiza la consulta
+ * en base de datos y retorna la informaciï¿½n.
+ * @return Se retorna la informaciï¿½n de la especialidad en un objeto Modelo Especialidad.
  */
 public static Insumo retornarInsumo(int idInsumo)
 {
@@ -95,6 +95,7 @@ public static Insumo retornarInsumo(int idInsumo)
 		int intControlCantidad = 0;
 		double costoUnidad = 0;
 		String controlTienda= "N";
+		double embalajeCosto = 0;
 		while(rs.next()){
 			nombre = rs.getString("nombre_insumo");
 			unidadMedida = rs.getString("unidad_medida");
@@ -124,10 +125,18 @@ public static Insumo retornarInsumo(int idInsumo)
 			{
 				costoUnidad = 0;
 			}
+			try
+			{
+				embalajeCosto = rs.getDouble("embalaje_costo");
+			}catch(Exception e)
+			{
+				embalajeCosto = 0;
+			}
 			controlTienda = rs.getString("control_tienda");
 			break;
 		}
 		insumo = new Insumo(idInsumo, nombre, unidadMedida,precioUnidad,manejaCanasta, cantidadCanasta, nombreContenedor, categoria, controlCantidad, costoUnidad, controlTienda);
+		insumo.setEmbalajeCosto(embalajeCosto);
 		stm.close();
 		con1.close();
 	}
@@ -144,8 +153,8 @@ public static Insumo retornarInsumo(int idInsumo)
 }
 
 /**
- * Método que tiene como objetivo modificar una especialidad.
- * @param Espe Recibe como parámetro un objeto Modelo Especiliadad con base en la cual se hará la modificación.
+ * Mï¿½todo que tiene como objetivo modificar una especialidad.
+ * @param Espe Recibe como parï¿½metro un objeto Modelo Especiliadad con base en la cual se harï¿½ la modificaciï¿½n.
  * @return Se retorna un string indicadno si el proceso fue exitoso o no.
  */
 public static String editarInsumo(Insumo insumo)
@@ -273,7 +282,7 @@ public static String actualizarPrecioInsumoRetirado(int idInsumo , double costoU
 	ConexionBaseDatos con = new ConexionBaseDatos();
 	Connection con1 = con.obtenerConexionBDInventarioPOSBodega();
 	String resultado = "";
-	//Realizamos la lógica para extraer desde cuando se hace la consulta del cambio de precio.
+	//Realizamos la lï¿½gica para extraer desde cuando se hace la consulta del cambio de precio.
 	SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 	Calendar calendarioActual = Calendar.getInstance();
 	String fechaActual = "";
@@ -324,7 +333,7 @@ public static String actualizarPrecioInsumoRetirado(int idInsumo , double costoU
 		//Si es sabado se resta cinco
 		calendarioActual.add(Calendar.DAY_OF_YEAR, -5);
 	}
-	//Llevamos a un string la fecha anterior para el cálculo de la venta
+	//Llevamos a un string la fecha anterior para el cï¿½lculo de la venta
 	datFechaAnterior = calendarioActual.getTime();
 	fechaAnterior = dateFormat.format(datFechaAnterior);
 	

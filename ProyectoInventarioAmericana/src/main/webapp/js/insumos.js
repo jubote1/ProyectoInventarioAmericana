@@ -192,6 +192,7 @@ function editarInsumo(idInsumo)
     						$("#selectcategoriaedit").val(respuesta.categoria);
     						$("#selectcontrolcantidadedit").val(respuesta.controlcantidad);
     						$("#costounidadedit").val(respuesta.costounidad);
+    						$("#embalajecosto").val(respuesta.embalajecosto);
     						if(respuesta.controltienda == 'S')
     						{
     							$('#controltienda').prop('checked', true);
@@ -199,6 +200,18 @@ function editarInsumo(idInsumo)
     						{
     							$('#controltienda').prop('checked', false);
     						}
+    						//Realizamos revisión de la explicación del costeo
+    						if($("#selectunidadmedidaedit").val() == "unidad")
+    						{
+    							$("#infocostounidad").val("Por unidad el costo es " + respuesta.costounidad );
+    						}else if($("#selectunidadmedidaedit").val() == "gramos")
+    						{
+    							$("#infocostounidad").val("Por " + respuesta.embalajecosto + " gramos, el costo es " + respuesta.costounidad);
+    						}else if($("#selectunidadmedidaedit").val() == "paquete")
+    						{
+    							$("#infocostounidad").val("Por " + respuesta.embalajecosto + " unidades, el costo es " + respuesta.costounidad);
+    						}
+
 				            // Show the dialog
 				            bootbox
 				                .dialog({
@@ -235,6 +248,10 @@ function confirmarEditarInsumo()
 			var manejaCanastas = $('#selectmanejacanastasedit').val();
 			var cantidadCanasta = $('#cantidadcanastasedit').val();
 			var nombreContenedor = $('#selectnombrecontenedoredit').val();
+			if(nombreContenedor == 'null' || nombreContenedor == null)
+			{
+				nombreContenedor = "";
+			}
 			var categoria = $('#selectcategoriaedit').val();
 			var categoriaEncode = encodeURIComponent(categoria);
 			var controlCantidad = $('#selectcontrolcantidadedit').val();

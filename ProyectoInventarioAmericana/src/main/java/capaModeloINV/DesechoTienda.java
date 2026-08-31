@@ -14,9 +14,36 @@ public class DesechoTienda {
 	private double costo;
 	private double cantidad;
 	private String usuario;
+	private int idEstado;
+	private String estado;
+	private String fechaCarro;
+	private String fechaBodega;
 	
 	
-	
+	public String getFechaCarro() {
+		return fechaCarro;
+	}
+	public void setFechaCarro(String fechaCarro) {
+		this.fechaCarro = fechaCarro;
+	}
+	public String getFechaBodega() {
+		return fechaBodega;
+	}
+	public void setFechaBodega(String fechaBodega) {
+		this.fechaBodega = fechaBodega;
+	}
+	public int getIdEstado() {
+		return idEstado;
+	}
+	public void setIdEstado(int idEstado) {
+		this.idEstado = idEstado;
+	}
+	public String getEstado() {
+		return estado;
+	}
+	public void setEstado(String estado) {
+		this.estado = estado;
+	}
 	public double getCantidad() {
 		return cantidad;
 	}

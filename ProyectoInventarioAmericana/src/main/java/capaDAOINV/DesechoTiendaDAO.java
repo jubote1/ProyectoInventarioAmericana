@@ -10,7 +10,7 @@ import capaModeloINV.DesechoTienda;
 import conexionINV.ConexionBaseDatos;
 
 /**
- * Clase que se encarga de implementar toda la interacción con la base de datos para le entidad Producto.
+ * Clase que se encarga de implementar toda la interacciï¿½n con la base de datos para le entidad Producto.
  * @author JuanDavid
  *
  */
@@ -25,7 +25,7 @@ public class DesechoTiendaDAO {
 		try
 		{
 			Statement stm = con1.createStatement();
-			String consulta = "select a.*, b.descripcion descdesecho, b.costo from desecho_tienda a, desecho b where a.iddesecho = b.iddesecho and a.fecha >= '" + fechaInicial + "' and a.fecha <= '" + fechaFinal +"' and idtienda = " + idTienda;
+			String consulta = "select a.*, b.descripcion descdesecho, b.costo, a.idestado, e.nombre, (SELECT fecha_cambio FROM cambio_estado_aprovechable h WHERE h.idaprovechable = a.iddesecho_tienda AND h.idestado = 2 limit 1 ) AS fechacarro, (SELECT fecha_cambio FROM cambio_estado_aprovechable h WHERE h.idaprovechable = a.iddesecho_tienda AND h.idestado = 3 limit 1) AS fechabodega from desecho_tienda a, desecho b, estado_aprovechable e where a.iddesecho = b.iddesecho and a.fecha >= '" + fechaInicial + "' and a.fecha <= '" + fechaFinal +"' and idtienda = " + idTienda + " and a.idestado = e.idestado ";
 			logger.info(consulta);
 			ResultSet rs = stm.executeQuery(consulta);
 			int idDesechoTienda;
@@ -39,6 +39,10 @@ public class DesechoTiendaDAO {
 			double costo;
 			double cantidad;
 			String usuario;
+			int idEstado;
+			String estado;
+			String fechaCarro;
+			String fechaBodega;
 			while(rs.next()){
 				idDesechoTienda = rs.getInt("iddesecho_tienda");
 				numeroDesecho = rs.getInt("numero_desecho");
@@ -52,9 +56,17 @@ public class DesechoTiendaDAO {
 				cantidad = rs.getDouble("cantidad");
 				usuario = rs.getString("usuario");
 				descripcionDesecho = rs.getString("descdesecho");
+				idEstado = rs.getInt("idestado");
+				estado = rs.getString("nombre");
+				fechaCarro = rs.getString("fechacarro");
+				fechaBodega = rs.getString("fechabodega");
 				DesechoTienda desechoTienda = new DesechoTienda(idDesechoTienda, numeroDesecho, idTienda, fecha, descripcion, motivo, idDesecho, gramos, cantidad, usuario );
 				desechoTienda.setDescripcionDesecho(descripcionDesecho);
 				desechoTienda.setCosto(costo);
+				desechoTienda.setIdEstado(idEstado);
+				desechoTienda.setEstado(estado);
+				desechoTienda.setFechaCarro(fechaCarro);
+				desechoTienda.setFechaBodega(fechaBodega);
 				desechosFechas.add(desechoTienda);
 			}
 			rs.close();
@@ -180,7 +192,6 @@ public class DesechoTiendaDAO {
 		return(desechosFechas);
 		
 	}
-	
 
 	public static int insertarDesechoTienda(DesechoTienda des)
 	{
@@ -327,5 +338,36 @@ public class DesechoTiendaDAO {
 		return(respuesta);
 	}
 
-
+	public static boolean actualizarEstadoAprovechable (int idAprovechable, int idEstado)
+	{
+		boolean respuesta = false;
+		Logger logger = Logger.getLogger("log_file");
+		ConexionBaseDatos con = new ConexionBaseDatos();
+		Connection con1 = con.obtenerConexionBDPrincipalLocal();
+		try
+		{
+			Statement stm = con1.createStatement();
+			String update = "update desecho_tienda set idestado = " + idEstado +"  where iddesecho_tienda = " + idAprovechable; 
+			logger.info(update);
+			stm.executeUpdate(update);
+			String insert = "insert into cambio_estado_aprovechable (idaprovechable, idestado) values(" + idAprovechable + "," + idEstado + ")";
+			logger.info(insert);
+			stm.executeUpdate(insert);
+			stm.close();
+			con1.close();
+			respuesta = true;
+		}
+		catch (Exception e){
+			logger.error(e.toString());
+			try
+			{
+				con1.close();
+			}catch(Exception e1)
+			{
+			}
+			
+		}
+		return(respuesta);
+	}
+	
 }

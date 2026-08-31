@@ -13,18 +13,24 @@ import javax.servlet.http.HttpSession;
 import org.apache.log4j.Logger;
 
 import capaControladorINV.InventarioCtrl;
+import capaModeloINV.DesechoTienda;
 
 /**
- * Servlet implementation class InsertarDetalleDespachoTienda
+ * Servlet implementation class InsertarDespachoTienda
  */
-@WebServlet("/ActualizarDetalleLoteDespachoTienda")
-public class ActualizarDetalleLoteDespachoTienda extends HttpServlet {
+@WebServlet("/CambiarEstadoAprovechable")
+/**
+ * Servlet que tiene como objetivo la INserci�n del encabezado de un despacho tienda.
+ * @author JuanDavid
+ *
+ */
+public class CambiarEstadoAprovechable extends HttpServlet {
 	private static final long serialVersionUID = 1L;
        
     /**
      * @see HttpServlet#HttpServlet()
      */
-    public ActualizarDetalleLoteDespachoTienda() {
+    public CambiarEstadoAprovechable() {
         super();
         // TODO Auto-generated constructor stub
     }
@@ -33,64 +39,33 @@ public class ActualizarDetalleLoteDespachoTienda extends HttpServlet {
 	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
 	 */
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		// TODO Auto-generated method stub
 		response.addHeader("Access-Control-Allow-Origin", "*");
 		response.setContentType("application/json");
 		Logger logger = Logger.getLogger("log_file");
 		HttpSession sesion = request.getSession(true);
-        int iddespacho;
-        int idinsumo;
-        int idDespachoDetalle;
-        String lote;
-        String color;
-        String caducidadLote;
+        int idaprovechable;
         try
         {
-        	idDespachoDetalle = Integer.parseInt(request.getParameter("iddespachodetalle"));
+        	idaprovechable = Integer.parseInt(request.getParameter("idaprovechable"));
         	
         }catch(Exception e)
         {
         	logger.error(e.toString());
-        	idDespachoDetalle = 0;
+        	idaprovechable = 0;
         }
+        int idestado;
         try
         {
-        	iddespacho = Integer.parseInt(request.getParameter("iddespacho"));
+        	idestado = Integer.parseInt(request.getParameter("idestado"));
         	
         }catch(Exception e)
         {
         	logger.error(e.toString());
-        	iddespacho = 0;
+        	idestado = 0;
         }
-        try
-        {
-        	idinsumo = Integer.parseInt(request.getParameter("idinsumo"));
-        	
-        }catch(Exception e)
-        {
-        	logger.error(e.toString());
-        	idinsumo = 0;
-        }
-        try
-        {
-        	lote = request.getParameter("lote");
-        	
-        }catch(Exception e)
-        {
-        	logger.error(e.toString());
-        	lote = "";
-        }
-        try
-        {
-        	color = request.getParameter("color");
-        	
-        }catch(Exception e)
-        {
-        	logger.error(e.toString());
-        	color = "";
-        }
-        caducidadLote = request.getParameter("caducidad_lote");
         InventarioCtrl inv = new InventarioCtrl();
-        String respuesta = inv.ActualizarDetalleLoteInsumoDespachoTienda(iddespacho,idinsumo,lote,color, idDespachoDetalle, caducidadLote);
+        String respuesta = inv.actualizarEstadoAprovechable(idaprovechable, idestado);
         PrintWriter out = response.getWriter();
 		out.write(respuesta);
 	}

@@ -10,7 +10,7 @@ import capaModeloINV.Desecho;
 import conexionINV.ConexionBaseDatos;
 
 /**
- * Clase que se encarga de implementar toda la interacción con la base de datos para le entidad Producto.
+ * Clase que se encarga de implementar toda la interacciï¿½n con la base de datos para le entidad Producto.
  * @author JuanDavid
  *
  */
@@ -25,7 +25,7 @@ public class DesechoDAO {
 		try
 		{
 			Statement stm = con1.createStatement();
-			String consulta = "select * from desecho where habilitado = 'S'";
+			String consulta = "select * from desecho where habilitado = 'S' and proviene_anulacion = 'N'";
 			logger.info(consulta);
 			ResultSet rs = stm.executeQuery(consulta);
 			int idDesecho;

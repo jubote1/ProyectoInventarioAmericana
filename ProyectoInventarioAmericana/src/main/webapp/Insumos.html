@@ -78,6 +78,10 @@
 					    <select id="selectunidadmedida" class="form-control input-md"></select>
 					  </div>
 					  <div class="form-group">
+					    <label for="costounidad">Costo Por Unidad</label>
+					    <input type="text" class="form-control" id="costounidad" placeholder="Costo Por Unidad">
+					  </div>
+					  <div class="form-group">
 					    <label for="manejaCanastas">Maneja Canastas</label>
 					    <select id="selectmanejacanastas" class="form-control input-md" onchange="habDeshabCanastas()"></select>
 					  </div>
@@ -96,10 +100,6 @@
 					  <div class="form-group">
 					    <label for="controlCantidad">Control Cantidad</label>
 					    <select id="selectcontrolcantidad" class="form-control input-md"></select>
-					  </div>
-					  <div class="form-group">
-					    <label for="costounidad">Costo Por Unidad</label>
-					    <input type="text" class="form-control" id="costounidad" placeholder="Costo Por Unidad">
 					  </div>
 		      </div>
 		      <div class="modal-footer">
@@ -135,6 +135,26 @@
     </div>
 
     <div class="form-group">
+        <label class="col-xs-3 control-label">Costo Por Unidad</label>
+        <div class="col-xs-5">
+            <input type="text" class="form-control" id="costounidadedit" name="costounidadedit" />
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-xs-3 control-label">Embalaje Costo</label>
+        <div class="col-xs-5">
+            <input type="text" class="form-control" id="embalajecosto" name="embalajecosto" disabled/>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <div class="col-xs-5">
+            <input type="text" class="form-control" id="infocostounidad" name="infocostounidad" disabled/>
+        </div>
+    </div>
+
+    <div class="form-group">
         <label class="col-xs-3 control-label">Maneja Canastas</label>
         <div class="col-xs-5">
             <select id="selectmanejacanastasedit" class="form-control input-md" onchange="habDeshabCanastasEdit()"></select>
@@ -166,13 +186,6 @@
         <label class="col-xs-3 control-label">Control Cantidad</label>
         <div class="col-xs-5">
             <select id="selectcontrolcantidadedit" class="form-control input-md"></select>
-        </div>
-    </div>
-
-    <div class="form-group">
-        <label class="col-xs-3 control-label">Costo Por Unidad</label>
-        <div class="col-xs-5">
-            <input type="text" class="form-control" id="costounidadedit" name="costounidadedit" />
         </div>
     </div>
 

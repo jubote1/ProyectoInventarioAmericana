@@ -32,11 +32,11 @@ public class CRUDInsumo extends HttpServlet {
 
 	/**
 	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
-	 * Este servicio recibe un idoperación que puede ser 1 insertar 2 editar 3 Eliminar  4 Consultar
-	 * dependiendo el valor de idoperacion, se recibirán los diferentes parámetros de la entidad especialidad.
+	 * Este servicio recibe un idoperaciï¿½n que puede ser 1 insertar 2 editar 3 Eliminar  4 Consultar
+	 * dependiendo el valor de idoperacion, se recibirï¿½n los diferentes parï¿½metros de la entidad especialidad.
 	 */
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-			//Operación idoperacion 1 insertar 2 editar 3 Eliminar  4 Consultar
+			//Operaciï¿½n idoperacion 1 insertar 2 editar 3 Eliminar  4 Consultar
 		response.addHeader("Access-Control-Allow-Origin", "*");	
 		Logger logger = Logger.getLogger("log_file");
 			HttpSession sesion = request.getSession();
@@ -117,6 +117,10 @@ public class CRUDInsumo extends HttpServlet {
 					cantidadCanasta = 0;
 				}
 				String nombreContenedor = request.getParameter("nombrecontenedor");
+				if(nombreContenedor.equals(new String("null")))
+				{
+					nombreContenedor = "";
+				}
 				String categoria = request.getParameter("categoria");
 				boolean controlCantidad = false;
 				String strControlCantidad = request.getParameter("controlcantidad");
@@ -140,7 +144,7 @@ public class CRUDInsumo extends HttpServlet {
 				respuesta = invCtrl.editarInsumo(insumoEdit);
 			}else if (operacion ==3 )
 			{
-				//No existe acción para la eliminación
+				//No existe acciï¿½n para la eliminaciï¿½n
 			}else if (operacion == 4)
 			{
 				int idInsumoCon = Integer.parseInt(request.getParameter("idinsumo"));

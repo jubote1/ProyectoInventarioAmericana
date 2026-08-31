@@ -1,5 +1,6 @@
 package capaDAOINV;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -11,7 +12,7 @@ import conexionINV.ConexionBaseDatos;
 
 
 /**
- * Clase que se encarga de implementar todos aquellos m閠odos que tienen una interacci髇 directa con la base de datos
+ * Clase que se encarga de implementar todos aquellos m锟絫odos que tienen una interacci锟絥 directa con la base de datos
  * @author JuanDavid
  *
  */
@@ -19,7 +20,7 @@ public class InsumoDespachoTiendaDetalleDAO {
 	
 	
 /**
- * M閠odo para retornar el detalle de un despacho de tienda.
+ * M锟絫odo para retornar el detalle de un despacho de tienda.
  * @param idDespacho
  * @return Un ArrayList con el detalle del despacho seleccionado.
  */
@@ -77,7 +78,7 @@ public class InsumoDespachoTiendaDetalleDAO {
 		try
 		{
 			Statement stm = con1.createStatement();
-			String consulta = "select IFNULL(a.iddespacho_detalle, 0) as iddespacho_detalle, IFNULL(a.iddespacho,0) as iddespacho, b.idinsumo, IFNULL(a.cantidad,0) as cantidad, IFNULL(a.contenedor,'') as contenedor, b.nombre_insumo, IFNULL(a.lote,'') as lote, IFNULL(a.estado,0) as estado, IFNULL(a.color,'') as color  from  insumo b left outer join insumo_despacho_tienda_detalle a on a.idinsumo = b.idinsumo and a.iddespacho = " + idDespacho + " order by b.orden asc";
+			String consulta = "select IFNULL(a.iddespacho_detalle, 0) as iddespacho_detalle, IFNULL(a.iddespacho,0) as iddespacho, b.idinsumo, IFNULL(a.cantidad,0) as cantidad, IFNULL(a.contenedor,'') as contenedor, b.nombre_insumo, IFNULL(a.lote,'') as lote, IFNULL(a.estado,0) as estado, IFNULL(a.color,'') as color, a.caducidad_lote  from  insumo b left outer join insumo_despacho_tienda_detalle a on a.idinsumo = b.idinsumo and a.iddespacho = " + idDespacho + " order by b.orden asc";
 			logger.info(consulta);
 			ResultSet rs = stm.executeQuery(consulta);
 			//Variables para capturar cada despacho
@@ -88,6 +89,7 @@ public class InsumoDespachoTiendaDetalleDAO {
 			String lote;
 			int estado;
 			String color;
+			String caducidadLote;
 			InsumoDespachoTiendaDetalle insDetalleTemp = new InsumoDespachoTiendaDetalle(0,0,0, 0, "");
 			while(rs.next()){
 				idDespachoDetalle = rs.getInt("iddespacho_detalle");
@@ -97,10 +99,12 @@ public class InsumoDespachoTiendaDetalleDAO {
 				lote = rs.getString("lote");
 				estado = rs.getInt("estado");
 				color = rs.getString("color");
+				caducidadLote = rs.getString("caducidad_lote");
 				insDetalleTemp = new InsumoDespachoTiendaDetalle(idDespachoDetalle,idDespacho, idInsumo, cantidad, contenedor);
 				insDetalleTemp.setLote(lote);
 				insDetalleTemp.setEstado(estado);
 				insDetalleTemp.setColor(color);
+				insDetalleTemp.setCaducidadLote(caducidadLote);
 				detalleDespacho.add(insDetalleTemp);	
 			}
 			
@@ -121,157 +125,197 @@ public class InsumoDespachoTiendaDetalleDAO {
 	
 	
 	/**
-	 * M閠odo que se encarga de realizar la inserci髇 de un detalle de insumo en el sistema de inventarios
+	 * M锟絫odo que se encarga de realizar la inserci锟絥 de un detalle de insumo en el sistema de inventarios
 	 * @param iddespacho
 	 * @param idinsumo
 	 * @param cantidad
 	 * @param contenedor
 	 * @return
 	 */
-	public static int InsertarDetalleInsumoDespachoTienda(int iddespacho,int idinsumo,double cantidad, String contenedor)
-	{
-		Logger logger = Logger.getLogger("log_file");
-		int idDespachoDetalle = 0;
-		ConexionBaseDatos con = new ConexionBaseDatos();
-		Connection con1 = con.obtenerConexionBDPrincipalLocal();
-				
-		try
-		{
-			Statement stm = con1.createStatement();
-			String insert = "insert into insumo_despacho_tienda_detalle (iddespacho,idinsumo, cantidad, contenedor) values (" + iddespacho + ", " + idinsumo  + ", " + cantidad +" , '" + contenedor +"' )"; 
-			logger.info(insert);
-			stm.executeUpdate(insert, Statement.RETURN_GENERATED_KEYS);
-			ResultSet rs = stm.getGeneratedKeys();
-			if (rs.next()){
-				idDespachoDetalle=rs.getInt(1);
-				
+	public static int InsertarDetalleInsumoDespachoTienda(int iddespacho, int idinsumo, double cantidad, String contenedor) {
+	    Logger logger = Logger.getLogger("log_file");
+	    int idDespachoDetalle = 0;
+	    ConexionBaseDatos con = new ConexionBaseDatos();
+	    Connection con1 = null;
+
+	    // Modificamos la consulta eliminando el campo caducidad_lote
+	    String insert = "INSERT INTO insumo_despacho_tienda_detalle (iddespacho, idinsumo, cantidad, contenedor) " +
+	                    "VALUES (?, ?, ?, ?)";
+	    try {
+	        con1 = con.obtenerConexionBDPrincipalLocal(); 
+
+	        // Usamos try-with-resources solo para el PreparedStatement
+	        try (PreparedStatement psInsert = con1.prepareStatement(insert, Statement.RETURN_GENERATED_KEYS)) {
+	            psInsert.setInt(1, iddespacho);
+	            psInsert.setInt(2, idinsumo);
+	            psInsert.setDouble(3, cantidad);
+	            psInsert.setString(4, contenedor);
+
+	            // Ejecutar la inserci贸n
+	            logger.info("Ejecutando consulta INSERT: " + psInsert);
+	            psInsert.executeUpdate();
+	            
+	            // Obtener la clave generada autom谩ticamente
+	            try (ResultSet rs = psInsert.getGeneratedKeys()) {
+	                if (rs.next()) {
+	                    idDespachoDetalle = rs.getInt(1);  // Recupera el ID generado
+	                }
+	            }
 	        }
-	        rs.close();
-			stm.close();
-			con1.close();
-		}
-		catch (Exception e){
-			logger.error(e.toString());
-			try
-			{
-				con1.close();
-			}catch(Exception e1)
-			{
-			}
-			return(0);
-		}
-		return(idDespachoDetalle);
+	    } catch (Exception e) {
+	        logger.error("Error al insertar detalle insumo despacho tienda: " + e.getMessage(), e);
+	        idDespachoDetalle = 0;
+	    } finally {
+	        if (con1 != null) {
+	            try {
+	                // Cerrar la conexi贸n aqu铆 si es necesario
+	            	con1.close();
+	            } catch (Exception e) {
+	                logger.error("Error al cerrar la conexi贸n: " + e.getMessage(), e);
+	            }
+	        }
+	    }
+
+	    return idDespachoDetalle;
 	}
+
 	
 	
 	/**
-	 * M閠odo que se encarga de realizar la inserci髇 de un detalle de insumo en el sistema de inventarios
+	 * M锟絫odo que se encarga de realizar la inserci锟絥 de un detalle de insumo en el sistema de inventarios
 	 * @param iddespacho
 	 * @param idinsumo
 	 * @param cantidad
 	 * @param contenedor
 	 * @return
 	 */
-	public static int ActualizarDetalleInsumoDespachoTienda(int iddespacho,int idinsumo,double cantidad, String contenedor, String lote, int estado, int idDespachoDetalle)
-	{
-		Logger logger = Logger.getLogger("log_file");
-		ConexionBaseDatos con = new ConexionBaseDatos();
-		Connection con1 = con.obtenerConexionBDPrincipalLocal();
-		boolean actualiza = false;
-		try
-		{
-			Statement stm = con1.createStatement();
-			String select = "select * from insumo_despacho_tienda_detalle where iddespacho_detalle = " + idDespachoDetalle; 
-			ResultSet rs = stm.executeQuery(select);
-			while(rs.next())
-			{
-				actualiza = true;
-				break;
-			}
-			String update = "";
-			String insert = "";
-			if(actualiza)
-			{
-				if(contenedor.equals(new String("")))
-				{
-					update = "update insumo_despacho_tienda_detalle set cantidad = " + cantidad + ", lote ='" +  lote + "', estado =" + estado  + "  where iddespacho_detalle = " + idDespachoDetalle; 
-				}else
-				{
-					update = "update insumo_despacho_tienda_detalle set cantidad = " + cantidad + " , contenedor = '" + contenedor + "' , lote ='" +  lote + "', estado =" + estado + "  where iddespacho_detalle = " + idDespachoDetalle; 
-				}
-				logger.info(update);
-				stm.executeUpdate(update);
-			}else
-			{
-				if(contenedor.equals(new String("")))
-				{
-					insert = "insert into insumo_despacho_tienda_detalle (iddespacho, idinsumo, cantidad, contenedor,lote, estado) values(" + iddespacho + "," + idinsumo + "," + cantidad + ", '" + contenedor + "' ,'" + lote + "' ," + estado + ")";
-				}else
-				{
-					insert = "insert into insumo_despacho_tienda_detalle (iddespacho, idinsumo, cantidad, lote, estado) values(" + iddespacho + "," + idinsumo + "," + cantidad +",'" + lote + "' ," + estado + ")";
-				}
-				logger.info(insert);
-				stm.executeUpdate(insert);
-			}
-			idDespachoDetalle = iddespacho;
-			stm.close();
-			con1.close();
-		}
-		catch (Exception e){
-			System.out.println(e.toString());
-			logger.error(e.toString());
-			try
-			{
-				con1.close();
-			}catch(Exception e1)
-			{
-			}
-			return(0);
-		}
-		return(idDespachoDetalle);
+	public static int ActualizarDetalleInsumoDespachoTienda( int iddespacho, int idinsumo, double cantidad, String contenedor, String lote, int estado, int idDespachoDetalle, String caducidadLote) {	
+	    Logger logger = Logger.getLogger("log_file");
+	    ConexionBaseDatos con = new ConexionBaseDatos();
+	    Connection con1 = null;
+	    String querySelect = "SELECT 1 FROM insumo_despacho_tienda_detalle WHERE iddespacho_detalle = ?";
+	    String queryUpdate = "UPDATE insumo_despacho_tienda_detalle SET cantidad = ?, contenedor = ?, lote = ?, estado = ?, caducidad_lote = ? WHERE iddespacho_detalle = ?";
+	    String queryInsert = "INSERT INTO insumo_despacho_tienda_detalle (iddespacho, idinsumo, cantidad, contenedor, lote, estado, caducidad_lote) VALUES (?, ?, ?, ?, ?, ?, ?)";
+	    int idRespuesta = 0;
+	    try {	     
+	        con1 = con.obtenerConexionBDPrincipalLocal();
+	        boolean actualiza;
+	        try (PreparedStatement psSelect = con1.prepareStatement(querySelect)) {
+	            psSelect.setInt(1, idDespachoDetalle);
+	            try (ResultSet rs = psSelect.executeQuery()) {
+	                actualiza = rs.next();
+	            }
+	        }
+	        if (actualiza) {
+	            try (PreparedStatement psUpdate = con1.prepareStatement(queryUpdate)) {
+	                psUpdate.setDouble(1, cantidad);
+	                psUpdate.setString(2, contenedor); 
+	                psUpdate.setString(3, lote);      
+	                psUpdate.setInt(4, estado);
+	                if (caducidadLote == null || caducidadLote.equals(new String("null"))) {
+	                	psUpdate.setNull(5, java.sql.Types.NULL);
+	                    
+	                } else {
+	                	psUpdate.setDate(5, java.sql.Date.valueOf(caducidadLote));
+	                }
+	                psUpdate.setInt(6, idDespachoDetalle);
+
+	                logger.info("Ejecutando consulta UPDATE: " + psUpdate);
+	                System.out.println("Ejecutando consulta UPDATE: " + psUpdate);
+	                System.out.println("Ejecutando consulta UPDATE: " + queryUpdate);
+	                psUpdate.executeUpdate();
+	                idRespuesta = iddespacho; 
+	            }
+	        } else {
+	            try (PreparedStatement psInsert = con1.prepareStatement(queryInsert)) {
+	                psInsert.setInt(1, iddespacho);
+	                psInsert.setInt(2, idinsumo);
+	                psInsert.setDouble(3, cantidad);
+	                psInsert.setString(4, contenedor); 
+	                psInsert.setString(5, lote);      
+	                psInsert.setInt(6, estado);
+	                if (caducidadLote == null || caducidadLote.equals(new String("null"))) {
+	                	psInsert.setNull(7, java.sql.Types.NULL);
+	                    
+	                } else {
+	                	psInsert.setDate(7, java.sql.Date.valueOf(caducidadLote));
+	                }
+
+	                logger.info("Ejecutando consulta INSERT: " + psInsert);
+	                psInsert.executeUpdate();
+	                idRespuesta = iddespacho; 
+	            }
+	        }
+
+	    } catch (Exception e) {
+	    	System.out.println("Error en ActualizarDetalleInsumoDespachoTienda " + e.toString());
+	        logger.error("Error en ActualizarDetalleInsumoDespachoTienda: " + e.getMessage(), e);
+	        return 0;
+	    } finally {
+	        if (con1 != null) {  try {
+	                con1.close();
+	            } catch (Exception e) {
+	                logger.error("Error al cerrar la conexi贸n: " + e.getMessage(), e);
+	            }
+	        }
+	    }
+	    return idRespuesta;
 	}
 	
 	
-	public static int ActualizarDetalleInsumoLoteDespachoTienda(int iddespacho,int idinsumo, String lote, String color, int idDespachoDetalle)
-	{
-		Logger logger = Logger.getLogger("log_file");
-		ConexionBaseDatos con = new ConexionBaseDatos();
-		Connection con1 = con.obtenerConexionBDPrincipalLocal();
-		boolean actualiza = false;
-		try
-		{
-			Statement stm = con1.createStatement();
-			String select = "select * from insumo_despacho_tienda_detalle where iddespacho_detalle = " + idDespachoDetalle; 
-			ResultSet rs = stm.executeQuery(select);
-			while(rs.next())
-			{
-				actualiza = true;
-				break;
-			}
-			String update = "";
-			if(actualiza)
-			{
-				update = "update insumo_despacho_tienda_detalle set lote ='" +  lote + "' , color ='"+ color +"'  where iddespacho_detalle = " + idDespachoDetalle; 
-				logger.info(update);
-				stm.executeUpdate(update);
-			}
-			idDespachoDetalle = iddespacho;
-			stm.close();
-			con1.close();
-		}
-		catch (Exception e){
-			System.out.println(e.toString());
-			logger.error(e.toString());
-			try
-			{
-				con1.close();
-			}catch(Exception e1)
-			{
-			}
-			return(0);
-		}
-		return(idDespachoDetalle);
+	public static int ActualizarDetalleInsumoLoteDespachoTienda(int iddespacho, int idinsumo, String lote, String color, int idDespachoDetalle, String caducidadLote) {
+	    Logger logger = Logger.getLogger("log_file");
+	    ConexionBaseDatos con = new ConexionBaseDatos();
+	    int idDespachoDetalleResult = 0;
+	    Connection con1 = null;
+	    
+	    String select = "SELECT 1 FROM insumo_despacho_tienda_detalle WHERE iddespacho_detalle = ?";
+	    String update = "UPDATE insumo_despacho_tienda_detalle SET lote = ?, color = ?, caducidad_lote = ? WHERE iddespacho_detalle = ?";
+
+	    try {
+	        con1 = con.obtenerConexionBDPrincipalLocal(); // Obtenci贸n de la conexi贸n fuera del try-with-resources
+
+	        try (PreparedStatement psSelect = con1.prepareStatement(select);
+	             PreparedStatement psUpdate = con1.prepareStatement(update)) {
+	            
+	            // Verificar si existe el registro
+	            psSelect.setInt(1, idDespachoDetalle);
+	            try (ResultSet rs = psSelect.executeQuery()) {
+	                if (rs.next()) {
+	                    // El registro existe, proceder a la actualizaci贸n
+	                    psUpdate.setString(1, lote);
+	                    psUpdate.setString(2, color);
+	                    
+	                    if (caducidadLote != null && !caducidadLote.isEmpty()) {
+	                        psUpdate.setDate(3, java.sql.Date.valueOf(caducidadLote));
+	                    } else {
+	                        psUpdate.setNull(3, java.sql.Types.DATE);
+	                    }
+	                    
+	                    psUpdate.setInt(4, idDespachoDetalle);
+	                    logger.info("Ejecutando consulta UPDATE: " + psUpdate);
+	                    psUpdate.executeUpdate();
+	                    idDespachoDetalleResult = iddespacho;
+	                }
+	            }
+	        }
+	    } catch (Exception e) {
+	        logger.error("Error al actualizar detalle insumo lote despacho tienda: " + e.getMessage(), e);
+	        idDespachoDetalleResult = 0;
+	    } finally {
+	        // Cerrar la conexi贸n de manera convencional
+	        if (con1 != null) {
+	            try {
+	                con1.close();
+	            } catch (Exception e) {
+	                logger.error("Error al cerrar la conexi贸n: " + e.getMessage(), e);
+	            }
+	        }
+	    }
+	    
+	    return idDespachoDetalleResult;
 	}
+
 	
 	public static void actualizarMarcadoDespachoTienda(int idDespacho, String marcado)
 	{

@@ -15,7 +15,15 @@ public class Insumo {
 	private String controlTienda;
 	private int idCategoriaDespacho;
 	private String colorCategoria;
+	private double embalajeCosto;
 	
+	
+	public double getEmbalajeCosto() {
+		return embalajeCosto;
+	}
+	public void setEmbalajeCosto(double embalajeCosto) {
+		this.embalajeCosto = embalajeCosto;
+	}
 	public String getColorCategoria() {
 		return colorCategoria;
 	}
