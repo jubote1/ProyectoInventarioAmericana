@@ -18,11 +18,11 @@ import conexionINV.ConexionBaseDatos;
 public class InventarioDAO {
 	
 	/**
-	 * Método de la capa DAO para obtener dado una tienda y un día de semana, cual es el inventario requerido de acuerdo a las dinámicas de ventas.
-	 * @param idtien Se recibe como parámetro el idtienda de la cual se requiere recuperar el inventario.
-	 * @param diasemana Las tiendas son surtidas dependiendo el día de la semana y de esta misma manera se determina el inventario
+	 * MÃ©todo de la capa DAO para obtener dado una tienda y un dÃ­a de semana, cual es el inventario requerido de acuerdo a las dinÃ¡micas de ventas.
+	 * @param idtien Se recibe como parÃ¡metro el idtienda de la cual se requiere recuperar el inventario.
+	 * @param diasemana Las tiendas son surtidas dependiendo el dÃ­a de la semana y de esta misma manera se determina el inventario
 	 * requerido en la tienda.
-	 * @return Se retorna un ArrayList con objetos tipo InsumoRequeridoTienda, de acuerdon los parámetros enviados.
+	 * @return Se retorna un ArrayList con objetos tipo InsumoRequeridoTienda, de acuerdon los parÃ¡metros enviados.
 	 */
 	public static ArrayList<InsumoRequeridoTienda> ObtenerInsumosRequeridosTienda(int idtien, int diasemana)
 	{
@@ -74,11 +74,11 @@ public class InventarioDAO {
 	
 	}
 	/**
-	 * Método que se encarga de retornar los valores de insumos con los que cerró la tienda el último día.
+	 * MÃ©todo que se encarga de retornar los valores de insumos con los que cerrÃ³ la tienda el Ãºltimo dÃ­a.
 	 * @param idtien El idtienda que denota la tienda de la cual se requiere recuperar el inventario
 	 * @param fecha de la cual se requiere recuperar los valores de insumo.
 	 * @return Se retorna un ArrayList con objetos de tipo InsumoTienda con los valores de uno a uno los insumos que posee la tienda
-	 * al último cierre.
+	 * al Ãºltimo cierre.
 	 */
 	public static ArrayList<InsumoTienda> ObtenerInsumosTienda(int idtien, String fecha)
 	{
@@ -136,9 +136,9 @@ public class InventarioDAO {
 	}
 	
 	/**
-	 * Método en la capa DAO de la cual se extrae los insumos tienda para calcular los inventarios de la tienda, se tiene un comportamiento
-	 * en donde si no hay para la fecha en cuestión, se busca si hay inventarios tomados despues de cierta hora del día anterior
-	 * @param idtien idtienda con el que se consultará los insumos de la tienda
+	 * MÃ©todo en la capa DAO de la cual se extrae los insumos tienda para calcular los inventarios de la tienda, se tiene un comportamiento
+	 * en donde si no hay para la fecha en cuestiÃ³n, se busca si hay inventarios tomados despues de cierta hora del dÃ­a anterior
+	 * @param idtien idtienda con el que se consultarÃ¡ los insumos de la tienda
 	 * @param fecha fecha para la cual se van a extraer los inventarios
 	 * @return Se retorna un arraylist con objetos de tipo insumo tienda, con los inventarios que tiene la tienda.
 	 */
@@ -173,8 +173,8 @@ public class InventarioDAO {
 				insumosTienda.add(insTie);
 			}
 			//Se valida si no hay datos para la fecha, validaremos si hay para la fecha anterior y entre las 12 y 10 de la nohce
-			//Construimos la fecha del día anterior y validamos si se obtuvo el inventario el día anteiror entre las 10:30 pm y
-			// 11:59 pm y adicionalmente se valida si la fecha de actualización es del mismo día, en cuyo caso se pueden tomar los datos
+			//Construimos la fecha del dÃ­a anterior y validamos si se obtuvo el inventario el dÃ­a anteiror entre las 10:30 pm y
+			// 11:59 pm y adicionalmente se valida si la fecha de actualizaciÃ³n es del mismo dÃ­a, en cuyo caso se pueden tomar los datos
 			if(banderaFechaAnterior)
 			{
 				Date fechaActual =  new Date();

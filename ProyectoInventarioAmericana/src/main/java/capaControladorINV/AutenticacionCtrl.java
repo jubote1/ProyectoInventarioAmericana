@@ -4,7 +4,7 @@ import capaDAOINV.UsuarioDAO;
 import capaModeloINV.Usuario;
 
 /**
- * Clase AutenticacionCtrl tiene como objetivo hacer las veces de Controlador para la autenticaciÛn de usuarios
+ * Clase AutenticacionCtrl tiene como objetivo hacer las veces de Controlador para la autenticaci√≥n de usuarios
  * en el aplicatiov
  * @author Juan David Botero Duque
  * @
@@ -24,10 +24,10 @@ public class AutenticacionCtrl {
 	
 	/**
 	 * 
-	 * @param usuario El usuario de logueo de la aplicaciÛn
-	 * @param contrasena ContraseÒa asociada al usuario que se est· logueando
-	 * @return Se retona un valor booleano indicando si el usuario y contraseÒa corresponde con alguien logueado
-	 * en al aplicaciÛn
+	 * @param usuario El usuario de logueo de la aplicaci√≥n
+	 * @param contrasena Contrase√±a asociada al usuario que se est√° logueando
+	 * @return Se retona un valor booleano indicando si el usuario y contrase√±a corresponde con alguien logueado
+	 * en al aplicaci√≥n
 	 */
 	public boolean autenticarUsuario(String usuario, String contrasena){
 		Usuario usu = new Usuario(usuario, contrasena, "");
@@ -37,8 +37,8 @@ public class AutenticacionCtrl {
 	
 	/**
 	 * 
-	 * @param usuario Se recibe el usuario de aplicaciÛn con el fin de validar si el usuario pasado como par·metro est·
-	 * o no logueado en la aplicaciÛn
+	 * @param usuario Se recibe el usuario de aplicaci√≥n con el fin de validar si el usuario pasado como par√°metro est√°
+	 * o no logueado en la aplicaci√≥n
 	 * @return Se retorna un valor booleano indicando si el usuario se encuentra o no logueado en el aplicativo.
 	 */
 	public String validarAutenticacion(String usuario)

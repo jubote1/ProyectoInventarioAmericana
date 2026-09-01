@@ -1,6 +1,6 @@
 buildscript {
 	repositories {
-        jcenter()
+        mavenCentral()
     }
     dependencies {
         classpath 'com.bmuschko:gradle-tomcat-plugin:2.5'
@@ -13,6 +13,13 @@ apply plugin: 'com.bmuschko.tomcat'
 
 //war.baseName = 'ProyectoInventarioAmericana'
 sourceSets.main.java.srcDirs = ['src/main/java']
+
+// Todos los fuentes de este proyecto estan en UTF-8 (normalizados el 2026-09-01).
+// Se declara explicitamente para no depender de la codificacion por defecto de la
+// maquina: en Windows es Cp1252, y con ella los literales con tildes quedan corruptos.
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
 
 repositories {
     mavenLocal()

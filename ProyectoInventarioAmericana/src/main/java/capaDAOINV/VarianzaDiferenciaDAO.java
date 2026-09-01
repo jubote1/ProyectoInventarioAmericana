@@ -11,7 +11,7 @@ import capaModeloINV.VarianzaDiferencia;
 import conexionINV.ConexionBaseDatos;
 
 /**
- * Clase que se encarga de implementar toda la interacción con la base de datos para le entidad Producto.
+ * Clase que se encarga de implementar toda la interacciÃ³n con la base de datos para le entidad Producto.
  * @author JuanDavid
  *
  */

@@ -13,14 +13,14 @@ import java.sql.Statement;
 import java.util.ArrayList;
 
 /**
- * Clase que se encarga de la implementación de toda la interacción con la base de datos para la entidad Llave
+ * Clase que se encarga de la implementaciÃ³n de toda la interacciÃ³n con la base de datos para la entidad Llave
  * @author JuanDavid
  *
  */
 public class LlaveDAO {
 	
 	/**
-	 * Método que se encarga de retornar la información de todas las llaves definidas en el sistema.
+	 * MÃ©todo que se encarga de retornar la informaciÃ³n de todas las llaves definidas en el sistema.
 	 * @return Se retorna un ArrayList con todos las llaves definidas en el sistema
 	 */
 	public static ArrayList obtenerLlaves(boolean auditoria)
@@ -70,7 +70,7 @@ public class LlaveDAO {
 	
 	
 	/**
-	 * Método de la capa DAO que se encarga de retornar los Municipios del sistema en un arrayList de objetos de tipo Municipio
+	 * MÃ©todo de la capa DAO que se encarga de retornar los Municipios del sistema en un arrayList de objetos de tipo Municipio
 	 * @return Un ArrayList con los Municipios.
 	 */
 	public static ArrayList<Llave> consultarLlaves(int idTienda, int tipoConsulta)

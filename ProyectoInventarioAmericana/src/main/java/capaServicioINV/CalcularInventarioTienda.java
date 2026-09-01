@@ -31,8 +31,8 @@ public class CalcularInventarioTienda extends HttpServlet {
 
 	/**
 	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
-	 * Este es el mÈtodo del servlet que se encarga de recuperar los valores de idtienda y fecha a surtir
-	 * con estos instanciar· un objeto de la capa Controlador y la respuesta en un string con formato JSON ser· retornada.
+	 * Este es el m√©todo del servlet que se encarga de recuperar los valores de idtienda y fecha a surtir
+	 * con estos instanciar√° un objeto de la capa Controlador y la respuesta en un string con formato JSON ser√° retornada.
 	 */
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		// TODO Auto-generated method stub

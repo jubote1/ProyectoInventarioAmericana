@@ -19,7 +19,7 @@ import conexionINV.ConexionBaseDatos;
 public class TiendaDAO {
 	
 /**
- * MÈtodo que se encarga de retornar todas las entidades Tiendas definidas en la base de datos
+ * M√©todo que se encarga de retornar todas las entidades Tiendas definidas en la base de datos
  * @return Se retorna un ArrayList con todas las entidades Tiendas definidas en la base de datos.
  */
 	public static ArrayList<Tienda> obtenerTiendas()
@@ -61,9 +61,9 @@ public class TiendaDAO {
 	}
 	
 	/**
-	 * MÈtodo que se encarga de la consulta de un idtienda con base en nombre de la tienda recibido como par·metro.
-	 * @param nombreTienda Se recibe como par·metro un valor String con el nombre de la tienda.
-	 * @return Se retorna el idtienda asociado al nombre de la tienda recibido como par·metro.
+	 * M√©todo que se encarga de la consulta de un idtienda con base en nombre de la tienda recibido como par√°metro.
+	 * @param nombreTienda Se recibe como par√°metro un valor String con el nombre de la tienda.
+	 * @return Se retorna el idtienda asociado al nombre de la tienda recibido como par√°metro.
 	 */
 	public static int obteneridTienda(String nombreTienda)
 	{
@@ -100,9 +100,9 @@ public class TiendaDAO {
 	
 	
 	/**
-	 * MÈtodo que retorna un objeto de la clase tienda con la informaciÛn de la URL y del dsn asociado a la tienda
-	 * enviada como par·metro.
-	 * @param idtienda Se recibe como par·metro el idtienda con base en el cual se realizar· la consulta
+	 * M√©todo que retorna un objeto de la clase tienda con la informaci√≥n de la URL y del dsn asociado a la tienda
+	 * enviada como par√°metro.
+	 * @param idtienda Se recibe como par√°metro el idtienda con base en el cual se realizar√° la consulta
 	 * @return Se retorna variable String con el valor del URL Servicio de la tienda.
 	 */
 	public static Tienda obtenerUrlTienda(int idtienda)
