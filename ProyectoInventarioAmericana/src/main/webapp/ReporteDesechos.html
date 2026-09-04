@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="es">
+	<head>
+		<title>REPORTE DE DESECHOS Y DEVOLUCIONES</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+		<link href="css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+		<link href="css/all.min.css" rel="stylesheet" type="text/css" />
+		<link href="css/jquery-ui.min.css" rel="stylesheet" type="text/css" />
+		<link rel="stylesheet" type="text/css" href="css/jquery.dataTables.min.css">
+		<link rel="stylesheet" href="css/jquery-confirm.min.css">
+		<script type="text/javascript" src="js/jquery-1.11.0.min.js"></script>
+		<script type="text/javascript" src="js/bootstrap.min.js"></script>
+		<script type="text/javascript" charset="utf8" src="js/jquery.dataTables.js"></script>
+		<style>
+			:root {
+				--rojo-marca: #d0201f;
+				--azul-marca: #20287f;
+				--amarillo-marca: #f5c518;
+			}
+
+			body { background: #f6f7f9; }
+
+			/* Encabezado con la franja de la marca, igual que en el ingreso */
+			.cabecera-reporte {
+				background: #fff;
+				border-radius: 10px;
+				box-shadow: 0 2px 10px rgba(0,0,0,.07);
+				padding: 0 0 18px 0;
+				margin: 18px 0 16px 0;
+				overflow: hidden;
+			}
+			.franja-marca {
+				height: 5px;
+				background: linear-gradient(90deg,
+					var(--rojo-marca) 0%, var(--rojo-marca) 33%,
+					var(--amarillo-marca) 33%, var(--amarillo-marca) 66%,
+					var(--azul-marca) 66%, var(--azul-marca) 100%);
+			}
+			.cabecera-reporte h1 {
+				font-size: 22px;
+				font-weight: 600;
+				color: var(--rojo-marca);
+				margin: 18px 22px 2px 22px;
+				letter-spacing: .2px;
+			}
+			.cabecera-reporte .bajada {
+				font-size: 13px;
+				color: #8a8a8a;
+				margin: 0 22px;
+			}
+
+			.panel-filtros { border: none; box-shadow: 0 2px 10px rgba(0,0,0,.07); border-radius: 10px; }
+			.panel-filtros .panel-heading {
+				background: #fff;
+				border-bottom: 1px solid #eee;
+				border-radius: 10px 10px 0 0;
+				font-weight: 600;
+				color: #555;
+				font-size: 13px;
+				text-transform: uppercase;
+				letter-spacing: .6px;
+			}
+			.panel-filtros label {
+				font-size: 11px; font-weight: 600; color: #6b6b6b;
+				text-transform: uppercase; letter-spacing: .5px;
+			}
+
+			.btn-marca { background: var(--rojo-marca); border: none; color: #fff; font-weight: 600; }
+			.btn-marca:hover, .btn-marca:focus { background: #b81c1b; color: #fff; }
+			.btn-excel { background: #1e6b3a; border: none; color: #fff; font-weight: 600; }
+			.btn-excel:hover, .btn-excel:focus { background: #175630; color: #fff; }
+
+			.tarjeta-total {
+				background: #fff; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,.07);
+				padding: 14px 18px; text-align: center; margin-bottom: 14px;
+			}
+			.tarjeta-total .numero { font-size: 25px; font-weight: 700; color: #333; line-height: 1.15; }
+			.tarjeta-total .rotulo {
+				font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: .6px;
+			}
+			/* El costo total es la cifra que importa: va en rojo de marca. */
+			.tarjeta-total.principal .numero { color: var(--rojo-marca); }
+
+			.bloque-mes { margin-bottom: 26px; }
+			.bloque-mes .titulo-mes {
+				font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 1px;
+				background: var(--rojo-marca); padding: 7px 14px;
+				border-radius: 8px 8px 0 0; text-transform: uppercase;
+			}
+			table.matriz {
+				width: 100%; background: #fff; font-size: 12px; margin: 0;
+				border-collapse: collapse;
+			}
+			table.matriz th {
+				background: #f2f3f5; color: #555; font-weight: 600; font-size: 10.5px;
+				text-align: center; padding: 7px 5px; border: 1px solid #e3e5e9;
+				text-transform: uppercase; letter-spacing: .3px;
+			}
+			table.matriz th.tienda-col { text-align: left; min-width: 130px; }
+			table.matriz td {
+				padding: 5px 6px; border: 1px solid #eceef1; text-align: right;
+				font-variant-numeric: tabular-nums;
+			}
+			table.matriz td.tienda { text-align: left; font-weight: 600; color: #333; }
+			/* El cero no aporta y estorba para leer: se apaga. */
+			table.matriz td.cero { color: #d3d3d3; }
+			table.matriz tr.fila-total td {
+				background: #fdf6e3; font-weight: 700; border-top: 2px solid var(--amarillo-marca);
+			}
+			table.matriz td.col-costo { background: #fbfbfc; font-weight: 600; }
+
+			.etiqueta {
+				display: inline-block; padding: 2px 8px; border-radius: 10px;
+				font-size: 10.5px; font-weight: 700; white-space: nowrap;
+			}
+			.et-aprov { background: #d5f5e3; color: #1e6b3a; }
+			.et-noaprov { background: #fadbd8; color: #922b21; }
+			.et-didi { background: #fdebd0; color: #a04000; }
+			.et-plataforma { background: #e8daef; color: #5b2c6f; }
+			.et-pv { background: #eaecee; color: #566573; }
+
+			.sin-datos { color: #999; font-style: italic; padding: 24px 0; text-align: center; }
+			.nota { font-size: 11.5px; color: #999; margin-top: 8px; }
+			#grid-detalle { font-size: 11.5px; }
+			.contenedor-tabla { overflow-x: auto; background: #fff; border-radius: 0 0 8px 8px; }
+			.cargando { color: #888; font-size: 13px; padding: 18px 0; text-align: center; }
+		</style>
+	</head>
+	<body>
+
+		<div id="cargarMenu"></div>
+		<script type="text/javascript">
+			//Obtenemos el valor de la variable server, con base en la URL digitada
+			var loc = window.location;
+			var pathName = loc.pathname.substring(0, loc.pathname.lastIndexOf('/') + 1);
+			server = loc.href.substring(0, loc.href.length - ((loc.pathname + loc.search + loc.hash).length - pathName.length));
+			var respuesta = '';
+			$.ajax({
+				url: server + 'ValidarUsuarioAplicacion',
+				dataType: 'text',
+				type: 'post',
+				async: false,
+				success: function(data){
+					respuesta = data;
+				}
+			});
+			switch(respuesta)
+			{
+				case 'OK':
+					$('#cargarMenu').load("Menu.html");
+					break;
+				case 'OKA':
+					$('#cargarMenu').load("MenuAdm.html");
+					break;
+				default:
+					location.href = server + "Index.html";
+					break;
+			}
+		</script>
+
+		<div class="container-fluid" style="max-width:1500px;">
+
+			<div class="cabecera-reporte">
+				<div class="franja-marca"></div>
+				<h1>Reporte de Desechos y Devoluciones</h1>
+				<p class="bajada">
+					Matriz de desechos por tienda y categoria de producto, tomada directamente de lo que
+					registran las tiendas. Reemplaza el libro que se llevaba a mano.
+				</p>
+			</div>
+
+			<div class="panel panel-default panel-filtros">
+				<div class="panel-heading">Filtros</div>
+				<div class="panel-body">
+					<div class="row">
+						<div class="col-md-2">
+							<label for="anio">Año</label>
+							<select id="anio" class="form-control"></select>
+						</div>
+						<div class="col-md-2">
+							<label for="mes">Mes</label>
+							<select id="mes" class="form-control">
+								<option value="0" selected>Todo el año</option>
+								<option value="1">Enero</option>
+								<option value="2">Febrero</option>
+								<option value="3">Marzo</option>
+								<option value="4">Abril</option>
+								<option value="5">Mayo</option>
+								<option value="6">Junio</option>
+								<option value="7">Julio</option>
+								<option value="8">Agosto</option>
+								<option value="9">Septiembre</option>
+								<option value="10">Octubre</option>
+								<option value="11">Noviembre</option>
+								<option value="12">Diciembre</option>
+							</select>
+						</div>
+						<div class="col-md-3">
+							<label for="tienda">Tienda</label>
+							<select id="tienda" class="form-control">
+								<option value="0" selected>Todas las tiendas</option>
+							</select>
+						</div>
+						<div class="col-md-2">
+							<label for="vista">Ver</label>
+							<select id="vista" class="form-control">
+								<option value="unidades" selected>Cantidades</option>
+								<option value="costos">Costos</option>
+							</select>
+						</div>
+						<div class="col-md-3">
+							<label>&nbsp;</label>
+							<div>
+								<input type="button" id="btnconsultar" class="btn btn-marca" value="Consultar"
+									onclick="consultarReporte()">
+								<input type="button" id="btnexcel" class="btn btn-excel" value="Descargar Excel"
+									onclick="descargarExcel()">
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div id="panelTotales" class="row" style="display:none;">
+				<div class="col-md-3">
+					<div class="tarjeta-total principal">
+						<div class="numero" id="totCosto">0</div>
+						<div class="rotulo">Costo total</div>
+					</div>
+				</div>
+				<div class="col-md-3">
+					<div class="tarjeta-total">
+						<div class="numero" id="totRegistros">0</div>
+						<div class="rotulo">Registros</div>
+					</div>
+				</div>
+				<div class="col-md-3">
+					<div class="tarjeta-total">
+						<div class="numero" id="totPuntoVenta">0</div>
+						<div class="rotulo">Punto de venta</div>
+					</div>
+				</div>
+				<div class="col-md-3">
+					<div class="tarjeta-total">
+						<div class="numero" id="totPlataformas">0</div>
+						<div class="rotulo">DIDI y plataformas</div>
+					</div>
+				</div>
+			</div>
+
+			<div id="cargando" class="cargando" style="display:none;">Consultando...</div>
+			<div id="matriz"></div>
+			<div id="mensajeVacio" class="sin-datos" style="display:none;">
+				No hay desechos registrados con los filtros seleccionados.
+			</div>
+
+			<div id="panelDetalle" style="display:none;">
+				<div class="bloque-mes">
+					<div class="titulo-mes">Detalle</div>
+					<div class="contenedor-tabla" style="padding:10px;">
+						<table id="grid-detalle" class="table table-striped table-bordered" style="width:100%">
+							<thead>
+								<tr>
+									<th>Semana</th>
+									<th>Fecha</th>
+									<th>N. desecho</th>
+									<th>Tienda</th>
+									<th>Producto</th>
+									<th>Categoria</th>
+									<th>Origen</th>
+									<th>Destino</th>
+									<th>Novedad</th>
+									<th>Gramos</th>
+									<th>Cantidad</th>
+									<th>Costo</th>
+									<th>Usuario</th>
+									<th>Estado</th>
+									<th>Recibido carro</th>
+									<th>Recibido bodega</th>
+								</tr>
+							</thead>
+							<tbody></tbody>
+						</table>
+						<p class="nota">
+							Los desechos que se cobran por gramos muestran los gramos; los que se cobran por
+							unidad muestran la cantidad. Nunca los dos, porque son dos formas de cobro
+							distintas del mismo registro.
+						</p>
+					</div>
+				</div>
+			</div>
+
+		</div>
+
+		<script src="js/reportedesechos.js" type="text/javascript"></script>
+		<script src="js/jquery-confirm.min.js"></script>
+		<script src="js/jquery-ui.min.js"></script>
+		<script>
+			$(function () {
+				inicializarReporte();
+			});
+		</script>
+	</body>
+</html>
