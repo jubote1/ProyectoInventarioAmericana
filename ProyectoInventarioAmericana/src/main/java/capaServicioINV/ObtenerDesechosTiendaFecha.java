@@ -20,7 +20,7 @@ import capaModeloINV.DesechoTienda;
  */
 @WebServlet("/ObtenerDesechosTiendaFecha")
 /**
- * Servlet que tiene como objetivo la INserción del encabezado de un despacho tienda.
+ * Servlet que tiene como objetivo la INserciÃ³n del encabezado de un despacho tienda.
  * @author JuanDavid
  *
  */

@@ -19,7 +19,7 @@ import capaControladorINV.InventarioCtrl;
  */
 @WebServlet("/ActualizarObservacionDespachoTienda")
 /**
- * Servlet que tiene como objetivo la INserción del encabezado de un despacho tienda.
+ * Servlet que tiene como objetivo la INserciÃ³n del encabezado de un despacho tienda.
  * @author JuanDavid
  *
  */

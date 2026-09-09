@@ -16,7 +16,7 @@ import conexionINV.ConexionBaseDatos;
 
 
 /**
- * Clase que se encarga de implementar todos aquellos mÈtodos que tienen una interacciÛn directa con la base de datos
+ * Clase que se encarga de implementar todos aquellos m√©todos que tienen una interacci√≥n directa con la base de datos
  * @author JuanDavid
  *
  */
@@ -25,7 +25,7 @@ public class InsumoDespachoTiendaDAO {
 	
 
 	/**
-	 * MÈtodo que nos permitir· validar si existe o no inventario pendiente de ingresar para la tienda en cuestiÛn.
+	 * M√©todo que nos permitir√° validar si existe o no inventario pendiente de ingresar para la tienda en cuesti√≥n.
 	 * @param idTienda
 	 * @param fecha
 	 * @return
@@ -127,7 +127,7 @@ public static String retornarEstadoDespacho(int idDespacho)
 }
 
 /**
- * MÈtodo que se encarga de retornar los despachos de tienda pendientes
+ * M√©todo que se encarga de retornar los despachos de tienda pendientes
  * @param idTienda
  * @param fecha
  * @return Un ArrayList con todos los InsusmosDespachoTienda pendientes para la tienda y la fecha.
@@ -197,11 +197,11 @@ public static ArrayList<InsumoDespachoTienda> obtenerInsumoDespachoTienda(int id
 }
 
 /**
- * MÈtodo de la capa de acceso a datos que se encarga de la inserciÛn de despacho de pedido, teniendo en cuenta que la tabla hace las veces
+ * M√©todo de la capa de acceso a datos que se encarga de la inserci√≥n de despacho de pedido, teniendo en cuenta que la tabla hace las veces
  * de encabezado del despacho de insumos para la tienda.
  * @param idtienda Se recibe el idtienda de la tienda asociada al inventario.
  * @param fechasurtir Fecha que determina la fecha de llevado de los insumos a la tienda
- * @return Retorna un enterio con el iddespacho que representa como el encabezado del detalle de los insumos que se llevar· a la tienda
+ * @return Retorna un enterio con el iddespacho que representa como el encabezado del detalle de los insumos que se llevar√° a la tienda
  */
 public static int InsertarInsumoDespachoTienda(int idtienda, String fechasurtir, String observacion, String estado)
 {
@@ -315,7 +315,7 @@ public static void actualizarObservacionDespachoTienda(int idDespacho, String ob
 }
 
 /**
- * MÈtodo que retorna el encabezado de un despacho de inventario dado un iddespacho enviado como par·metro.
+ * M√©todo que retorna el encabezado de un despacho de inventario dado un iddespacho enviado como par√°metro.
  * @param idDespacho
  * @return
  */

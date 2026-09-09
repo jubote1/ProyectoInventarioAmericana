@@ -1,6 +1,7 @@
 package capaDAOINV;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.sql.ResultSet;
@@ -201,17 +202,32 @@ public class DesechoTiendaDAO {
 		Connection con1 = con.obtenerConexionBDPrincipalLocal();
 		try
 		{
-			Statement stm = con1.createStatement();
-			String insert = "insert into desecho_tienda (numero_desecho, idtienda, fecha, descripcion, motivo, iddesecho, gramos, cantidad, usuario) values (" + des.getNumeroDesecho() + ", " + des.getIdTienda() + " , '" + des.getFecha() + "' , '" + des.getDescripcion() + "' , '" + des.getMotivo() + "', " + des.getIdDesecho() + " , " + des.getGramos() + " , " + des.getCantidad() + " , '" + des.getUsuario() + "')"; 
-			logger.info(insert);
-			System.out.println(insert);
-			stm.executeUpdate(insert, Statement.RETURN_GENERATED_KEYS);
-			ResultSet rs = stm.getGeneratedKeys();
+			//Va con PreparedStatement porque descripcion, motivo y usuario son texto
+			//que escribe la gente en la tienda. Concatenado, un apostrofo en el
+			//motivo rompia la sentencia y el desecho no quedaba registrado: el POS
+			//se tragaba el error y nadie se enteraba.
+			String insert = "insert into desecho_tienda (numero_desecho, idtienda, fecha, descripcion,"
+					+ " motivo, iddesecho, gramos, cantidad, usuario) values (?,?,?,?,?,?,?,?,?)";
+			logger.info(insert + " tienda=" + des.getIdTienda() + " iddesecho=" + des.getIdDesecho()
+					+ " gramos=" + des.getGramos() + " cantidad=" + des.getCantidad());
+			PreparedStatement pst = con1.prepareStatement(insert, Statement.RETURN_GENERATED_KEYS);
+			pst.setInt(1, des.getNumeroDesecho());
+			pst.setInt(2, des.getIdTienda());
+			pst.setString(3, des.getFecha());
+			pst.setString(4, des.getDescripcion() == null ? "" : des.getDescripcion());
+			pst.setString(5, des.getMotivo() == null ? "" : des.getMotivo());
+			pst.setInt(6, des.getIdDesecho());
+			pst.setDouble(7, des.getGramos());
+			pst.setDouble(8, des.getCantidad());
+			pst.setString(9, des.getUsuario() == null ? "" : des.getUsuario());
+			pst.executeUpdate();
+			ResultSet rs = pst.getGeneratedKeys();
 			if (rs.next()){
 				idDesechoIns = rs.getInt(1);
-				
+
 	        }
-			stm.close();
+			rs.close();
+			pst.close();
 			con1.close();
 		}
 		catch (Exception e){

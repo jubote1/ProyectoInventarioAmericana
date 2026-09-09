@@ -1,7 +1,7 @@
 package conexionINV;
 import java.sql.*;
 /**
- * Clase que se encarga de la implementaci髇 de la conexi髇 a las bases de datos del sistema contact center y la
+ * Clase que se encarga de la implementaci贸n de la conexi贸n a las bases de datos del sistema contact center y la
  * base de datos de cada tienda.
  * @author JuanDavid
  *
@@ -53,7 +53,7 @@ public class ConexionBaseDatos {
 	}
 	
 	/**
-	 * M閠odo que implementa la conexi髇 a la base de datos del sistema principal de contact center
+	 * M茅todo que implementa la conexi贸n a la base de datos del sistema principal de contact center
 	 * @return
 	 */
 	public Connection obtenerConexionBDPrincipalLocal(){
@@ -77,7 +77,7 @@ public class ConexionBaseDatos {
 
 			
 			/**
-			 * Se realiza la creaci髇 de la conexi髇 a la base de datos
+			 * Se realiza la creaci贸n de la conexi贸n a la base de datos
 			 */
 			con = DriverManager.getConnection(
 		            "jdbc:mysql://localhost/inventarioamericana?"
@@ -100,7 +100,7 @@ public class ConexionBaseDatos {
 	
 	
 	/**
-	 * M閠odo que se encarga de tener conexi髇 al sistema principal de temas generales
+	 * M茅todo que se encarga de tener conexi贸n al sistema principal de temas generales
 	 * @return
 	 */
 	public Connection obtenerConexionBDGeneral(){

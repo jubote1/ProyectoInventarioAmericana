@@ -7,17 +7,17 @@ import org.apache.log4j.Logger;
 import capaModeloINV.Usuario;
 import conexionINV.ConexionBaseDatos;
 /**
- * Clase que se encarga de implementar toda la interacci髇 con la base de datos para la entidad Usuario.
+ * Clase que se encarga de implementar toda la interacci贸n con la base de datos para la entidad Usuario.
  * @author JuanDavid
  *
  */
 public class UsuarioDAO {
 
 	/**
-	 * M閠odo que se encarga de validar la existencia y de un usuario y su contrase馻 en la base de datos.
-	 * @param usuario Se recibe como par醡etro un objeto MOdelo Usuario, el cual trae la informaci髇 base para la validaci髇,
-	 * autenticaci髇 del usuario.
-	 * @return Se retorna un valor booleano que indica si el proceso de autenticaci髇 es satifactorio o no.
+	 * M茅todo que se encarga de validar la existencia y de un usuario y su contrase帽a en la base de datos.
+	 * @param usuario Se recibe como par谩metro un objeto MOdelo Usuario, el cual trae la informaci贸n base para la validaci贸n,
+	 * autenticaci贸n del usuario.
+	 * @return Se retorna un valor booleano que indica si el proceso de autenticaci贸n es satifactorio o no.
 	 */
 	public static boolean validarUsuario(Usuario usuario)
 	{
@@ -66,9 +66,9 @@ public class UsuarioDAO {
 	}
 	
 	/**
-	 * M閠odo que se encarga de validar si un usuario existe o no en la base de datos
-	 * @param usuario Recibe como par醡etro un objeto Modelo Usuario con base en el cual se realiza la consulta.
-	 * @return Se retorna un valor booleano con base en el cual se realiza la validaci髇 del usuario en base de datos
+	 * M茅todo que se encarga de validar si un usuario existe o no en la base de datos
+	 * @param usuario Recibe como par谩metro un objeto Modelo Usuario con base en el cual se realiza la consulta.
+	 * @return Se retorna un valor booleano con base en el cual se realiza la validaci贸n del usuario en base de datos
 	 * 
 	 */
 	public static String validarAutenticacion(Usuario usuario)

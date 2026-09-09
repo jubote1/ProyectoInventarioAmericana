@@ -81,11 +81,13 @@ public class InsertarAprovechableTienda extends HttpServlet {
         try
         {
         	cantidad = Double.parseDouble(request.getParameter("cantidad"));
-        	
+
         }catch(Exception e)
         {
         	logger.error(e.toString());
-        	gramos = 0;
+        	//Aqui decia gramos = 0, que es la variable de arriba: si la cantidad
+        	//venia mal, se perdian los gramos que si habian llegado bien.
+        	cantidad = 0;
         }
         String usuario = request.getParameter("usuario");
         InventarioCtrl inv = new InventarioCtrl();
