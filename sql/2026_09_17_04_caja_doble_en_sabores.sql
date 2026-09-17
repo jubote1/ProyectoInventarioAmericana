@@ -50,6 +50,8 @@
 -- por eso el borrado va restringido a tipo_producto = 'D'.
 -- ---------------------------------------------------------------------------
 
+USE inventarioamericana;
+
 START TRANSACTION;
 
 -- Quedan 96 filas por fuera: 24 sabores x 4 tamanos de caja.
