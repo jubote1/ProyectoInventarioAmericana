@@ -251,4 +251,38 @@ public class ConexionBaseDatos {
 		return(con);
 	}
 	
+
+	/**
+	 * Conexion a datamart, donde vive la historia de varianza de las tiendas.
+	 *
+	 * No existia en este proyecto. La tabla varianza_resumen_historico la
+	 * alimenta cada noche ServicioDiarioReplicaVarianza con lo de las once
+	 * tiendas, y es de donde lee el monitoreo de varianzas. Esta en el mismo
+	 * servidor, asi que la consulta no sale a la red de las tiendas.
+	 */
+	public Connection obtenerConexionBDDatamartLocal(){
+		try {
+		    Class.forName("com.mysql.cj.jdbc.Driver").newInstance();
+
+		} catch (Exception e) {
+
+		    System.out.println(e.toString());
+
+		}
+
+		Connection con = null;
+
+		try {
+
+			con = DriverManager.getConnection(
+		            "jdbc:mysql://localhost/datamart?"
+		            + "user=root&password=4m32017&serverTimezone=UTC");
+
+		} catch (SQLException ex) {
+
+		    System.out.println("SQLException: " + ex.getMessage());
+
+		}
+		return(con);
+	}
 }

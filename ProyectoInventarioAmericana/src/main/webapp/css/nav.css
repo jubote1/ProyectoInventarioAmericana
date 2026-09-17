@@ -1,0 +1,24 @@
+
+  .navbar-nav .dropdown-menu {
+    background-color: #343a40 !important;
+    color: white;
+  }
+
+  .navbar-nav .dropdown-item:hover {
+    background-color: #495057 !important;
+  }
+
+  .navbar-nav .dropdown-item {
+    color: white;
+  }
+
+  .navbar-nav .dropdown-item:focus,
+  .navbar-nav .dropdown-item:active {
+    background-color: #495057 !important;
+    color: white;
+  }
+
+  .navbar {
+    padding: 10px;
+    border-radius: 0 !important;
+  }

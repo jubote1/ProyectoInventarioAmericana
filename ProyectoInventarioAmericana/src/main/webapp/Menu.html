@@ -1,18 +1,53 @@
-<nav id ="menuprincipal" class="navbar navbar-inverse">
-		  <div class="container-fluid">
-		    <div class="navbar-header">
-		      <a class="navbar-brand"><img src="LogoAmericana.png" class="img-circle" /></a>
-		      <a class="navbar-brand" href="pendiente.html">INVENTARIOS PIZZA AMERICANA</a>
-		    </div>
-		    <ul class="nav navbar-nav">
-		      <li class="active"><a href="www.pizzaamericana.co">Home Pizza Americana</a></li>
-		      <li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="#">Funciones<span class="caret"></span></a>
-		        <ul class="dropdown-menu">
-		          <li><a href="">Opciones</a></li>
-		        </ul>
-		      </li>
-		     </ul>
-		     <P ALIGN="right">
-		     <LABEL id="usuariologin" style="color:white;"></LABEL></P>
-		  </div>
-		</nav>
+<link rel="stylesheet" href="css/nav.css" crossorigin="anonymous">
+<link href="css/all.min.css" rel="stylesheet" type="text/css" />
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark" id="menuprincipal">
+  <div class="container-fluid">
+    <a class="navbar-brand d-flex align-items-center" href="CalcularInventario.html" style="gap: 10px;">
+      <img id="logo-img" src="images/logo-sin-fondo.png" alt="Logo Pizza Americana"
+        style="height: 80px; width: 80px; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.6));">
+      <span class="text-white font-weight-bold">INVENTARIOS PIZZA AMERICANA</span>
+    </a>
+
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarContenido"
+      aria-controls="navbarContenido" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarContenido" style="margin: 10px;">
+      <ul class="navbar-nav mr-auto">
+        <li class="nav-item active">
+          <a class="nav-link" href="http://www.pizzaamericana.co">Pagina Web<span class="sr-only">(current)</span></a>
+        </li>
+
+        <!-- Este menu es el del usuario sin perfil de administrador. Se dejan las
+             mismas opciones que tenia antes: cambiar quien ve que no es un
+             cambio de estilo y no se hace de paso. -->
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown"
+            aria-haspopup="true" aria-expanded="false">Funciones</a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+            <a class="dropdown-item" href="CalcularInventario.html">Despachar Inventario Tiendas</a>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <div id="notf" class="ml-auto d-flex align-items-center text-white">
+      <span class="font-weight-bold mr-4" style="color:gray;">Usuario:</span><span id="usuariologin"
+        class="font-weight-bold mr-4" style="color:white;"></span>
+
+      <a href="Index.html" class="text-white text-decoration-none"><span
+          class="font-weight-bold d-flex align-items-center "><i class="fas fa-sign-out-alt mr-1"></i>Salir</span></a>
+    </div>
+  </div>
+</nav>
+
+<script>
+  //El menu se pinta el nombre solo. Asi la pagina que lo carga no tiene que
+  //saber nada del usuario, y basta con hacer el .load() de siempre.
+  (function () {
+    $.getJSON('ObtenerUsuarioSesion', function (data) {
+      $('#usuariologin').text(data && data.nombre ? data.nombre : '');
+    });
+  })();
+</script>

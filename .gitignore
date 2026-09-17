@@ -1,0 +1,6 @@
+# Salidas de compilacion: nunca van al repositorio. En ProyectoPizzaAmericana
+# se colaron seis .class por un "git add -A" sobre src, y hubo que sacarlos.
+*.class
+ProyectoInventarioAmericana/build/
+ProyectoInventarioAmericana/bin/
+ProyectoInventarioAmericana/.gradle/
