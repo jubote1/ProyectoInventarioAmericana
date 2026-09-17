@@ -1,0 +1,87 @@
+HOMOLOGACION DE LA COMPOSICION DE PRODUCTOS - 2026-09-17
+================================================================================
+
+QUE ES ESTO
+
+item_inventario_x_producto dice cuanto insumo descuenta cada producto. Vive solo
+en cada tienda y no hay dos iguales. Estos scripts las dejan iguales.
+
+De 1.234 recetas, 1.186 ya coinciden en las once tiendas -el 96%-. Quedan 48
+distintas, y ninguna esta empatada: todas tienen una mayoria clara.
+
+COMO SE DECIDIO CUAL ES LA BUENA
+
+Por mayoria entre las once tiendas, NO tomando una como referencia. Manrique
+tambien tiene errores propios: tenia BlueBerry descontando 0,023 de Bolas Gel
+donde nueve tiendas descuentan 25, y Americana Premium GD con 430 de queso
+donde diez tienen 330.
+
+CUANTO CAMBIA CADA TIENDA
+
+  LaMota           29        Bello              0
+  Manrique          5        Itagui             0
+  Calasanz          4        Envigado           0
+  Niquia            4        SanAntonio         0
+  America           2
+  Pilarica          2
+  ManriquePiloto    1
+                   --
+                   47
+
+LO QUE ENCONTRAMOS EN LA MOTA, QUE ES LO IMPORTANTE
+
+La Mota no tiene la receta de la Hawaiana Artesanal MD ni de la PZ -cero
+insumos- y a la GD le faltan el queso y la caja. Y si las vende: 3.363 MD y
+2.543 PZ historicas, 564 unidades en los ultimos 30 dias.
+
+O sea que cada una de esas pizzas se lleva queso, pina, jamon y pasta de la
+nevera y el sistema descuenta cero. El inventario teorico queda mas alto que el
+real, y al contar aparece como faltante.
+
+Costeado sobre los ultimos 30 dias, lo que dejo de descontarse:
+
+  Queso           134.395 g      2.714.779
+  Caja Grande         238,5        408.312
+  Pina Artesanal   28.430 g        318.416
+  Jamon            10.009 g        246.892
+  Caja Mediana          178        241.012
+  Pasta            10.070 g        186.295
+  Caja Pequena        147,5        110.625
+                               -----------
+                                 4.226.331
+
+La Mota reporta 4.947.265 de faltante en esos mismos 30 dias. Esto explica el
+85%, y el cruce insumo por insumo cuadra:
+
+  Queso   predicho 134.395 g  contra faltante real 151.537 g
+  Jamon   predicho  10.009 g  contra faltante real  14.249 g
+
+La pasta encaja al reves -predicho 10.070, faltante real 2.897- y tambien tiene
+explicacion: La Mota descuenta 100 de pasta donde las demas descuentan 70, o sea
+que se sobre-descuenta y compensa.
+
+El faltante de La Mota no es merma ni robo. Es una receta que no existe.
+
+COMO CORRERLOS
+
+Uno por tienda, en la base de esa tienda. Cada uno va dentro de una transaccion
+y termina mostrando el conteo de filas antes del COMMIT.
+
+  Manrique          172.19.1.80
+  America           192.168.3.38
+  Calasanz          192.168.4.10
+  LaMota            192.168.7.19
+  Pilarica          192.168.9.39
+  ManriquePiloto    172.19.11.69
+  Niquia            172.19.12.19
+
+QUEDAN CINCO CASOS SIN RESOLVER
+
+Estan en _PARA_DECIDIR.txt. No se homologaron porque la mayoria no alcanza o
+porque seguirla probablemente empeoraria las cosas.
+
+DESPUES DE CORRER ESTO
+
+La varianza de La Mota deberia caer fuerte la semana siguiente. Vale la pena
+mirarla en el monitoreo antes y despues: es la prueba de que el diagnostico
+estaba bien.

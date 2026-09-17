@@ -1,0 +1,23 @@
+CASOS QUE NO SE HOMOLOGAN SOLOS
+==============================================================================
+
+Adici¢n Guacamole GD          Guacamole Kg            mayoria=AUSENTE   ( 9/11)
+      Adicion Guacamole GD: Manrique y Niquia SI descuentan guacamole, nueve tiendas no descuentan nada. Quitarlo deja la adicion sin descontar en ninguna parte, que es peor que el problema.
+      Manrique=90  Bello=AUSENTE  America=AUSENTE  Calasanz=AUSENTE  Itagui=AUSENTE  LaMota=AUSENTE  Envigado=AUSENTE  Pilarica=AUSENTE  SanAntonio=AUSENTE  ManriquePiloto=AUSENTE  Niquia=90
+
+Vaso Gaseosa10oz              Gaseosa 1.5 lts         mayoria=0.2       ( 6/11)
+      La mayoria es de solo 6 de 11.
+      Manrique=AUSENTE  Bello=0.2  America=0.2  Calasanz=AUSENTE  Itagui=0.2  LaMota=0.2  Envigado=0.2  Pilarica=0.2  SanAntonio=AUSENTE  ManriquePiloto=AUSENTE  Niquia=AUSENTE
+
+Nueva Soda Frutos Rojos       Soda                    mayoria=AUSENTE   (10/11)
+      Nueva Soda Frutos Rojos solo la tiene Calasanz. Puede ser un producto que solo alli venden, no un error.
+      Manrique=AUSENTE  Bello=AUSENTE  America=AUSENTE  Calasanz=1  Itagui=AUSENTE  LaMota=AUSENTE  Envigado=AUSENTE  Pilarica=AUSENTE  SanAntonio=AUSENTE  ManriquePiloto=AUSENTE  Niquia=AUSENTE
+
+Nueva Soda Frutos Amarillos   Soda                    mayoria=AUSENTE   (10/11)
+      Nueva Soda Frutos Amarillos solo la tiene Calasanz. Puede ser un producto que solo alli venden, no un error.
+      Manrique=AUSENTE  Bello=AUSENTE  America=AUSENTE  Calasanz=1  Itagui=AUSENTE  LaMota=AUSENTE  Envigado=AUSENTE  Pilarica=AUSENTE  SanAntonio=AUSENTE  ManriquePiloto=AUSENTE  Niquia=AUSENTE
+
+Adici¢n Champi«Òon MD         Guacamole Kg            mayoria=90        ( 9/11)
+      Adicion Champinon MD descuenta GUACAMOLE en nueve tiendas. Eso huele a error en las nueve, no en las dos que no lo tienen. Copiarlo a Manrique y Niquia propagaria el error.
+      Manrique=AUSENTE  Bello=90  America=90  Calasanz=90  Itagui=90  LaMota=90  Envigado=90  Pilarica=90  SanAntonio=90  ManriquePiloto=90  Niquia=AUSENTE
+
