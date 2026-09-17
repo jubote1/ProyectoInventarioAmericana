@@ -268,7 +268,12 @@ function guardarInsumo() {
 		+ "&unidadmedida=" + unidadMedida + "&manejacanastas=" + manejaCanastas
 		+ "&cantidadcanasta=" + cantidadCanasta + "&nombrecontenedor=" + nombreContenedor
 		+ "&categoria=" + categoria + "&controlcantidad=" + controlCantidad
-		+ "&costounidad=" + costoUnidad + "&controltienda=" + controlTienda, function () {
+		+ "&costounidad=" + costoUnidad + "&controltienda=" + controlTienda, function (data) {
+			if (data && data.resultado === 'COSTOMALO') {
+				avisar('Revise el costo: escriba solo numeros, con coma para los decimales '
+					+ '(por ejemplo 20.200 o 1377,5). No se creo el insumo.', false);
+				return;
+			}
 			//Antes no refrescaba: el insumo quedaba creado pero la tabla seguia
 			//igual, y daba la impresion de que no habia guardado.
 			$('#addData').modal('hide');
@@ -346,7 +351,15 @@ function confirmarEditarInsumo() {
 			+ "&controltienda=" + controlTienda,
 		dataType: 'json',
 		async: false,
-		success: function () {
+		success: function (data) {
+			//El costo malo no se guarda. Antes se decia "actualizado" pasara lo
+			//que pasara, y como el costo quedaba en cero el mensaje era mentira
+			//justo cuando mas importaba.
+			if (data && data.resultado === 'COSTOMALO') {
+				bootbox.alert('Revise el costo: escriba solo numeros, con coma para los decimales '
+					+ '(por ejemplo 20.200 o 1377,5). NO se guardaron los cambios.');
+				return;
+			}
 			pintarInsumos();
 			$('#userForm').parents('.bootbox').modal('hide');
 			bootbox.alert('El insumo ha sido actualizado');

@@ -83,14 +83,19 @@ public class CRUDInsumo extends HttpServlet {
 				{
 					controlCantidad = false;
 				}
-				double costoUnidad = 0;
-				try
+				//En el alta se permite dejar el costo vacio: crear el insumo y
+				//cargarle el costo despues es una forma de trabajar que se usa
+				//-hay insumos con retiros en cero de sus primeras semanas, justo
+				//por eso-. Lo que no se permite es un costo escrito que no se
+				//entienda, que es otra cosa.
+				Double costoLeido = leerCosto(request.getParameter("costounidad"), true);
+				if(costoLeido == null)
 				{
-					costoUnidad = Integer.parseInt(request.getParameter("costounidad"));
-				}catch(Exception e)
-				{
-					costoUnidad = 0;
+					PrintWriter outMal = response.getWriter();
+					outMal.write("{\"resultado\":\"COSTOMALO\"}");
+					return;
 				}
+				double costoUnidad = costoLeido.doubleValue();
 				String controlTienda = request.getParameter("controltienda");
 				Insumo insumo = new Insumo(0,nombre, unidadMedida,precioUnidad,manejaCanasta,cantidadCanasta,nombreContenedor,categoria, controlCantidad,costoUnidad, controlTienda);
 				respuesta = invCtrl.insertarInsumo(insumo);
@@ -131,14 +136,20 @@ public class CRUDInsumo extends HttpServlet {
 				{
 					controlCantidad = false;
 				}
-				double costoUnidad = 0;
-				try
+				//Aca es donde mas dolia: editarInsumo, ademas de guardar el
+				//maestro, reescribe retiro_inventario_detalle.precio de TODA la
+				//semana en curso. Un costo que quedara en cero se llevaba por
+				//delante los retiros de la semana, sin decir nada.
+				//Aca el vacio NO se acepta: borrar el campo sin querer no puede
+				//terminar en un costo cero que se lleve por delante la semana.
+				Double costoLeidoEdit = leerCosto(request.getParameter("costounidad"), false);
+				if(costoLeidoEdit == null)
 				{
-					costoUnidad = Integer.parseInt(request.getParameter("costounidad"));
-				}catch(Exception e)
-				{
-					costoUnidad = 0;
+					PrintWriter outMal = response.getWriter();
+					outMal.write("{\"resultado\":\"COSTOMALO\"}");
+					return;
 				}
+				double costoUnidad = costoLeidoEdit.doubleValue();
 				String controlTienda = request.getParameter("controltienda");
 				Insumo insumoEdit = new Insumo(idInsumoEdit,nombre, unidadMedida,precioUnidad,manejaCanasta,cantidadCanasta,nombreContenedor,categoria, controlCantidad,costoUnidad, controlTienda);
 				respuesta = invCtrl.editarInsumo(insumoEdit);
@@ -163,6 +174,88 @@ public class CRUDInsumo extends HttpServlet {
 			out.write(respuesta);
 			
 		
+	}
+
+	/**
+	 * Lee el costo que manda la pantalla.
+	 *
+	 * Antes esto era Integer.parseInt dentro de un try que en el catch dejaba
+	 * el costo en CERO. O sea que escribir "1377,5" o "20.200" no daba error:
+	 * guardaba el insumo con costo cero y nadie se enteraba. Y no era solo el
+	 * maestro: editarInsumo tambien reescribe retiro_inventario_detalle.precio
+	 * de toda la semana en curso para ese insumo, asi que los retiros de la
+	 * semana quedaban en cero. Un insumo en cero desaparece de todo informe
+	 * costeado -varianza, desechos, venta integral- sin dejar rastro.
+	 *
+	 * Ahora devuelve null cuando no se entiende, y el que llama no guarda
+	 * nada. Es preferible que la pantalla diga "revise el costo" a que el dato
+	 * se pierda en silencio.
+	 *
+	 * Sobre los separadores: se usa la convencion de aca, punto para los miles
+	 * y coma para los decimales, que es la misma que ya se uso en el central
+	 * para los valores de conciliacion. Asi "20.200" son veinte mil doscientos
+	 * y "1377,5" son mil trescientos setenta y siete con cinco. Escribir
+	 * "1377.5" con punto decimal daria 13.775, pero es una forma que aca no se
+	 * usa y que el codigo anterior tampoco aceptaba.
+	 *
+	 * @param permitirVacio true en el alta, donde dejar el costo en blanco y
+	 *        cargarlo despues es valido; false en la edicion, donde borrar el
+	 *        campo sin querer no puede terminar en un costo cero
+	 * @return el costo, o null si no se puede leer
+	 */
+	private Double leerCosto(String valor, boolean permitirVacio)
+	{
+		if(valor == null || valor.trim().length() == 0)
+		{
+			return(permitirVacio ? Double.valueOf(0) : null);
+		}
+		//Un signo de pesos o un espacio pegado no deberian tumbar el guardado.
+		String limpio = valor.trim().replace("$", "").replace(" ", "");
+
+		if(limpio.indexOf(',') >= 0)
+		{
+			//Hay coma: entonces la coma es el decimal y los puntos son miles.
+			limpio = limpio.replace(".", "").replace(',', '.');
+		}
+		else
+		{
+			//No hay coma. Un punto solo es ambiguo: "20.200" son veinte mil
+			//doscientos y "1377.5" son mil trescientos setenta y siete con
+			//cinco. Se decide por cuantos digitos quedan despues del punto,
+			//que es como se escribe de verdad: tres digitos son miles, uno o
+			//dos son decimales.
+			//
+			//Importa afinar esto y no barrer el punto siempre: con la regla
+			//simple, escribir "1377.5" guardaba 13.775, diez veces el costo
+			//real. Un cero se ve; un costo diez veces mayor pasa de largo y
+			//desajusta el costeo de la varianza sin que nadie lo note.
+			int primerPunto = limpio.indexOf('.');
+			int ultimoPunto = limpio.lastIndexOf('.');
+			int digitosFinales = limpio.length() - ultimoPunto - 1;
+			if(primerPunto >= 0 && primerPunto == ultimoPunto && digitosFinales > 0 && digitosFinales <= 2)
+			{
+				//Un solo punto con uno o dos digitos detras: es decimal, se deja.
+			}
+			else
+			{
+				//Varios puntos, o tres digitos detras: son separadores de miles.
+				limpio = limpio.replace(".", "");
+			}
+		}
+		try
+		{
+			double leido = Double.parseDouble(limpio);
+			//Un costo negativo no existe y romperia el costeo de la varianza,
+			//que quedaria con las perdidas del lado de las ganancias.
+			if(leido < 0)
+			{
+				return(null);
+			}
+			return(Double.valueOf(leido));
+		}catch(Exception e)
+		{
+			return(null);
+		}
 	}
 
 	/**
