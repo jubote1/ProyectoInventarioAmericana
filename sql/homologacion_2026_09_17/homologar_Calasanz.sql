@@ -16,16 +16,16 @@
 
 START TRANSACTION;
 
--- Lecherita(Obsequio) / Pasta : 85 -> AUSENTE   (asi lo tienen 10 de 11)
+-- Lecherita(Obsequio) / Pasta : 85 -> AUSENTE   (asi lo tienen 10 de 11)
 DELETE FROM item_inventario_x_producto WHERE idproducto = 462 AND iditem = 26;
 
--- Lecherita(Obsequio) / Queso : 330 -> AUSENTE   (asi lo tienen 10 de 11)
+-- Lecherita(Obsequio) / Queso : 330 -> AUSENTE   (asi lo tienen 10 de 11)
 DELETE FROM item_inventario_x_producto WHERE idproducto = 462 AND iditem = 28;
 
--- Lecherita(Obsequio) / Caja Grande : 1 -> AUSENTE   (asi lo tienen 10 de 11)
+-- Lecherita(Obsequio) / Caja Grande : 1 -> AUSENTE   (asi lo tienen 10 de 11)
 DELETE FROM item_inventario_x_producto WHERE idproducto = 462 AND iditem = 35;
 
--- Lecherita(Obsequio) / Masa Grande : 1 -> AUSENTE   (asi lo tienen 10 de 11)
+-- Lecherita(Obsequio) / Masa Grande : 1 -> AUSENTE   (asi lo tienen 10 de 11)
 DELETE FROM item_inventario_x_producto WHERE idproducto = 462 AND iditem = 9;
 
 -- Revise el conteo antes de confirmar.

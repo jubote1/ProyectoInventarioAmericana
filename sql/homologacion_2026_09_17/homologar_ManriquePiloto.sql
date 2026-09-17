@@ -16,7 +16,7 @@
 
 START TRANSACTION;
 
--- Deditos Promo / Mantequilla : 3 -> 3.3   (asi lo tienen 10 de 11)
+-- Deditos Promo / Mantequilla : 3 -> 3.3   (asi lo tienen 10 de 11)
 DELETE FROM item_inventario_x_producto WHERE idproducto = 432 AND iditem = 70;
 INSERT INTO item_inventario_x_producto (idproducto, iditem, cantidad) VALUES (432, 70, 3.3);
 

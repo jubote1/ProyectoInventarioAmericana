@@ -16,10 +16,10 @@
 
 START TRANSACTION;
 
--- Promo 2 Lasag + Maduro / Arequipe Sobre : AUSENTE -> 1   (asi lo tienen 10 de 11)
+-- Promo 2 Lasag + Maduro / Arequipe Sobre : AUSENTE -> 1   (asi lo tienen 10 de 11)
 INSERT INTO item_inventario_x_producto (idproducto, iditem, cantidad) VALUES (433, 5, 1);
 
--- Promo 2 Lasag + Maduro / Caja Madurito : 1 -> AUSENTE   (asi lo tienen 10 de 11)
+-- Promo 2 Lasag + Maduro / Caja Madurito : 1 -> AUSENTE   (asi lo tienen 10 de 11)
 DELETE FROM item_inventario_x_producto WHERE idproducto = 433 AND iditem = 79;
 
 -- Revise el conteo antes de confirmar.

@@ -16,11 +16,11 @@
 
 START TRANSACTION;
 
--- XL Combo Doble / Caja Extra Grande : 2 -> 1   (asi lo tienen 10 de 11)
+-- XL Combo Doble / Caja Extra Grande : 2 -> 1   (asi lo tienen 10 de 11)
 DELETE FROM item_inventario_x_producto WHERE idproducto = 418 AND iditem = 34;
 INSERT INTO item_inventario_x_producto (idproducto, iditem, cantidad) VALUES (418, 34, 1);
 
--- GD Combo Doble / Caja Grande : 1 -> 2   (asi lo tienen 10 de 11)
+-- GD Combo Doble / Caja Grande : 1 -> 2   (asi lo tienen 10 de 11)
 DELETE FROM item_inventario_x_producto WHERE idproducto = 419 AND iditem = 35;
 INSERT INTO item_inventario_x_producto (idproducto, iditem, cantidad) VALUES (419, 35, 2);
 

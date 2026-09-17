@@ -16,18 +16,18 @@
 
 START TRANSACTION;
 
--- Grande Postobon Ifood / Caja Grande : 1 -> AUSENTE   (asi lo tienen 9 de 11)
+-- Grande Postobon Ifood / Caja Grande : 1 -> AUSENTE   (asi lo tienen 9 de 11)
 DELETE FROM item_inventario_x_producto WHERE idproducto = 417 AND iditem = 35;
 
--- Lasag¤a Combo Insep / Lasagna Mixt : 2 -> 1   (asi lo tienen 9 de 11)
+-- Lasag¤a Combo Insep / Lasagna Mixt : 2 -> 1   (asi lo tienen 9 de 11)
 DELETE FROM item_inventario_x_producto WHERE idproducto = 447 AND iditem = 6;
 INSERT INTO item_inventario_x_producto (idproducto, iditem, cantidad) VALUES (447, 6, 1);
 
--- Lasag¤a Combo Insep / Panes Lasagna Baguette : 4 -> 2   (asi lo tienen 9 de 11)
+-- Lasag¤a Combo Insep / Panes Lasagna Baguette : 4 -> 2   (asi lo tienen 9 de 11)
 DELETE FROM item_inventario_x_producto WHERE idproducto = 447 AND iditem = 72;
 INSERT INTO item_inventario_x_producto (idproducto, iditem, cantidad) VALUES (447, 72, 2);
 
--- BlueBerry / Bolas Gel Sandia : 0.023 -> 25   (asi lo tienen 9 de 11)
+-- BlueBerry / Bolas Gel Sandia : 0.023 -> 25   (asi lo tienen 9 de 11)
 DELETE FROM item_inventario_x_producto WHERE idproducto = 513 AND iditem = 133;
 INSERT INTO item_inventario_x_producto (idproducto, iditem, cantidad) VALUES (513, 133, 25);
 
