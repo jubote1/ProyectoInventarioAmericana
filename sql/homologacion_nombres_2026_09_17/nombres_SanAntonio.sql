@@ -1,5 +1,5 @@
 -- ---------------------------------------------------------------------------
--- HOMOLOGACION DE NOMBRES - Bello
+-- HOMOLOGACION DE NOMBRES - SanAntonio
 --
 -- Se corre en la base de ESTA tienda (tiendaamericana).
 -- Solo cambia texto: no toca ids, ni precios, ni recetas.
@@ -125,14 +125,14 @@ UPDATE producto SET descripcion = UNHEX('4D6F6E7461C3B165726120505A') WHERE idpr
 -- producto 408 -> Pepperoni Champiñon PZ
 UPDATE producto SET descripcion = UNHEX('5065707065726F6E69204368616D7069C3B16F6E20505A') WHERE idproducto = 408;
 
--- item_inventario 6 -> Lasagna Mixt
-UPDATE item_inventario SET nombre_item = UNHEX('4C617361676E61204D697874') WHERE iditem = 6;
-
 -- item_inventario 11 -> Masa Pequeña
 UPDATE item_inventario SET nombre_item = UNHEX('4D617361205065717565C3B161') WHERE iditem = 11;
 
 -- item_inventario 24 -> Champiñon
 UPDATE item_inventario SET nombre_item = UNHEX('4368616D7069C3B16F6E') WHERE iditem = 24;
+
+-- item_inventario 27 -> Piña
+UPDATE item_inventario SET nombre_item = UNHEX('5069C3B161') WHERE iditem = 27;
 
 -- item_inventario 37 -> Caja Pequeña
 UPDATE item_inventario SET nombre_item = UNHEX('43616A61205065717565C3B161') WHERE iditem = 37;
