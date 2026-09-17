@@ -329,7 +329,7 @@ function pintarDetalle(filas) {
 
 function etiquetaGrupo(grupo) {
 	if (grupo === 'CAROS') {
-		return ('<span class="mv-etiqueta mv-g-caros">CAROS</span>');
+		return ('<span class="mv-etiqueta mv-g-caros">COSTOSOS</span>');
 	}
 	if (grupo === 'CARNES') {
 		return ('<span class="mv-etiqueta mv-g-carnes">CARNES</span>');

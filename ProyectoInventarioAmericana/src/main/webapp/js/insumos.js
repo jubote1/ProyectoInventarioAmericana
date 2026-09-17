@@ -202,7 +202,7 @@ function pasaFiltro(ins) {
 }
 
 function selectorGrupo(ins) {
-	var opciones = [['', '(sin grupo)'], ['CAROS', 'Caros'], ['CARNES', 'Carnes']];
+	var opciones = [['', '(sin grupo)'], ['CAROS', 'Insumos costosos'], ['CARNES', 'Carnes']];
 	var html = '<select class="form-control ins-selgrupo sel-grupo" data-id="' + ins.idinsumo + '">';
 	for (var i = 0; i < opciones.length; i++) {
 		html += '<option value="' + opciones[i][0] + '"'
