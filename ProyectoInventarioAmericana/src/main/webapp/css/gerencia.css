@@ -92,3 +92,16 @@ body { background-color: #F4F6F8; }
 	margin-bottom: -2px; }
 .ger-pestanas a.activa { color: #102F6F; font-weight: bold; border-bottom-color: #E42528; }
 .ger-pestanas a:hover { color: #102F6F; text-decoration: none; }
+
+/* ---- Buscador de empleado con sugerencias ---- */
+.ger-autocompletar { position: absolute; z-index: 20; background: #FFFFFF; border: 1px solid #D7DCE3;
+	border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,.12); max-height: 220px; overflow-y: auto;
+	width: 100%; margin-top: 2px; }
+.ger-autocompletar div { padding: 6px 10px; font-size: 13px; cursor: pointer; }
+.ger-autocompletar div:hover { background: #F4F6F8; }
+.ger-autocompletar .ger-inactivo { color: #C21C1F; font-style: italic; }
+
+/* ---- Aviso de pendientes sin repartir ---- */
+.ger-alerta { background: #FDE9C6; border: 1px solid #F0CE8E; border-radius: 4px;
+	padding: 9px 12px; font-size: 13px; color: #6C4E00; }
+.ger-alerta strong { color: #8A6400; }
