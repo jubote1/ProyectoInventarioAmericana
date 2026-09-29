@@ -43,6 +43,22 @@
           </div>
         </li>
 
+        <!-- Gerencia va visible para todos a proposito. El enlace no muestra
+             ningun dato: cada una de esas pantallas pide identificarse aparte,
+             contra el central, y el servidor vuelve a revisar el permiso en
+             cada consulta. Esconder el boton no protege nada -la URL se puede
+             escribir a mano- y en cambio obligaria a resolver el permiso antes
+             de pintar el menu en las noventa pantallas. -->
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown"
+            aria-haspopup="true" aria-expanded="false">Gerencia</a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+            <a class="dropdown-item" href="CalendarioSemanas.html">Calendario de Semanas</a>
+            <a class="dropdown-item" href="GastosTienda.html">Gastos por Tienda</a>
+            <a class="dropdown-item" href="EstructuraGerencia.html">Estructura y N&oacute;mina</a>
+          </div>
+        </li>
+
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown"
             aria-haspopup="true" aria-expanded="false">Parametrizaci&oacute;n</a>

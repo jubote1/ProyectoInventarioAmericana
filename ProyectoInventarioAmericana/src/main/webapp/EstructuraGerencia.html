@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<title>Estructura y Nomina</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<link href="css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+	<link href="css/all.min.css" rel="stylesheet" type="text/css" />
+	<link href="css/gerencia.css" rel="stylesheet" type="text/css" />
+	<script type="text/javascript" src="js/jquery-1.11.0.min.js"></script>
+	<script type="text/javascript" src="js/bootstrap.min.js"></script>
+</head>
+<body>
+
+	<div id="cargarMenu"></div>
+
+	<script type="text/javascript">
+		var server = window.location.protocol + '//' + window.location.host
+			+ window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+		var respuesta = '';
+		$.ajax({
+			url: server + 'ValidarUsuarioAplicacion',
+			dataType: 'text',
+			type: 'post',
+			async: false,
+			success: function (data) { respuesta = data; }
+		});
+		switch (respuesta) {
+			case 'OK':
+				$('#cargarMenu').load("Menu.html");
+				break;
+			case 'OKA':
+				$('#cargarMenu').load("MenuAdm.html");
+				break;
+			default:
+				location.href = server + "Index.html";
+				break;
+		}
+	</script>
+
+	<div class="container-fluid" style="max-width:1500px;">
+
+		<h3 class="ger-h1">Estructura y n&oacute;mina</h3>
+		<p class="ger-sub">
+			Los costos que no pertenecen a ninguna tienda y se reparten entre todas, y la n&oacute;mina
+			de cada punto de venta.
+		</p>
+
+		<div id="ger-contenido">
+
+			<div class="ger-panel">
+				<div class="row">
+					<div class="col-md-2 col-sm-3">
+						<div class="ger-campo">
+							<label>A&ntilde;o</label>
+							<select id="anio" class="form-control"></select>
+						</div>
+					</div>
+					<div class="col-md-3 col-sm-4">
+						<div class="ger-campo">
+							<label>Mes</label>
+							<select id="mes" class="form-control"></select>
+						</div>
+					</div>
+					<div class="col-md-7 col-sm-5">
+						<div class="ger-campo">
+							<label>&nbsp;</label>
+							<div>
+								<button id="btnConsultar" class="btn btn-default">
+									<i class="fas fa-search"></i> Consultar
+								</button>
+								<span id="infoSemanas" class="ger-nota" style="margin-left:10px;"></span>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="ger-panel">
+				<h4 class="ger-titulo">Las cuatro bolsas de estructura</h4>
+				<p class="ger-sub">
+					Administrativa, log&iacute;stica y producci&oacute;n, contact center y publicidad.
+					Son el total del mes, antes de repartir.
+				</p>
+				<div class="row" id="bolsas"></div>
+				<div style="margin-top:8px;">
+					<button id="btnGuardarPools" class="btn btn-primary">
+						<i class="fas fa-save"></i> Guardar las bolsas
+					</button>
+					<span id="totalBolsas" class="ger-nota" style="margin-left:10px;"></span>
+				</div>
+			</div>
+
+			<div class="ger-panel">
+				<h4 class="ger-titulo">C&oacute;mo quedar&iacute;a repartido</h4>
+				<p class="ger-sub">
+					El reparto es <strong>por participaci&oacute;n en la venta</strong>: se suma la venta
+					de todas las tiendas del mes y a cada una le toca su porcentaje. La venta del mes es
+					la de las semanas que el calendario le asign&oacute;, no la del 1 al 31.
+				</p>
+				<p class="ger-sub">
+					Esto se calcula al mostrar y <strong>no se guarda</strong>. Congelarlo ser&iacute;a
+					repetir lo que hace hoy el Excel, donde los pesos son puntos enteros que salieron de
+					una venta vieja.
+				</p>
+				<div class="table-responsive">
+					<table class="ger-tabla" id="tablaReparto">
+						<thead>
+							<tr>
+								<th>Tienda</th>
+								<th class="ger-num">Venta del mes</th>
+								<th class="ger-num">Participaci&oacute;n</th>
+								<th class="ger-num">Administrativa</th>
+								<th class="ger-num">Log&iacute;stica</th>
+								<th class="ger-num">Contact</th>
+								<th class="ger-num">Publicidad</th>
+								<th class="ger-num">Total estructura</th>
+							</tr>
+						</thead>
+						<tbody></tbody>
+					</table>
+				</div>
+			</div>
+
+			<div class="ger-panel">
+				<h4 class="ger-titulo">N&oacute;mina por tienda</h4>
+				<p class="ger-sub">
+					Va <strong>agregada por tienda, nunca persona por persona</strong>. Para el tablero
+					el total basta, y lo que no se guarda no se filtra.
+				</p>
+				<div class="table-responsive">
+					<table class="ger-tabla" id="tablaNomina">
+						<thead>
+							<tr>
+								<th style="min-width:130px;">Tienda</th>
+								<th class="ger-num" style="width:90px;">Empleados</th>
+								<th class="ger-num" style="min-width:120px;">Sueldo b&aacute;sico</th>
+								<th class="ger-num" style="min-width:120px;">Sueldo variable</th>
+								<th class="ger-num" style="min-width:120px;">Seguridad social</th>
+								<th class="ger-num" style="min-width:120px;">Liquidaci&oacute;n</th>
+								<th class="ger-num" style="min-width:130px;">Costo del mes</th>
+							</tr>
+						</thead>
+						<tbody></tbody>
+					</table>
+				</div>
+				<div style="margin-top:8px;">
+					<button id="btnGuardarNomina" class="btn btn-primary">
+						<i class="fas fa-save"></i> Guardar la n&oacute;mina
+					</button>
+					<span id="cuantasNominas" class="ger-nota" style="margin-left:8px;"></span>
+				</div>
+				<p class="ger-nota" style="margin-top:8px;">
+					El costo del mes es sueldo variable m&aacute;s seguridad social m&aacute;s
+					liquidaci&oacute;n, igual que en la hoja de c&aacute;lculo de hoy. El sueldo
+					b&aacute;sico se guarda aparte porque sirve para comparar, pero no se suma dos veces.
+				</p>
+			</div>
+
+		</div>
+	</div>
+
+</body>
+<script src="js/gerenciaacceso.js" type="text/javascript"></script>
+<script src="js/gerenciaestructura.js" type="text/javascript"></script>
+</html>

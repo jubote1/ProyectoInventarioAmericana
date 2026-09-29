@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<title>Gastos por Tienda</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<link href="css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+	<link href="css/all.min.css" rel="stylesheet" type="text/css" />
+	<link href="css/gerencia.css" rel="stylesheet" type="text/css" />
+	<script type="text/javascript" src="js/jquery-1.11.0.min.js"></script>
+	<script type="text/javascript" src="js/bootstrap.min.js"></script>
+</head>
+<body>
+
+	<div id="cargarMenu"></div>
+
+	<script type="text/javascript">
+		var server = window.location.protocol + '//' + window.location.host
+			+ window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+		var respuesta = '';
+		$.ajax({
+			url: server + 'ValidarUsuarioAplicacion',
+			dataType: 'text',
+			type: 'post',
+			async: false,
+			success: function (data) { respuesta = data; }
+		});
+		switch (respuesta) {
+			case 'OK':
+				$('#cargarMenu').load("Menu.html");
+				break;
+			case 'OKA':
+				$('#cargarMenu').load("MenuAdm.html");
+				break;
+			default:
+				location.href = server + "Index.html";
+				break;
+		}
+	</script>
+
+	<div class="container-fluid" style="max-width:1600px;">
+
+		<h3 class="ger-h1">Gastos por tienda</h3>
+		<p class="ger-sub">
+			Lo que el sistema no puede saber solo: cu&aacute;nto vale el arriendo, la alarma, el
+			seguro. Se define una vez y rige hasta que cambie.
+		</p>
+
+		<div id="ger-contenido">
+
+			<div class="ger-panel">
+				<div class="row">
+					<div class="col-md-2 col-sm-3">
+						<div class="ger-campo">
+							<label>A&ntilde;o</label>
+							<select id="anio" class="form-control"></select>
+						</div>
+					</div>
+					<div class="col-md-3 col-sm-4">
+						<div class="ger-campo">
+							<label>Mes</label>
+							<select id="mes" class="form-control"></select>
+						</div>
+					</div>
+					<div class="col-md-7 col-sm-5">
+						<div class="ger-campo">
+							<label>&nbsp;</label>
+							<div>
+								<button id="btnConsultar" class="btn btn-default">
+									<i class="fas fa-search"></i> Consultar
+								</button>
+								<span id="vigenteAl" class="ger-nota" style="margin-left:10px;"></span>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="ger-pestanas">
+				<a href="#" id="tabFijos" class="activa">Gastos fijos</a>
+				<a href="#" id="tabServicios">Servicios p&uacute;blicos</a>
+			</div>
+
+			<!-- ================= FIJOS ================= -->
+			<div id="panelFijos">
+				<div class="ger-panel">
+					<h4 class="ger-titulo">Gastos fijos vigentes</h4>
+					<p class="ger-sub">
+						Cuando un valor cambia <strong>no se sobrescribe</strong>: se le cierra la vigencia
+						al anterior y se abre uno nuevo desde la fecha que usted indique. As&iacute; un mes
+						ya reportado sigue mostrando lo que de verdad se pag&oacute;, y se puede explicar
+						desde cu&aacute;ndo subi&oacute;.
+					</p>
+					<div class="row">
+						<div class="col-md-3 col-sm-4">
+							<div class="ger-campo">
+								<label>Los cambios rigen desde</label>
+								<input type="text" id="rigeDesde" class="form-control" placeholder="aaaa-mm-dd" />
+							</div>
+						</div>
+						<div class="col-md-5 col-sm-8">
+							<div class="ger-campo">
+								<label>Observaci&oacute;n (opcional)</label>
+								<input type="text" id="observacion" class="form-control"
+									placeholder="Por ejemplo: incremento anual del contrato" />
+							</div>
+						</div>
+						<div class="col-md-4">
+							<div class="ger-campo">
+								<label>&nbsp;</label>
+								<div>
+									<button id="btnGuardarFijos" class="btn btn-primary">
+										<i class="fas fa-save"></i> Guardar los cambios
+									</button>
+									<span id="cuantosCambios" class="ger-nota" style="margin-left:8px;"></span>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="table-responsive" style="margin-top:8px;">
+						<table class="ger-tabla" id="tablaFijos">
+							<thead></thead>
+							<tbody></tbody>
+						</table>
+					</div>
+					<p class="ger-nota" style="margin-top:8px;">
+						Solo se guardan las celdas que usted toque, y quedan resaltadas mientras tanto.
+						Haga clic en el nombre de la tienda para ver la historia de un concepto.
+					</p>
+				</div>
+			</div>
+
+			<!-- ================= SERVICIOS ================= -->
+			<div id="panelServicios" style="display:none;">
+				<div class="ger-panel">
+					<h4 class="ger-titulo">Servicios p&uacute;blicos</h4>
+					<p class="ger-sub">
+						La factura llega despu&eacute;s de cerrado el mes. Mientras no llegue, la pantalla
+						propone el promedio de los &uacute;ltimos tres meses <strong>reales</strong> y lo
+						marca como estimado. Cuando llegue la factura, se digita el valor y el estimado
+						queda reemplazado.
+					</p>
+					<p class="ger-sub">
+						<span class="ger-origen ger-real">Real</span> es la factura &middot;
+						<span class="ger-origen ger-estimado">Estimado</span> es el promedio &middot;
+						<span class="ger-origen ger-sinbase">Sin base</span> es que no hay historia
+						con qu&eacute; estimar, y entonces no se muestra ning&uacute;n n&uacute;mero.
+					</p>
+					<div>
+						<button id="btnGuardarServicios" class="btn btn-primary">
+							<i class="fas fa-save"></i> Guardar como real
+						</button>
+						<button id="btnAceptarEstimados" class="btn btn-default">
+							<i class="fas fa-check"></i> Aceptar los estimados del mes
+						</button>
+						<span id="cuantosServicios" class="ger-nota" style="margin-left:8px;"></span>
+					</div>
+					<div class="table-responsive" style="margin-top:12px;">
+						<table class="ger-tabla" id="tablaServicios">
+							<thead></thead>
+							<tbody></tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+
+			<!-- Historia de un concepto -->
+			<div class="ger-panel" id="panelHistoria" style="display:none;">
+				<h4 class="ger-titulo" id="tituloHistoria">Historia</h4>
+				<div class="table-responsive">
+					<table class="ger-tabla" id="tablaHistoria">
+						<thead>
+							<tr>
+								<th>Desde</th>
+								<th>Hasta</th>
+								<th class="ger-num">Valor mensual</th>
+								<th>Observaci&oacute;n</th>
+								<th>Qui&eacute;n</th>
+							</tr>
+						</thead>
+						<tbody></tbody>
+					</table>
+				</div>
+				<button id="btnCerrarHistoria" class="btn btn-default ger-mini" style="margin-top:8px;">Cerrar</button>
+			</div>
+
+		</div>
+	</div>
+
+</body>
+<script src="js/gerenciaacceso.js" type="text/javascript"></script>
+<script src="js/gerenciagastos.js" type="text/javascript"></script>
+</html>

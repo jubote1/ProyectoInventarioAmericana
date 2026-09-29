@@ -1,0 +1,94 @@
+/* Menu Gerencia: el lenguaje visual comun de las tres pantallas.
+   Los colores son los del manual de marca -#E42528 rojo, #FDC806 amarillo,
+   #102F6F azul- y el mismo gris de fondo del monitoreo de varianzas, para que
+   no se sienta otra aplicacion. */
+
+body { background-color: #F4F6F8; }
+
+.ger-panel { border: 1px solid #E2E6EC; border-radius: 6px; padding: 14px 16px;
+	background-color: #FFFFFF; margin-bottom: 14px; }
+.ger-titulo { font-size: 17px; font-weight: bold; color: #102F6F; margin: 0 0 4px; }
+.ger-h1 { font-size: 22px; font-weight: bold; color: #102F6F; margin: 16px 0 4px; }
+.ger-sub { font-size: 12.5px; color: #6C7482; margin: 0 0 12px; }
+
+.ger-campo { margin-bottom: 9px; }
+.ger-campo label { font-size: 11px; color: #6C7482; text-transform: uppercase;
+	letter-spacing: .04em; margin-bottom: 2px; display: block; }
+
+/* ---- La reja de acceso ---- */
+.ger-acceso { display: flex; justify-content: center; padding: 50px 15px; }
+.ger-acceso-caja { width: 100%; max-width: 380px; background: #FFFFFF;
+	border: 1px solid #E2E6EC; border-top: 4px solid #E42528; border-radius: 6px;
+	padding: 24px 26px; }
+.ger-acceso-caja h4 { color: #102F6F; font-weight: bold; margin: 0 0 8px; }
+.ger-acceso-nota { font-size: 12.5px; color: #6C7482; margin-bottom: 16px; }
+.ger-mensaje { background: #FADBDB; color: #C21C1F; border-radius: 4px;
+	padding: 8px 10px; font-size: 13px; margin-bottom: 10px; }
+
+.ger-barra { background: #102F6F; color: #FFFFFF; padding: 6px 14px;
+	border-radius: 4px; margin: 12px 0; font-size: 13px; }
+.ger-barra-rotulo { font-weight: bold; letter-spacing: .05em; text-transform: uppercase;
+	font-size: 11px; color: #FDC806; margin-right: 12px; }
+.ger-barra-quien { font-weight: bold; }
+.ger-barra-salir { color: #FFFFFF; float: right; text-decoration: underline; }
+.ger-barra-salir:hover, .ger-barra-salir:focus { color: #FDC806; }
+
+.ger-aviso { padding: 9px 12px; border-radius: 4px; font-size: 13px; margin-bottom: 12px; }
+.ger-aviso-ok { background: #DCF0E6; color: #16704F; border: 1px solid #B6DEC9; }
+.ger-aviso-mal { background: #FADBDB; color: #C21C1F; border: 1px solid #F0BCBC; }
+
+/* ---- Tablas ---- */
+.ger-tabla { width: 100%; font-size: 13px; background: #FFFFFF; }
+.ger-tabla th { background: #102F6F; color: #FFFFFF; font-weight: bold; font-size: 11.5px;
+	text-transform: uppercase; letter-spacing: .03em; padding: 7px 8px; border: 1px solid #102F6F;
+	vertical-align: middle; }
+.ger-tabla td { border: 1px solid #E2E6EC; padding: 5px 8px; vertical-align: middle; }
+.ger-tabla tbody tr:nth-child(even) td { background: #FAFBFC; }
+.ger-num { text-align: right; white-space: nowrap; }
+
+/* La celda que se digita se ve que se digita. */
+.ger-entrada { width: 100%; border: 1px solid #D7DCE3; border-radius: 3px;
+	padding: 3px 6px; font-size: 13px; text-align: right; }
+.ger-entrada:focus { border-color: #102F6F; outline: none; }
+.ger-entrada.ger-sucio { background: #FFF8E1; border-color: #FDC806; }
+
+/* ---- El calendario ---- */
+.ger-semana-cambiada td { background: #FFF8E1 !important; }
+.ger-mes-select { border: 1px solid #D7DCE3; border-radius: 3px; padding: 2px 4px;
+	font-size: 13px; }
+.ger-mes-movido { border-color: #FDC806; background: #FFF8E1; font-weight: bold; }
+
+.ger-resumen-mes { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+.ger-mes-caja { border: 1px solid #E2E6EC; border-radius: 4px; padding: 6px 10px;
+	background: #FFFFFF; min-width: 92px; }
+.ger-mes-caja .n { font-size: 11px; color: #6C7482; text-transform: uppercase; }
+.ger-mes-caja .v { font-size: 18px; font-weight: bold; color: #102F6F; }
+.ger-mes-caja.ger-mes-corto { border-color: #E42528; }
+.ger-mes-caja.ger-mes-corto .v { color: #C21C1F; }
+
+.ger-estado { font-size: 11px; font-weight: bold; padding: 2px 8px; border-radius: 3px;
+	text-transform: uppercase; letter-spacing: .03em; }
+.ger-abierto { background: #DCF0E6; color: #16704F; }
+.ger-cerrado { background: #E4E7EC; color: #4A5260; }
+
+/* ---- El origen del dato: real, estimado, o sin base ----
+   Un estimado que se ve igual que un real es peor que no tener el dato: quien
+   mira decide creyendo que el numero es firme. */
+.ger-origen { font-size: 10.5px; font-weight: bold; padding: 1px 6px; border-radius: 3px;
+	text-transform: uppercase; letter-spacing: .03em; white-space: nowrap; }
+.ger-real { background: #DCF0E6; color: #16704F; }
+.ger-estimado { background: #FDE9C6; color: #8A6400; }
+.ger-sinbase { background: #FADBDB; color: #C21C1F; }
+.ger-fila-estimada td { background: #FFFCF4 !important; }
+.ger-fila-sinbase td { background: #FFF6F6 !important; }
+
+.ger-vacio { color: #C21C1F; font-style: italic; font-size: 12px; }
+.ger-mini { font-size: 11.5px; padding: 1px 7px; }
+.ger-nota { font-size: 12px; color: #6C7482; }
+
+.ger-pestanas { border-bottom: 2px solid #E2E6EC; margin-bottom: 14px; }
+.ger-pestanas a { display: inline-block; padding: 8px 16px; font-size: 13.5px;
+	color: #6C7482; text-decoration: none; border-bottom: 3px solid transparent;
+	margin-bottom: -2px; }
+.ger-pestanas a.activa { color: #102F6F; font-weight: bold; border-bottom-color: #E42528; }
+.ger-pestanas a:hover { color: #102F6F; text-decoration: none; }

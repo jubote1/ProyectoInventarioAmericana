@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<title>Calendario de Semanas</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<link href="css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+	<link href="css/all.min.css" rel="stylesheet" type="text/css" />
+	<link href="css/gerencia.css" rel="stylesheet" type="text/css" />
+	<script type="text/javascript" src="js/jquery-1.11.0.min.js"></script>
+	<script type="text/javascript" src="js/bootstrap.min.js"></script>
+</head>
+<body>
+
+	<div id="cargarMenu"></div>
+
+	<script type="text/javascript">
+		//La misma reja de sesion de las demas pantallas de inventarios. Ojo:
+		//esta solo dice si hay sesion de la aplicacion. El permiso para ver
+		//Gerencia se pide aparte, en gerenciaacceso.js, contra el central.
+		var server = window.location.protocol + '//' + window.location.host
+			+ window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+		var respuesta = '';
+		$.ajax({
+			url: server + 'ValidarUsuarioAplicacion',
+			dataType: 'text',
+			type: 'post',
+			async: false,
+			success: function (data) { respuesta = data; }
+		});
+		switch (respuesta) {
+			case 'OK':
+				$('#cargarMenu').load("Menu.html");
+				break;
+			case 'OKA':
+				$('#cargarMenu').load("MenuAdm.html");
+				break;
+			default:
+				location.href = server + "Index.html";
+				break;
+		}
+	</script>
+
+	<div class="container-fluid" style="max-width:1200px;">
+
+		<h3 class="ger-h1">Calendario de semanas</h3>
+		<p class="ger-sub">
+			Una semana de lunes a domingo casi nunca cabe dentro de un mes: la del 28 de julio
+			al 3 de agosto tiene cuatro dias en julio y tres en agosto. Aqui se define, de una
+			vez y para todos los reportes, a que mes se le carga cada semana.
+		</p>
+
+		<div id="ger-contenido">
+
+			<div class="ger-panel">
+				<div class="row">
+					<div class="col-md-2 col-sm-3">
+						<div class="ger-campo">
+							<label>A&ntilde;o</label>
+							<select id="anio" class="form-control"></select>
+						</div>
+					</div>
+					<div class="col-md-10 col-sm-9">
+						<div class="ger-campo">
+							<label>&nbsp;</label>
+							<div>
+								<button id="btnGenerar" class="btn btn-default">
+									<i class="fas fa-magic"></i> Generar propuesta
+								</button>
+								<button id="btnGuardar" class="btn btn-primary">
+									<i class="fas fa-save"></i> Guardar calendario
+								</button>
+								<button id="btnCerrar" class="btn btn-default">
+									<i class="fas fa-lock"></i> Cerrar a&ntilde;o
+								</button>
+								<span id="estadoAnio" style="margin-left:10px;"></span>
+							</div>
+						</div>
+					</div>
+				</div>
+				<p class="ger-nota" style="margin-top:6px;">
+					La propuesta le carga cada semana al mes donde caen la mayor&iacute;a de sus d&iacute;as
+					&mdash;que es lo mismo que decir el mes donde cae el jueves&mdash;. Es un punto de
+					partida: se puede cambiar el mes de cualquier semana antes de guardar.
+					<strong>Generar no guarda nada.</strong>
+				</p>
+			</div>
+
+			<div class="ger-panel">
+				<h4 class="ger-titulo">Semanas por mes</h4>
+				<p class="ger-sub">Un mes con menos de cuatro semanas casi siempre es una edici&oacute;n de m&aacute;s.</p>
+				<div id="resumenMeses" class="ger-resumen-mes"></div>
+			</div>
+
+			<div class="ger-panel">
+				<h4 class="ger-titulo">Las semanas</h4>
+				<p class="ger-sub">
+					Las que queden resaltadas son las que usted movi&oacute; del mes que propuso la regla.
+				</p>
+				<div class="table-responsive">
+					<table class="ger-tabla" id="tablaSemanas">
+						<thead>
+							<tr>
+								<th style="width:80px;">Semana</th>
+								<th style="width:150px;">Desde (lunes)</th>
+								<th style="width:150px;">Hasta (domingo)</th>
+								<th style="width:170px;">Mes al que se carga</th>
+								<th>Reparto de d&iacute;as</th>
+							</tr>
+						</thead>
+						<tbody></tbody>
+					</table>
+				</div>
+			</div>
+
+		</div>
+	</div>
+
+</body>
+<script src="js/gerenciaacceso.js" type="text/javascript"></script>
+<script src="js/gerenciacalendario.js" type="text/javascript"></script>
+</html>
