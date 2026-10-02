@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<title>Tablero de Rentabilidad</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<link href="css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+	<link href="css/all.min.css" rel="stylesheet" type="text/css" />
+	<link href="css/gerencia.css" rel="stylesheet" type="text/css" />
+	<script type="text/javascript" src="js/jquery-1.11.0.min.js"></script>
+	<script type="text/javascript" src="js/bootstrap.min.js"></script>
+</head>
+<body>
+
+	<div id="cargarMenu"></div>
+
+	<script type="text/javascript">
+		var server = window.location.protocol + '//' + window.location.host
+			+ window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+		var respuesta = '';
+		$.ajax({
+			url: server + 'ValidarUsuarioAplicacion',
+			dataType: 'text',
+			type: 'post',
+			async: false,
+			success: function (data) { respuesta = data; }
+		});
+		switch (respuesta) {
+			case 'OK':
+				$('#cargarMenu').load("Menu.html");
+				break;
+			case 'OKA':
+				$('#cargarMenu').load("MenuAdm.html");
+				break;
+			default:
+				location.href = server + "Index.html";
+				break;
+		}
+	</script>
+
+	<div class="container-fluid" style="max-width:1700px;">
+
+		<h3 class="ger-h1">Tablero de rentabilidad</h3>
+		<p class="ger-sub">
+			De la venta al resultado, tienda por tienda. El mes son las semanas que el
+			calendario le asign&oacute;, no el mes del almanaque.
+		</p>
+
+		<div id="ger-contenido">
+
+			<div class="ger-panel">
+				<div class="row">
+					<div class="col-md-2 col-sm-3">
+						<div class="ger-campo">
+							<label>A&ntilde;o</label>
+							<select id="anio" class="form-control"></select>
+						</div>
+					</div>
+					<div class="col-md-3 col-sm-4">
+						<div class="ger-campo">
+							<label>Mes</label>
+							<select id="mes" class="form-control"></select>
+						</div>
+					</div>
+					<div class="col-md-4 col-sm-5">
+						<div class="ger-campo">
+							<label>Periodo</label>
+							<select id="semana" class="form-control"></select>
+						</div>
+					</div>
+					<div class="col-md-3">
+						<div class="ger-campo">
+							<label>&nbsp;</label>
+							<div>
+								<button id="btnConsultar" class="btn btn-default">
+									<i class="fas fa-search"></i> Consultar
+								</button>
+								<button id="btnExcel" class="btn btn-default">
+									<i class="fas fa-file-excel"></i> Excel
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div id="avisos"></div>
+			</div>
+
+			<!-- ============ EL RESUMEN DE LA COMPANIA ============ -->
+			<div class="ger-panel" id="panelResumen" style="display:none;">
+				<h4 class="ger-titulo">La compa&ntilde;&iacute;a en el periodo</h4>
+				<div class="ger-resumen-mes" id="cajasResumen"></div>
+			</div>
+
+			<!-- ============ LA ESCALERA ============ -->
+			<div class="ger-panel" id="panelEscalera" style="display:none;">
+				<h4 class="ger-titulo">De la venta al resultado</h4>
+				<p class="ger-sub">
+					Cada columna es una tienda, ordenadas por resultado. Debajo de cada peso va
+					su porcentaje sobre la venta de esa tienda, que es lo que deja compararlas
+					aunque vendan distinto. Haga clic en el nombre de una l&iacute;nea para ver
+					de qu&eacute; est&aacute; hecha.
+				</p>
+				<div class="table-responsive">
+					<table class="ger-tabla ger-escalera" id="tablaEscalera">
+						<thead></thead>
+						<tbody></tbody>
+					</table>
+				</div>
+				<p class="ger-nota" style="margin-top:8px;">
+					<span class="ger-origen ger-estimado">Estimado</span> es un valor que todav&iacute;a
+					no tiene factura &middot;
+					<span class="ger-origen ger-sinbase">Simulado</span> es un costo copiado de otro mes
+					para poder mirar el tablero &middot; una celda
+					<span class="ger-vacio">vac&iacute;a</span> es un dato que no est&aacute; cargado, y
+					<strong>no</strong> un cero.
+				</p>
+			</div>
+
+			<!-- ============ EL DETALLE DE UNA LINEA ============ -->
+			<div class="ger-panel" id="panelDetalle" style="display:none;">
+				<h4 class="ger-titulo" id="tituloDetalle">Detalle</h4>
+				<p class="ger-sub" id="subDetalle"></p>
+				<div class="table-responsive">
+					<table class="ger-tabla" id="tablaDetalle">
+						<thead>
+							<tr>
+								<th>Concepto</th>
+								<th class="ger-num">Valor</th>
+								<th class="ger-num">% de la l&iacute;nea</th>
+								<th>Nota</th>
+							</tr>
+						</thead>
+						<tbody></tbody>
+					</table>
+				</div>
+				<button id="btnCerrarDetalle" class="btn btn-default ger-mini" style="margin-top:8px;">Cerrar</button>
+			</div>
+
+			<!-- ============ LA TENDENCIA ============ -->
+			<div class="ger-panel" id="panelTendencia" style="display:none;">
+				<h4 class="ger-titulo" id="tituloTendencia">Tendencia</h4>
+				<p class="ger-sub">
+					Semana a semana del a&ntilde;o. Los costos mensuales van repartidos entre las
+					semanas de su mes, as&iacute; que esto se lee como una tendencia y no como la
+					medici&oacute;n exacta de cada semana.
+				</p>
+				<div id="barrasTendencia"></div>
+				<button id="btnCerrarTendencia" class="btn btn-default ger-mini" style="margin-top:8px;">Cerrar</button>
+			</div>
+
+		</div>
+	</div>
+
+</body>
+<script src="js/gerenciaacceso.js" type="text/javascript"></script>
+<script src="js/gerenciarentabilidad.js" type="text/javascript"></script>
+</html>
