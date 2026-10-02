@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<title>N&oacute;mina por Empleado</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<link href="css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+	<link href="css/all.min.css" rel="stylesheet" type="text/css" />
+	<link href="css/gerencia.css" rel="stylesheet" type="text/css" />
+	<script type="text/javascript" src="js/jquery-1.11.0.min.js"></script>
+	<script type="text/javascript" src="js/bootstrap.min.js"></script>
+</head>
+<body>
+
+	<div id="cargarMenu"></div>
+
+	<script type="text/javascript">
+		var server = window.location.protocol + '//' + window.location.host
+			+ window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+		var respuesta = '';
+		$.ajax({
+			url: server + 'ValidarUsuarioAplicacion',
+			dataType: 'text',
+			type: 'post',
+			async: false,
+			success: function (data) { respuesta = data; }
+		});
+		switch (respuesta) {
+			case 'OK':
+				$('#cargarMenu').load("Menu.html");
+				break;
+			case 'OKA':
+				$('#cargarMenu').load("MenuAdm.html");
+				break;
+			default:
+				location.href = server + "Index.html";
+				break;
+		}
+	</script>
+
+	<div class="container-fluid" style="max-width:1600px;">
+
+		<h3 class="ger-h1">N&oacute;mina por empleado</h3>
+		<p class="ger-sub">
+			Se carga el costo de <strong>cada persona</strong>, por semana. El reparto entre tiendas no se
+			digita: se calcula solo, mirando en cu&aacute;l tienda marc&oacute; biometr&iacute;a esa semana
+			y en qu&eacute; proporci&oacute;n. Aplica a todos los empleados -a uno de tienda propia le
+			deber&iacute;a quedar ~100% en su tienda, y eso sirve de chequeo-.
+		</p>
+
+		<div id="ger-contenido">
+
+			<div class="ger-panel">
+				<div class="row">
+					<div class="col-md-3 col-sm-4">
+						<div class="ger-campo">
+							<label>Semana (domingo de cierre)</label>
+							<input type="text" id="semana" class="form-control" placeholder="aaaa-mm-dd" />
+						</div>
+					</div>
+					<div class="col-md-9 col-sm-8">
+						<div class="ger-campo">
+							<label>&nbsp;</label>
+							<div>
+								<button id="btnConsultar" class="btn btn-default">
+									<i class="fas fa-search"></i> Consultar
+								</button>
+								<button id="btnCalcular" class="btn btn-primary">
+									<i class="fas fa-random"></i> Calcular reparto por biometr&iacute;a
+								</button>
+								<span id="avisoCalculo" class="ger-nota" style="margin-left:10px;"></span>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- ================= CARGAR ================= -->
+			<div class="ger-panel">
+				<h4 class="ger-titulo">Cargar el costo de un empleado esa semana</h4>
+				<div class="row">
+					<div class="col-md-4 col-sm-6">
+						<div class="ger-campo" style="position:relative;">
+							<label>Empleado</label>
+							<input type="text" id="buscarEmpleado" class="form-control" autocomplete="off"
+								placeholder="Escriba el nombre..." />
+							<div id="listaEmpleados" class="ger-autocompletar" style="display:none;"></div>
+							<input type="hidden" id="idEmpleadoElegido" />
+						</div>
+					</div>
+					<div class="col-md-2 col-sm-6">
+						<div class="ger-campo">
+							<label>Sueldo b&aacute;sico</label>
+							<input type="text" id="cBasico" class="form-control" value="0" />
+						</div>
+					</div>
+					<div class="col-md-2 col-sm-6">
+						<div class="ger-campo">
+							<label>Sueldo variable</label>
+							<input type="text" id="cVariable" class="form-control" value="0" />
+						</div>
+					</div>
+					<div class="col-md-2 col-sm-6">
+						<div class="ger-campo">
+							<label>Seguridad social</label>
+							<input type="text" id="cSeguridad" class="form-control" value="0" />
+						</div>
+					</div>
+					<div class="col-md-2 col-sm-6">
+						<div class="ger-campo">
+							<label>Liquidaci&oacute;n</label>
+							<input type="text" id="cLiquidacion" class="form-control" value="0" />
+						</div>
+					</div>
+				</div>
+				<button id="btnGuardar" class="btn btn-primary" style="margin-top:6px;">
+					<i class="fas fa-save"></i> Guardar
+				</button>
+				<span id="avisoGuardar" class="ger-nota" style="margin-left:8px;"></span>
+			</div>
+
+			<!-- ================= PENDIENTES ================= -->
+			<div class="ger-panel" id="panelPendientes" style="display:none;">
+				<div class="ger-alerta">
+					<strong id="tituloPendientes"></strong>
+					<div id="listaPendientes"></div>
+					<p class="ger-nota" style="margin-top:4px;">
+						No se les invent&oacute; un reparto: siguen activos y no tienen ninguna marcaci&oacute;n
+						de entrada/salida esa semana (vacaciones, incapacidad, o de verdad no marcaron).
+						Revise a mano.
+					</p>
+				</div>
+			</div>
+
+			<!-- ================= CARGADOS ================= -->
+			<div class="ger-panel">
+				<h4 class="ger-titulo">Cargado esta semana</h4>
+				<div class="table-responsive">
+					<table class="ger-tabla" id="tablaCargados">
+						<thead>
+							<tr>
+								<th>Empleado</th>
+								<th class="ger-num">B&aacute;sico</th>
+								<th class="ger-num">Variable</th>
+								<th class="ger-num">Seg. social</th>
+								<th class="ger-num">Liquidaci&oacute;n</th>
+								<th class="ger-num">Total</th>
+								<th>Origen</th>
+								<th>Qui&eacute;n</th>
+							</tr>
+						</thead>
+						<tbody></tbody>
+					</table>
+				</div>
+			</div>
+
+			<!-- ================= REPARTO ================= -->
+			<div class="ger-panel">
+				<h4 class="ger-titulo">Reparto por tienda</h4>
+				<p class="ger-sub">
+					Minutos marcados y porcentaje que le tocaron a cada tienda, y el costo ya repartido en esa
+					proporci&oacute;n. Si algo no cuadra con lo que se esperaba, revise la biometr&iacute;a del
+					empleado esa semana antes de volver a calcular.
+				</p>
+				<div class="table-responsive">
+					<table class="ger-tabla" id="tablaReparto">
+						<thead>
+							<tr>
+								<th>Empleado</th>
+								<th>Tienda</th>
+								<th class="ger-num">Minutos</th>
+								<th class="ger-num">%</th>
+								<th class="ger-num">Total repartido</th>
+							</tr>
+						</thead>
+						<tbody></tbody>
+					</table>
+				</div>
+			</div>
+
+		</div>
+	</div>
+
+</body>
+<script src="js/gerenciaacceso.js" type="text/javascript"></script>
+<script src="js/gerencianominaempleado.js" type="text/javascript"></script>
+</html>
