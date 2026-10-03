@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<title>C&aacute;lculo de N&oacute;mina</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<link href="css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+	<link href="css/all.min.css" rel="stylesheet" type="text/css" />
+	<link href="css/gerencia.css" rel="stylesheet" type="text/css" />
+	<script type="text/javascript" src="js/jquery-1.11.0.min.js"></script>
+	<script type="text/javascript" src="js/bootstrap.min.js"></script>
+</head>
+<body>
+
+	<div id="cargarMenu"></div>
+
+	<script type="text/javascript">
+		var server = window.location.protocol + '//' + window.location.host
+			+ window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+		var respuesta = '';
+		$.ajax({
+			url: server + 'ValidarUsuarioAplicacion',
+			dataType: 'text',
+			type: 'post',
+			async: false,
+			success: function (data) { respuesta = data; }
+		});
+		switch (respuesta) {
+			case 'OK':
+				$('#cargarMenu').load("Menu.html");
+				break;
+			case 'OKA':
+				$('#cargarMenu').load("MenuAdm.html");
+				break;
+			default:
+				location.href = server + "Index.html";
+				break;
+		}
+	</script>
+
+	<div class="container-fluid" style="max-width:1700px;">
+
+		<h3 class="ger-h1">C&aacute;lculo de n&oacute;mina</h3>
+		<p class="ger-sub">
+			Estima lo que cost&oacute; una semana a partir de la biometr&iacute;a y los
+			par&aacute;metros de ley, para que el tablero tenga un n&uacute;mero mientras llega
+			el real de SIIGO. <strong>Esto no liquida n&oacute;mina ni sirve para pagarle a
+			nadie</strong>: para eso est&aacute; SIIGO.
+		</p>
+
+		<div id="ger-contenido">
+
+			<div class="ger-panel">
+				<div class="row">
+					<div class="col-md-4 col-sm-6">
+						<div class="ger-campo">
+							<label>Semana (domingo de cierre)</label>
+							<select id="semana" class="form-control"></select>
+						</div>
+					</div>
+					<div class="col-md-8 col-sm-6">
+						<div class="ger-campo">
+							<label>&nbsp;</label>
+							<div>
+								<button id="btnCalcular" class="btn btn-primary">
+									<i class="fas fa-calculator"></i> Calcular la semana
+								</button>
+								<button id="btnPasar" class="btn btn-default">
+									<i class="fas fa-arrow-right"></i> Pasar el estimado al tablero
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div id="avisos"></div>
+			</div>
+
+			<div class="ger-pestanas">
+				<a href="#" id="tabEstimado" class="activa">Estimado</a>
+				<a href="#" id="tabCargar">Cargar el real</a>
+				<a href="#" id="tabCalibracion">Calibraci&oacute;n</a>
+				<a href="#" id="tabParametros">Par&aacute;metros de ley</a>
+			</div>
+
+			<!-- ================= ESTIMADO ================= -->
+			<div id="panelEstimado">
+				<div class="ger-panel">
+					<div class="ger-resumen-mes" id="cajasEstimado"></div>
+				</div>
+				<div class="ger-panel">
+					<h4 class="ger-titulo">Lo que cost&oacute; cada persona</h4>
+					<p class="ger-sub">
+						El b&aacute;sico sale del salario mensual, no de las horas: a quien tiene
+						salario mensual se le paga igual trabaje 40 o 44. Lo que la biometr&iacute;a
+						determina son los <strong>recargos</strong> y en qu&eacute; tienda cayeron.
+					</p>
+					<div class="table-responsive">
+						<table class="ger-tabla" id="tablaEstimado">
+							<thead>
+								<tr>
+									<th>Empleado</th>
+									<th>Cargo</th>
+									<th class="ger-num">Salario</th>
+									<th class="ger-num">Horas</th>
+									<th class="ger-num" title="Horas en la franja de 19:00 a 6:00">Noche</th>
+									<th class="ger-num" title="Domingos y festivos">Dom/Fes</th>
+									<th class="ger-num">Extra</th>
+									<th class="ger-num">B&aacute;sico</th>
+									<th class="ger-num" title="Recargos y extras">Variable</th>
+									<th class="ger-num">Seg. social</th>
+									<th class="ger-num" title="Cesant&iacute;as, intereses, prima y vacaciones">Provisiones</th>
+									<th class="ger-num">Costo</th>
+									<th>&nbsp;</th>
+								</tr>
+							</thead>
+							<tbody></tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+
+			<!-- ================= CARGAR EL REAL ================= -->
+			<div id="panelCargar" style="display:none;">
+				<div class="ger-panel">
+					<h4 class="ger-titulo">Cargar la n&oacute;mina real</h4>
+					<p class="ger-sub">
+						La API p&uacute;blica de SIIGO Nube no expone n&oacute;mina &mdash; solo
+						contabilidad y facturaci&oacute;n &mdash; as&iacute; que el real entra por
+						aqu&iacute;, pegado desde la exportaci&oacute;n. Lo que se cargue
+						<strong>reemplaza al estimado</strong> y queda marcado como real para
+						siempre.
+					</p>
+					<div class="row">
+						<div class="col-md-3 col-sm-4">
+							<div class="ger-campo">
+								<label>Origen del dato</label>
+								<select id="origen" class="form-control">
+									<option value="SIIGO">Exportado de SIIGO</option>
+									<option value="MANUAL">Digitado a mano</option>
+								</select>
+							</div>
+						</div>
+						<div class="col-md-9 col-sm-8">
+							<div class="ger-campo">
+								<label>Formato esperado, una l&iacute;nea por persona</label>
+								<div class="ger-nota" style="padding-top:6px;">
+									<code>documento ; b&aacute;sico ; variable ; seguridad social ; liquidaci&oacute;n</code>
+									&nbsp;&middot;&nbsp; sirve pegar directo de Excel (separado por tabulaci&oacute;n).
+									El encabezado se ignora solo.
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="ger-campo">
+						<textarea id="pegado" class="form-control" rows="12"
+							placeholder="1045512830&#9;1200000&#9;340000&#9;280000&#9;260000"
+							style="font-family:monospace;font-size:12.5px;"></textarea>
+					</div>
+					<button id="btnCargar" class="btn btn-primary">
+						<i class="fas fa-upload"></i> Cargar la semana
+					</button>
+					<span class="ger-nota" style="margin-left:10px;">
+						Al cargar se mide sola la desviaci&oacute;n contra lo estimado.
+					</span>
+					<div id="resultadoCarga" style="margin-top:12px;"></div>
+				</div>
+			</div>
+
+			<!-- ================= CALIBRACION ================= -->
+			<div id="panelCalibracion" style="display:none;">
+				<div class="ger-panel">
+					<h4 class="ger-titulo">Qu&eacute; tan bien venimos estimando</h4>
+					<p class="ger-sub">
+						Cada vez que se carga un real, se guarda cu&aacute;nto se alej&oacute; del
+						estimado. Con suficiente historia, el c&aacute;lculo se corrige solo.
+						<strong>Va por tienda y no una sola para la compa&ntilde;&iacute;a</strong>,
+						porque el porcentaje de horas nocturnas va de 47% a 53% seg&uacute;n
+						cu&aacute;l, y un solo factor quedar&iacute;a mal en las dos puntas.
+					</p>
+					<p class="ger-sub">
+						La correcci&oacute;n <strong>no se aplica</strong> cuando hay poca historia
+						o cuando las desviaciones est&aacute;n regadas: un promedio de +2, &minus;5,
+						+8 tambi&eacute;n da +1 y no significa nada, y aplicarlo empeora el estimado.
+					</p>
+					<div class="table-responsive">
+						<table class="ger-tabla" id="tablaCalibracion">
+							<thead>
+								<tr>
+									<th>Tienda</th>
+									<th class="ger-num">Semanas medidas</th>
+									<th class="ger-num" title="Cuanto se queda corto el estimado, en promedio">Desviaci&oacute;n media</th>
+									<th class="ger-num" title="Cuanto varia esa desviacion de una semana a otra">Dispersi&oacute;n</th>
+									<th>&iquest;Se aplica?</th>
+								</tr>
+							</thead>
+							<tbody></tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+
+			<!-- ================= PARAMETROS ================= -->
+			<div id="panelParametros" style="display:none;">
+				<div class="ger-panel">
+					<h4 class="ger-titulo">Los par&aacute;metros de ley</h4>
+					<p class="ger-sub">
+						Cuando un valor cambia <strong>no se sobrescribe</strong>: se le cierra la
+						vigencia al anterior y se abre uno nuevo. As&iacute; una semana ya calculada
+						sigue dando lo mismo si se vuelve a correr, y se puede explicar desde
+						cu&aacute;ndo cambi&oacute;.
+					</p>
+					<p class="ger-sub">
+						En 2026 la ley cambia tres veces: el recargo nocturno ya arranca a las
+						19:00 (Ley 2466 de 2025), el dominical sube a 90% el 1 de julio, y la
+						jornada baja a 42 horas el 15 de julio. Por eso esto va en tabla.
+					</p>
+					<div class="table-responsive">
+						<table class="ger-tabla" id="tablaParametros">
+							<thead>
+								<tr>
+									<th>Par&aacute;metro</th>
+									<th class="ger-num">Valor</th>
+									<th>Unidad</th>
+									<th>Rige desde</th>
+									<th>Hasta</th>
+									<th>Sustento</th>
+									<th>&nbsp;</th>
+								</tr>
+							</thead>
+							<tbody></tbody>
+						</table>
+					</div>
+				</div>
+
+				<div class="ger-panel" id="panelCambio" style="display:none;">
+					<h4 class="ger-titulo" id="tituloCambio">Cambiar</h4>
+					<div class="row">
+						<div class="col-md-3 col-sm-4">
+							<div class="ger-campo">
+								<label>Valor nuevo</label>
+								<input type="text" id="valorNuevo" class="form-control" />
+							</div>
+						</div>
+						<div class="col-md-3 col-sm-4">
+							<div class="ger-campo">
+								<label>Rige desde</label>
+								<input type="text" id="rigeDesde" class="form-control" placeholder="aaaa-mm-dd" />
+							</div>
+						</div>
+						<div class="col-md-6 col-sm-4">
+							<div class="ger-campo">
+								<label>Sustento (la norma, el acta, lo que sea)</label>
+								<input type="text" id="sustento" class="form-control" />
+							</div>
+						</div>
+					</div>
+					<button id="btnGuardarParametro" class="btn btn-primary">
+						<i class="fas fa-save"></i> Abrir la vigencia nueva
+					</button>
+					<button id="btnCancelarCambio" class="btn btn-default">Cancelar</button>
+				</div>
+			</div>
+
+		</div>
+	</div>
+
+</body>
+<script src="js/gerenciaacceso.js" type="text/javascript"></script>
+<script src="js/gerencianominacalculo.js" type="text/javascript"></script>
+</html>
