@@ -184,7 +184,7 @@ public class GerenciaRentabilidadDAO {
 				+ " LEFT JOIN (SELECT g.idtienda, SUM(g.valor_gasto) operacion"
 				+ "              FROM inventarioamericana.gasto_semanal g"
 				+ "              JOIN inventarioamericana.gasto_configuracion gc"
-				+ "                ON gc.idgasto_conf = g.idgasto_conf AND gc.activo = 1"
+				+ "                ON gc.idgasto_conf = g.idgasto_conf AND gc.rentabilidad_calcula = 1"
 				+ "             WHERE g.fecha IN " + fechas + " AND g.idgasto_conf <> " + CONCEPTO_CONTEO
 				+ "             GROUP BY g.idtienda) o ON o.idtienda = t.idtienda"
 				+ " LEFT JOIN (SELECT idtienda,"
@@ -409,7 +409,7 @@ public class GerenciaRentabilidadDAO {
 				+ "             GROUP BY fecha) c ON c.fecha = s.fecha_fin"
 				+ " LEFT JOIN (SELECT g.fecha, SUM(g.valor_gasto) ope FROM inventarioamericana.gasto_semanal g"
 				+ "              JOIN inventarioamericana.gasto_configuracion gc"
-				+ "                ON gc.idgasto_conf = g.idgasto_conf AND gc.activo = 1"
+				+ "                ON gc.idgasto_conf = g.idgasto_conf AND gc.rentabilidad_calcula = 1"
 				+ "             WHERE g.idtienda = " + idTienda + " AND g.idgasto_conf <> " + CONCEPTO_CONTEO
 				+ "             GROUP BY g.fecha) o ON o.fecha = s.fecha_fin"
 				+ " LEFT JOIN (SELECT anio, mes,"
@@ -501,7 +501,7 @@ final ResultSet rs = ps.executeQuery();
 			} else if ("COM".equals(linea) || "OPE".equals(linea)) {
 				final String cuales = "COM".equals(linea)
 						? " AND g.idgasto_conf IN (" + COMISIONES + ")"
-						: " AND gc.activo = 1 AND g.idgasto_conf <> " + CONCEPTO_CONTEO;
+						: " AND gc.rentabilidad_calcula = 1 AND g.idgasto_conf <> " + CONCEPTO_CONTEO;
 				sql = "SELECT gc.nombre_gasto AS concepto, SUM(g.valor_gasto) AS valor, '' AS nota"
 					+ " FROM inventarioamericana.gasto_semanal g"
 					+ " JOIN inventarioamericana.gasto_configuracion gc ON gc.idgasto_conf = g.idgasto_conf"
