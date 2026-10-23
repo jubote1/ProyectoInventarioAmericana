@@ -26,7 +26,18 @@ var PESTANAS = [
 	{ codigo: 'PORCENTAJE',     nombre: 'Porcentaje',            lista: false }
 ];
 
-$(document).ready(function () {
+/*
+ * Gerencia tiene su propia reja: el usuario de inventarios es uno solo -admin,
+ * compartido por las once tiendas- y esa sesion no dice quien es la persona.
+ * Detras de esta pantalla hay nomina con nombre propio, asi que se pide
+ * identificarse aparte contra el maestro del central. Mientras no haya sesion,
+ * #ger-contenido queda escondido y nada se consulta.
+ */
+$(function () {
+	Gerencia.proteger('ger-contenido', arrancar);
+});
+
+function arrancar() {
 	var hoy = new Date();
 	var anioHoy = hoy.getFullYear();
 	for (var a = anioHoy + 1; a >= anioHoy - 3; a--) {
@@ -52,7 +63,7 @@ $(document).ready(function () {
 		consultar();
 	});
 	$('#btnExcel').click(exportar);
-});
+}
 
 /* ------------------------------------------------------------------ */
 /* El periodo                                                          */
@@ -94,9 +105,10 @@ function consultar() {
 		desde: $('#desde').val(),
 		hasta: $('#hasta').val()
 	}, function (d) {
-		if (!d || d.respuesta !== 'OK') {
-			var porque = (d && d.detalle) ? d.detalle : 'No se pudo consultar el cierre.';
-			$('#contenidoPestana').html('<div class="ger-alerta">' + esc(porque) + '</div>');
+		/* respondio() traduce NOSESION y SINPERMISO y vuelve a pedir la clave:
+		   si no, una sesion vencida se ve igual que un error de datos. */
+		if (!Gerencia.respondio(d)) {
+			$('#contenidoPestana').html('');
 			$('#periodo').html('');
 			return;
 		}
