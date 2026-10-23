@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<title>Cierre de Gerencia</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<link href="css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+	<link href="css/all.min.css" rel="stylesheet" type="text/css" />
+	<link href="css/gerencia.css" rel="stylesheet" type="text/css" />
+	<script type="text/javascript" src="js/jquery-1.11.0.min.js"></script>
+	<script type="text/javascript" src="js/bootstrap.min.js"></script>
+</head>
+<body>
+
+	<div id="cargarMenu"></div>
+
+	<script type="text/javascript">
+		var server = window.location.protocol + '//' + window.location.host
+			+ window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+		var respuesta = '';
+		$.ajax({
+			url: server + 'ValidarUsuarioAplicacion',
+			dataType: 'text',
+			type: 'post',
+			async: false,
+			success: function (data) { respuesta = data; }
+		});
+		switch (respuesta) {
+			case 'OK':
+				$('#cargarMenu').load("Menu.html");
+				break;
+			case 'OKA':
+				$('#cargarMenu').load("MenuAdm.html");
+				break;
+			default:
+				location.href = server + "Index.html";
+				break;
+		}
+	</script>
+
+	<div class="container-fluid" style="max-width:1700px;">
+
+		<h3 class="ger-h1">Cierre de gerencia</h3>
+		<p class="ger-sub">
+			El mes completo o unas semanas sueltas, &aacute;rea por &aacute;rea y despu&eacute;s
+			punto de venta por punto de venta. El mes son las semanas que el calendario le
+			asign&oacute;, no el mes del almanaque.
+		</p>
+
+		<div id="ger-contenido">
+
+			<div class="ger-panel">
+				<div class="row">
+					<div class="col-md-2 col-sm-3">
+						<div class="ger-campo">
+							<label>A&ntilde;o</label>
+							<select id="anio" class="form-control"></select>
+						</div>
+					</div>
+					<div class="col-md-2 col-sm-3">
+						<div class="ger-campo">
+							<label>Mes</label>
+							<select id="mes" class="form-control"></select>
+						</div>
+					</div>
+					<div class="col-md-2 col-sm-3">
+						<div class="ger-campo">
+							<label>Desde la semana</label>
+							<select id="desde" class="form-control"></select>
+						</div>
+					</div>
+					<div class="col-md-2 col-sm-3">
+						<div class="ger-campo">
+							<label>Hasta la semana</label>
+							<select id="hasta" class="form-control"></select>
+						</div>
+					</div>
+					<div class="col-md-4">
+						<div class="ger-campo">
+							<label>&nbsp;</label>
+							<div>
+								<button id="btnConsultar" class="btn btn-default">
+									<i class="fas fa-search"></i> Consultar
+								</button>
+								<button id="btnMes" class="btn btn-default">
+									<i class="fas fa-calendar"></i> Mes completo
+								</button>
+								<button id="btnExcel" class="btn btn-default">
+									<i class="fas fa-file-excel"></i> Excel
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div id="periodo" class="ger-sub" style="margin-top:6px;"></div>
+				<div id="avisos"></div>
+			</div>
+
+			<div class="ger-pestanas" id="pestanas"></div>
+
+			<div id="contenidoPestana"></div>
+
+		</div>
+	</div>
+
+	<script type="text/javascript" src="js/gerenciacierre.js"></script>
+</body>
+</html>
