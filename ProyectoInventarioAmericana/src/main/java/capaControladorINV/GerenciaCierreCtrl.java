@@ -54,6 +54,7 @@ public class GerenciaCierreCtrl {
 			sb.append(",\"totalgastos\":").append(a.totalGastos);
 			sb.append(",\"total\":").append(a.total);
 			sb.append(",\"sinsalario\":").append(a.sinSalario);
+			sb.append(",\"singastosnunca\":").append(a.sinGastosNunca);
 
 			sb.append(",\"personas\":[");
 			for (int j = 0; j < a.personas.size(); j++) {

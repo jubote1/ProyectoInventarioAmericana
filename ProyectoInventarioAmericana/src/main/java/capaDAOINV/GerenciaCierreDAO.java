@@ -83,6 +83,8 @@ public class GerenciaCierreDAO {
 		public double totalGastos;
 		public double total;
 		public int sinSalario;
+		/** true cuando el area nunca ha tenido gastos: no es un dato que falte. */
+		public boolean sinGastosNunca;
 		public ArrayList<String> avisos = new ArrayList<String>();
 	}
 
@@ -288,8 +290,16 @@ public class GerenciaCierreDAO {
 				a.totalGastos += g.periodo;
 				a.gastos.add(g);
 			}
+			//Un area sin gastos en el periodo puede ser dos cosas muy distintas, y
+			//decirlas igual confunde: contact center y logistica NO manejan
+			//gastos -en el Excel esas hojas solo traen nomina- mientras que un
+			//area que si los maneja y aparece vacia es un dato que falta cargar.
 			if (a.gastos.isEmpty()) {
-				a.avisos.add("No hay gastos cargados para esta area en el periodo.");
+				a.sinGastosNunca = !tuvoGastosAlgunaVez(cn, a.codigo);
+				if (!a.sinGastosNunca) {
+					a.avisos.add("Esta area tiene gastos configurados, pero ninguno vigente en el "
+							+ "periodo consultado.");
+				}
 			}
 		} catch (final Exception e) {
 			a.avisos.add("No se pudieron leer los gastos del area.");
@@ -379,6 +389,31 @@ public class GerenciaCierreDAO {
 			cerrar(ps);
 		}
 		return (cuantas);
+	}
+
+	/**
+	 * Si el area ha tenido gastos configurados alguna vez, con o sin vigencia.
+	 *
+	 * Es lo que separa "esta area no maneja gastos" de "falta cargarlos". Sin
+	 * esto las dos se ven como un cero y la pantalla no puede decir cual es.
+	 */
+	private static boolean tuvoGastosAlgunaVez(final Connection cn, final String area) {
+		PreparedStatement ps = null;
+		ResultSet rs = null;
+		boolean tuvo = false;
+		try {
+			ps = cn.prepareStatement(
+					"SELECT 1 FROM inventarioamericana.gerencia_gasto_area WHERE area = ? LIMIT 1");
+			ps.setString(1, area);
+			rs = ps.executeQuery();
+			tuvo = rs.next();
+		} catch (final Exception e) {
+			System.out.println("GerenciaCierreDAO.tuvoGastosAlgunaVez " + area + ": " + e.toString());
+		} finally {
+			cerrar(rs);
+			cerrar(ps);
+		}
+		return (tuvo);
 	}
 
 	private static String texto(final String valor) {

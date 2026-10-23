@@ -260,7 +260,15 @@ function pintarArea(a) {
 	/* ---- Los gastos ---- */
 	h += '<div class="ger-panel"><h4 class="ger-titulo">Gastos del &aacute;rea</h4>';
 	if (!a.gastos.length) {
-		h += '<p class="ger-vacio">Sin gastos cargados en el periodo.</p>';
+		/* No es lo mismo "esta area no maneja gastos" que "faltan por cargar".
+		   En el Excel, contact center y logistica solo traen nomina: ese cero
+		   es la verdad, no un hueco. Decirlos igual haria buscar un dato que no
+		   existe, o peor, dar por normal uno que si falta. */
+		h += a.singastosnunca
+			? '<p class="ger-vacio">Esta &aacute;rea no maneja gastos propios: su costo es '
+				+ 'solamente la n&oacute;mina.</p>'
+			: '<p class="ger-vacio">No hay ning&uacute;n gasto vigente en el periodo '
+				+ 'consultado, aunque el &aacute;rea s&iacute; tiene gastos configurados.</p>';
 	} else {
 		h += '<table class="ger-tabla"><thead><tr><th>Concepto</th>'
 			+ '<th class="ger-num">Mensual</th>'
