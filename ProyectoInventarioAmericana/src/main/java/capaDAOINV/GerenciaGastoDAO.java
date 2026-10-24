@@ -25,6 +25,26 @@ import conexionINV.ConexionBaseDatos;
  *
  * Y aparte, las cuatro bolsas de estructura y la nomina agregada por tienda.
  *
+ * LA TIENDA CERO ES "TODAS LAS TIENDAS"
+ *
+ * Una fila con idtienda = 0 es el valor general del concepto; la tienda que
+ * tenga fila propia la sobreescribe. Se hizo asi porque cuatro de los siete
+ * conceptos cargados tienen el MISMO valor en las once -alarma 200.000,
+ * contador 350.200, navidad 550.000, industria y comercio 500.000- y subirlos
+ * costaba once operaciones, con el riesgo de que se escapara una y esa tienda
+ * se quedara con el valor viejo sin que nadie lo notara.
+ *
+ * La razon de peso para la herencia, y no para un boton que copie a las once,
+ * es la tienda NUEVA: con filas sueltas abre con todos los generales en cero y
+ * nadie se entera; heredando, los recibe sola.
+ *
+ * CADA FILA TIENE SU PROPIA VIGENCIA
+ *
+ * No hay una fecha comun de cambio. El arriendo de una tienda sube el 1 de
+ * enero porque se lo subieron ese dia, y el de otra en mayo porque ahi se le
+ * cumple el ano al contrato. El valor general y la excepcion de una tienda
+ * tambien cambian por separado.
+ *
  * EL ESTIMADO SE MARCA, SIEMPRE
  *
  * Un estimado que se ve igual que un real es peor que no tener el dato: quien
@@ -50,6 +70,28 @@ public class GerenciaGastoDAO {
 		public String tipo = "";
 		public String linea = "";
 		public int orden;
+		/** TIENDA, AREA o AMBOS: a quien se le puede cargar este concepto. */
+		public String ambito = "TIENDA";
+	}
+
+	/**
+	 * Un gasto de un area de estructura: administrativa, logistica, contact,
+	 * publicidad.
+	 *
+	 * Es lo mismo que un GastoFijo pero la llave es el area y no la tienda. Se
+	 * mantiene como clase aparte, y en su propia tabla, para no tocar nada de lo
+	 * que ya funciona con las tiendas.
+	 */
+	public static class GastoArea {
+		public int idGasto;
+		public String area = "";
+		public int idConcepto;
+		public String concepto = "";
+		public double valorMensual;
+		public String vigenciaDesde = "";
+		public String vigenciaHasta = "";
+		public String observacion = "";
+		public String usuario = "";
 	}
 
 	public static class GastoFijo {
@@ -117,7 +159,7 @@ public class GerenciaGastoDAO {
 		final ArrayList<Concepto> conceptos = new ArrayList<Concepto>();
 		try {
 			final PreparedStatement ps = cn.prepareStatement(
-					"SELECT idconcepto, nombre, tipo, linea, orden FROM gerencia_concepto_gasto"
+					"SELECT idconcepto, nombre, tipo, linea, orden, ambito FROM gerencia_concepto_gasto"
 					+ " WHERE activo = 'S' ORDER BY orden, nombre");
 			final ResultSet rs = ps.executeQuery();
 			while (rs.next()) {
@@ -127,6 +169,7 @@ public class GerenciaGastoDAO {
 				c.tipo = rs.getString("tipo");
 				c.linea = rs.getString("linea");
 				c.orden = rs.getInt("orden");
+				c.ambito = rs.getString("ambito");
 				conceptos.add(c);
 			}
 			rs.close();
@@ -339,6 +382,176 @@ public class GerenciaGastoDAO {
 			cerrar(cn);
 		}
 		return (error);
+	}
+
+	// =======================================================================
+	// GASTOS DE UN AREA DE ESTRUCTURA
+	// =======================================================================
+
+	/**
+	 * Los gastos de un area vigentes a una fecha.
+	 *
+	 * Misma mecanica que los de tienda: valor mensual con vigencia. Lo que
+	 * cambia es la llave, que aqui es el nombre del area.
+	 */
+	public static ArrayList<GastoArea> obtenerGastosArea(final String area, final String fecha) {
+		final ConexionBaseDatos con = new ConexionBaseDatos();
+		final Connection cn = con.obtenerConexionBDPrincipalLocal();
+		final ArrayList<GastoArea> gastos = new ArrayList<GastoArea>();
+		try {
+			final PreparedStatement ps = cn.prepareStatement(
+					"SELECT g.idgasto, g.area, g.idconcepto, c.nombre, g.valor_mensual,"
+					+ " g.vigencia_desde, g.vigencia_hasta, g.observacion, g.usuario"
+					+ " FROM gerencia_gasto_area g"
+					+ " JOIN gerencia_concepto_gasto c ON c.idconcepto = g.idconcepto"
+					+ " WHERE g.area = ? AND g.vigencia_desde <= ?"
+					+ "   AND (g.vigencia_hasta IS NULL OR g.vigencia_hasta >= ?)"
+					+ " ORDER BY c.orden");
+			ps.setString(1, area);
+			ps.setString(2, fecha);
+			ps.setString(3, fecha);
+			final ResultSet rs = ps.executeQuery();
+			while (rs.next()) {
+				gastos.add(leerArea(rs));
+			}
+			rs.close();
+			ps.close();
+		} catch (final Exception e) {
+			System.out.println("GerenciaGastoDAO.obtenerGastosArea: " + e.toString());
+		} finally {
+			cerrar(cn);
+		}
+		return (gastos);
+	}
+
+	/** Toda la historia de un concepto en un area, de lo mas nuevo a lo mas viejo. */
+	public static ArrayList<GastoArea> obtenerHistoriaArea(final String area, final int idConcepto) {
+		final ConexionBaseDatos con = new ConexionBaseDatos();
+		final Connection cn = con.obtenerConexionBDPrincipalLocal();
+		final ArrayList<GastoArea> gastos = new ArrayList<GastoArea>();
+		try {
+			final PreparedStatement ps = cn.prepareStatement(
+					"SELECT g.idgasto, g.area, g.idconcepto, c.nombre, g.valor_mensual,"
+					+ " g.vigencia_desde, g.vigencia_hasta, g.observacion, g.usuario"
+					+ " FROM gerencia_gasto_area g"
+					+ " JOIN gerencia_concepto_gasto c ON c.idconcepto = g.idconcepto"
+					+ " WHERE g.area = ? AND g.idconcepto = ?"
+					+ " ORDER BY g.vigencia_desde DESC");
+			ps.setString(1, area);
+			ps.setInt(2, idConcepto);
+			final ResultSet rs = ps.executeQuery();
+			while (rs.next()) {
+				gastos.add(leerArea(rs));
+			}
+			rs.close();
+			ps.close();
+		} catch (final Exception e) {
+			System.out.println("GerenciaGastoDAO.obtenerHistoriaArea: " + e.toString());
+		} finally {
+			cerrar(cn);
+		}
+		return (gastos);
+	}
+
+	/**
+	 * Pone un valor nuevo a regir en un area desde una fecha.
+	 *
+	 * Igual que guardarFijo: no sobrescribe. Le cierra la vigencia al registro
+	 * viejo y abre uno nuevo, para que un mes ya reportado no cambie por detras.
+	 *
+	 * Cada concepto lleva su propia fecha: el arriendo puede cambiar en enero y
+	 * el celular en mayo. No hay una fecha comun para todo.
+	 */
+	public static String guardarGastoArea(final GastoArea gasto, final String usuario) {
+		if (gasto.area == null || gasto.area.trim().length() == 0) {
+			return ("Falta el area");
+		}
+		if (gasto.vigenciaDesde == null || gasto.vigenciaDesde.trim().length() == 0) {
+			return ("Falta la fecha desde la que rige");
+		}
+		if (gasto.valorMensual < 0) {
+			return ("El valor no puede ser negativo");
+		}
+		final ConexionBaseDatos con = new ConexionBaseDatos();
+		final Connection cn = con.obtenerConexionBDPrincipalLocal();
+		String error = "";
+		try {
+			cn.setAutoCommit(false);
+
+			//No se puede abrir una vigencia que empiece antes de una que ya
+			//existe: quedarian dos valores rigiendo el mismo dia.
+			final PreparedStatement choque = cn.prepareStatement(
+					"SELECT COUNT(*) FROM gerencia_gasto_area"
+					+ " WHERE area = ? AND idconcepto = ? AND vigencia_desde >= ?");
+			choque.setString(1, gasto.area);
+			choque.setInt(2, gasto.idConcepto);
+			choque.setString(3, gasto.vigenciaDesde);
+			final ResultSet rsChoque = choque.executeQuery();
+			int posteriores = 0;
+			if (rsChoque.next()) {
+				posteriores = rsChoque.getInt(1);
+			}
+			rsChoque.close();
+			choque.close();
+
+			if (posteriores > 0) {
+				cn.rollback();
+				return ("Ya hay un valor registrado para ese concepto desde esa fecha o despues. "
+						+ "Revise la historia del concepto.");
+			}
+
+			final PreparedStatement cerrarVigente = cn.prepareStatement(
+					"UPDATE gerencia_gasto_area"
+					+ " SET vigencia_hasta = DATE_SUB(?, INTERVAL 1 DAY)"
+					+ " WHERE area = ? AND idconcepto = ? AND vigencia_hasta IS NULL");
+			cerrarVigente.setString(1, gasto.vigenciaDesde);
+			cerrarVigente.setString(2, gasto.area);
+			cerrarVigente.setInt(3, gasto.idConcepto);
+			cerrarVigente.executeUpdate();
+			cerrarVigente.close();
+
+			final PreparedStatement ps = cn.prepareStatement(
+					"INSERT INTO gerencia_gasto_area"
+					+ " (area, idconcepto, valor_mensual, vigencia_desde, vigencia_hasta,"
+					+ "  observacion, usuario, fecha_registro)"
+					+ " VALUES (?, ?, ?, ?, NULL, ?, ?, ?)");
+			ps.setString(1, gasto.area);
+			ps.setInt(2, gasto.idConcepto);
+			ps.setDouble(3, gasto.valorMensual);
+			ps.setString(4, gasto.vigenciaDesde);
+			ps.setString(5, gasto.observacion == null ? "" : gasto.observacion);
+			ps.setString(6, usuario);
+			ps.setTimestamp(7, new Timestamp(System.currentTimeMillis()));
+			ps.executeUpdate();
+			ps.close();
+
+			cn.commit();
+		} catch (final Exception e) {
+			System.out.println("GerenciaGastoDAO.guardarGastoArea: " + e.toString());
+			error = "No se pudo guardar el gasto del area";
+			try {
+				cn.rollback();
+			} catch (final Exception e1) {
+				//El rollback que falla no cambia lo que hay que responder.
+			}
+		} finally {
+			cerrar(cn);
+		}
+		return (error);
+	}
+
+	private static GastoArea leerArea(final ResultSet rs) throws java.sql.SQLException {
+		final GastoArea g = new GastoArea();
+		g.idGasto = rs.getInt("idgasto");
+		g.area = rs.getString("area");
+		g.idConcepto = rs.getInt("idconcepto");
+		g.concepto = rs.getString("nombre");
+		g.valorMensual = rs.getDouble("valor_mensual");
+		g.vigenciaDesde = rs.getString("vigencia_desde");
+		g.vigenciaHasta = rs.getString("vigencia_hasta") == null ? "" : rs.getString("vigencia_hasta");
+		g.observacion = rs.getString("observacion") == null ? "" : rs.getString("observacion");
+		g.usuario = rs.getString("usuario") == null ? "" : rs.getString("usuario");
+		return (g);
 	}
 
 	// =======================================================================

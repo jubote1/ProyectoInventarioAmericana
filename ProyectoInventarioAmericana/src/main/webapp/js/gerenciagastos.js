@@ -18,8 +18,14 @@ var MESES_G = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio
 	'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
 var datos = null;
+var datosArea = null;
 var cambiosFijos = {};
 var cambiosServicios = {};
+var cambiosAreas = {};
+
+/* La tienda CERO es "todas las tiendas": su valor rige donde la tienda no
+   tenga uno propio. Ver el javadoc de GerenciaGastoDAO. */
+var TODAS = 0;
 
 $(function () {
 	Gerencia.proteger('ger-contenido', arrancar);
@@ -31,8 +37,11 @@ function arrancar() {
 	$('#anio, #mes').on('change', consultar);
 	$('#tabFijos').on('click', function (e) { e.preventDefault(); verPestana('fijos'); });
 	$('#tabServicios').on('click', function (e) { e.preventDefault(); verPestana('servicios'); });
+	$('#tabAreas').on('click', function (e) { e.preventDefault(); verPestana('areas'); });
 	$('#btnGuardarFijos').on('click', guardarFijos);
 	$('#btnGuardarServicios').on('click', guardarServicios);
+	$('#btnGuardarAreas').on('click', guardarAreas);
+	$('#areaSel').on('change', consultarArea);
 	$('#btnAceptarEstimados').on('click', aceptarEstimados);
 	$('#btnCerrarHistoria').on('click', function () { $('#panelHistoria').hide(); });
 	consultar();
@@ -81,9 +90,14 @@ function consultar() {
 function verPestana(cual) {
 	$('#tabFijos').toggleClass('activa', cual === 'fijos');
 	$('#tabServicios').toggleClass('activa', cual === 'servicios');
+	$('#tabAreas').toggleClass('activa', cual === 'areas');
 	$('#panelFijos').toggle(cual === 'fijos');
 	$('#panelServicios').toggle(cual === 'servicios');
+	$('#panelAreas').toggle(cual === 'areas');
 	$('#panelHistoria').hide();
+	if (cual === 'areas' && !datosArea) {
+		consultarArea();
+	}
 }
 
 // =========================================================================
@@ -110,8 +124,22 @@ function valorFijo(idtienda, idconcepto) {
 	return (null);
 }
 
+/* Los conceptos que se pueden cargar a una tienda. Gasolina o celulares son
+   del area y no tienen por que aparecer aqui ocupando una columna vacia. */
+function conceptosDeTienda() {
+	var todos = conceptosDe('FIJO');
+	var lista = [];
+	for (var i = 0; i < todos.length; i++) {
+		var a = todos[i].ambito;
+		if (!a || a === 'TIENDA' || a === 'AMBOS') {
+			lista.push(todos[i]);
+		}
+	}
+	return (lista);
+}
+
 function pintarFijos() {
-	var conceptos = conceptosDe('FIJO');
+	var conceptos = conceptosDeTienda();
 	var encabezado = '<tr><th style="min-width:120px;">Tienda</th>';
 	for (var c = 0; c < conceptos.length; c++) {
 		encabezado += '<th class="ger-num" style="min-width:95px;">' + conceptos[c].nombre + '</th>';
@@ -119,31 +147,193 @@ function pintarFijos() {
 	encabezado += '<th class="ger-num" style="min-width:110px;">Total mes</th></tr>';
 	$('#tablaFijos thead').html(encabezado);
 
-	var cuerpo = '';
+	/* La primera fila es el valor para TODAS. Lo que se escriba aqui rige en
+	   cualquier tienda que no tenga valor propio, y una tienda nueva lo hereda
+	   sola. Va arriba y resaltada porque es la que se toca mas: cuatro de los
+	   siete conceptos tienen hoy el mismo valor en las once. */
+	var cuerpo = filaFijos({ idtienda: TODAS, nombre: 'TODAS LAS TIENDAS' }, conceptos, true);
 	for (var t = 0; t < datos.tiendas.length; t++) {
-		var tienda = datos.tiendas[t];
-		var total = 0;
-		cuerpo += '<tr><td><strong>' + tienda.nombre + '</strong></td>';
-		for (var k = 0; k < conceptos.length; k++) {
-			var concepto = conceptos[k];
-			var actual = valorFijo(tienda.idtienda, concepto.idconcepto);
-			var valor = actual ? actual.valor : 0;
-			total += valor;
-			var llave = tienda.idtienda + '_' + concepto.idconcepto;
-			cuerpo += '<td class="ger-num">'
-				+ '<input type="text" class="ger-entrada celda-fijo" data-llave="' + llave + '"'
-				+ ' data-tienda="' + tienda.idtienda + '" data-concepto="' + concepto.idconcepto + '"'
-				+ ' data-original="' + valor + '"'
-				+ ' data-nombre="' + escapar(tienda.nombre + ' / ' + concepto.nombre) + '"'
-				+ ' value="' + (valor === 0 ? '' : miles(valor)) + '" /></td>';
-		}
-		cuerpo += '<td class="ger-num"><strong>' + Gerencia.pesos(total) + '</strong></td></tr>';
+		cuerpo += filaFijos(datos.tiendas[t], conceptos, false);
 	}
 	$('#tablaFijos tbody').html(cuerpo);
 
 	$('.celda-fijo').on('input', function () { marcar($(this), cambiosFijos); });
 	$('.celda-fijo').on('dblclick', function () {
 		verHistoria($(this).data('tienda'), $(this).data('concepto'), $(this).data('nombre'));
+	});
+}
+
+/**
+ * Una fila de la matriz de fijos.
+ *
+ * Una celda vacia en una tienda NO es un cero: es que esa tienda hereda el
+ * valor general. Se muestra en gris como sugerencia para que se vea de donde
+ * sale, y el total de la fila lo cuenta. Si se escribe encima, esa tienda
+ * queda con excepcion propia y la celda se marca.
+ */
+function filaFijos(tienda, conceptos, esGeneral) {
+	var total = 0;
+	var fila = '<tr' + (esGeneral ? ' style="background:#F4F6F8;"' : '') + '>'
+		+ '<td><strong>' + escapar(tienda.nombre) + '</strong>'
+		+ (esGeneral ? '<br><span class="ger-mini">rige donde no haya valor propio</span>' : '')
+		+ '</td>';
+	for (var k = 0; k < conceptos.length; k++) {
+		var concepto = conceptos[k];
+		var propio = valorFijo(tienda.idtienda, concepto.idconcepto);
+		var general = esGeneral ? null : valorFijo(TODAS, concepto.idconcepto);
+		var valor = propio ? propio.valor : 0;
+		var heredado = (!propio && general) ? general.valor : 0;
+		total += propio ? valor : heredado;
+
+		var llave = tienda.idtienda + '_' + concepto.idconcepto;
+		var excepcion = (propio && general && propio.valor !== general.valor);
+		fila += '<td class="ger-num">'
+			+ '<input type="text" class="ger-entrada celda-fijo" data-llave="' + llave + '"'
+			+ ' data-tienda="' + tienda.idtienda + '" data-concepto="' + concepto.idconcepto + '"'
+			+ ' data-original="' + valor + '"'
+			+ ' data-nombre="' + escapar(tienda.nombre + ' / ' + concepto.nombre) + '"'
+			+ (heredado > 0 ? ' placeholder="' + miles(heredado) + '"' : '')
+			+ (excepcion ? ' title="Excepcion: el general es ' + miles(general.valor) + '"'
+				+ ' style="border-color:#E0A800;"' : '')
+			+ ' value="' + (valor === 0 ? '' : miles(valor)) + '" /></td>';
+	}
+	return (fila + '<td class="ger-num"><strong>'
+		+ (esGeneral ? '&mdash;' : Gerencia.pesos(total)) + '</strong></td></tr>');
+}
+
+// =========================================================================
+// GASTOS DE UN AREA
+// =========================================================================
+
+function consultarArea() {
+	cambiosAreas = {};
+	$('#cuantosAreas').text('');
+	$.getJSON('GerenciaGastos', { que: 'area', area: $('#areaSel').val() }, function (d) {
+		if (!Gerencia.respondio(d)) {
+			return;
+		}
+		datosArea = d;
+		pintarAreas();
+	}).fail(function () {
+		Gerencia.avisar('No se pudieron consultar los gastos del area.');
+	});
+}
+
+function valorArea(idconcepto) {
+	for (var i = 0; i < datosArea.gastos.length; i++) {
+		if (datosArea.gastos[i].idconcepto === idconcepto) {
+			return (datosArea.gastos[i]);
+		}
+	}
+	return (null);
+}
+
+function pintarAreas() {
+	/* Se ofrecen los conceptos cuyo ambito es de area: poner el datafono en
+	   administrativa invita a cargarlo donde no va.
+
+	   PERO lo que YA tiene valor se muestra siempre, aunque su ambito diga
+	   otra cosa. Un gasto cargado que la pantalla esconde sigue sumando en el
+	   cierre y nadie puede corregirlo: es peor que mostrarlo fuera de lugar.
+	   Pasa hoy con Seguridad Acropolis, que esta marcado como de tienda y
+	   tiene valor en administrativa. */
+	var cuerpo = '';
+	for (var i = 0; i < datosArea.conceptos.length; i++) {
+		var c = datosArea.conceptos[i];
+		var actual = valorArea(c.idconcepto);
+		if (!actual && c.ambito !== 'AREA' && c.ambito !== 'AMBOS') {
+			continue;
+		}
+		var valor = actual ? actual.valor : 0;
+		cuerpo += '<tr><td>' + escapar(c.nombre)
+			+ (c.tipo === 'SERVICIO' ? ' <span class="ger-mini">(servicio)</span>' : '') + '</td>'
+			+ '<td class="ger-num">'
+			+ '<input type="text" class="ger-entrada celda-area" data-llave="' + c.idconcepto + '"'
+			+ ' data-concepto="' + c.idconcepto + '"'
+			+ ' data-original="' + valor + '"'
+			+ ' data-nombre="' + escapar(c.nombre) + '"'
+			+ ' value="' + (valor === 0 ? '' : miles(valor)) + '" /></td>'
+			+ '<td>' + (actual ? escapar(actual.desde) : '<span class="ger-vacio">sin cargar</span>') + '</td>'
+			+ '<td class="ger-mini">' + (actual ? escapar(actual.usuario) : '') + '</td></tr>';
+	}
+	$('#tablaAreas tbody').html(cuerpo);
+
+	$('.celda-area').on('input', function () { marcar($(this), cambiosAreas); });
+	$('.celda-area').on('dblclick', function () {
+		verHistoriaArea($(this).data('concepto'), $(this).data('nombre'));
+	});
+}
+
+function guardarAreas() {
+	var desde = $.trim($('#rigeDesdeArea').val());
+	if (!/^\d{4}-\d{2}-\d{2}$/.test(desde)) {
+		Gerencia.avisar('Escriba desde que fecha rigen los cambios, como aaaa-mm-dd.');
+		return;
+	}
+	var llaves = Object.keys(cambiosAreas);
+	if (llaves.length === 0) {
+		return;
+	}
+	if (!confirm('Se van a abrir ' + llaves.length + ' vigencia(s) nueva(s) desde el ' + desde
+		+ '.\n\nLo anterior no se borra: queda cerrado el dia antes y se puede consultar.\n\nContinuar?')) {
+		return;
+	}
+
+	var area = $('#areaSel').val();
+	$('#btnGuardarAreas').prop('disabled', true);
+	/* Uno por uno y en cadena, como los de tienda: cada guardado abre una
+	   vigencia y el servidor rechaza las que choquen, asi que mandarlos en
+	   paralelo haria que el orden decidiera cual pasa. */
+	enCadena(llaves, 0, cambiosAreas, function (cambio, seguir) {
+		$.post('GerenciaGastos', {
+			que: 'gastoarea',
+			area: area,
+			idconcepto: cambio.concepto,
+			valor: cambio.valor,
+			desde: desde
+		}, function (data) { seguir(data, cambio); }, 'json').fail(function () {
+			seguir(null, cambio);
+		});
+	}, function (fallos) {
+		$('#btnGuardarAreas').prop('disabled', false);
+		//No se usa terminar(): ese recarga la matriz de tiendas y aqui hay que
+		//recargar el area que se esta viendo.
+		if (fallos.length === 0) {
+			Gerencia.avisar('Se guardaron ' + llaves.length + ' gasto(s) del area.', true);
+		} else {
+			Gerencia.avisar('Se guardaron ' + (llaves.length - fallos.length) + ' de '
+				+ llaves.length + '. No se pudo con: ' + fallos.join(' | '));
+		}
+		consultarArea();
+	});
+}
+
+function verHistoriaArea(idconcepto, nombre) {
+	$.getJSON('GerenciaGastos', {
+		que: 'historiaarea',
+		area: $('#areaSel').val(),
+		idconcepto: idconcepto
+	}, function (d) {
+		if (!Gerencia.respondio(d)) {
+			return;
+		}
+		$('#tituloHistoria').text('Historia de ' + nombre);
+		var cuerpo = '';
+		for (var i = 0; i < d.historia.length; i++) {
+			var h = d.historia[i];
+			cuerpo += '<tr><td>' + escapar(h.desde) + '</td>'
+				+ '<td>' + (h.hasta ? escapar(h.hasta) : '<strong>vigente</strong>') + '</td>'
+				+ '<td class="ger-num">' + Gerencia.pesos(h.valor) + '</td>'
+				+ '<td>' + escapar(h.observacion) + '</td>'
+				+ '<td class="ger-mini">' + escapar(h.usuario) + '</td></tr>';
+		}
+		if (!cuerpo) {
+			cuerpo = '<tr><td colspan="5" class="ger-vacio">Sin historia: nunca se ha cargado.</td></tr>';
+		}
+		$('#tablaHistoria tbody').html(cuerpo);
+		$('#panelHistoria').show();
+	}).fail(function () {
+		Gerencia.avisar('No se pudo consultar la historia.');
 	});
 }
 
@@ -181,10 +371,13 @@ function marcar(celda, bolsa) {
 function contar() {
 	var f = Object.keys(cambiosFijos).length;
 	var s = Object.keys(cambiosServicios).length;
+	var a = Object.keys(cambiosAreas).length;
 	$('#cuantosCambios').text(f === 0 ? 'Sin cambios' : (f + ' celda(s) por guardar'));
 	$('#cuantosServicios').text(s === 0 ? 'Sin cambios' : (s + ' celda(s) por guardar'));
+	$('#cuantosAreas').text(a === 0 ? 'Sin cambios' : (a + ' celda(s) por guardar'));
 	$('#btnGuardarFijos').prop('disabled', f === 0);
 	$('#btnGuardarServicios').prop('disabled', s === 0);
+	$('#btnGuardarAreas').prop('disabled', a === 0);
 }
 
 function guardarFijos() {

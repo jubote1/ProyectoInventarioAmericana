@@ -662,6 +662,82 @@ public class GerenciaCtrl {
 			o.put("nombre", c.nombre);
 			o.put("tipo", c.tipo);
 			o.put("linea", c.linea);
+			o.put("orden", Integer.valueOf(c.orden));
+			//El ambito dice a quien se le puede cargar el concepto: TIENDA, AREA
+			//o AMBOS. La pantalla lo usa para no ofrecer gasolina en una tienda
+			//ni datafono en administrativa.
+			o.put("ambito", c.ambito);
+			lista.add(o);
+		}
+		return (lista);
+	}
+
+	// =======================================================================
+	// GASTOS DE UN AREA DE ESTRUCTURA
+	// =======================================================================
+
+	@SuppressWarnings("unchecked")
+	public String consultarGastosArea(final String area, final String fecha) {
+		final JSONObject raiz = new JSONObject();
+		//Sin fecha se mira hoy: es lo que esta rigiendo ahora, que es lo que
+		//quiere ver quien entra a configurar.
+		final String aLaFecha = (fecha == null || !fecha.matches("^\\d{4}-\\d{2}-\\d{2}$"))
+				? new java.text.SimpleDateFormat("yyyy-MM-dd").format(new java.util.Date())
+				: fecha;
+		raiz.put("area", area);
+		raiz.put("fecha", aLaFecha);
+		raiz.put("conceptos", aJsonConceptos(GerenciaGastoDAO.obtenerConceptos()));
+		raiz.put("gastos", aJsonAreas(GerenciaGastoDAO.obtenerGastosArea(area, aLaFecha)));
+		raiz.put("respuesta", "OK");
+		return (raiz.toJSONString());
+	}
+
+	@SuppressWarnings("unchecked")
+	public String consultarHistoriaArea(final String area, final int idConcepto) {
+		final JSONObject raiz = new JSONObject();
+		raiz.put("historia", aJsonAreas(GerenciaGastoDAO.obtenerHistoriaArea(area, idConcepto)));
+		raiz.put("respuesta", "OK");
+		return (raiz.toJSONString());
+	}
+
+	@SuppressWarnings("unchecked")
+	public String guardarGastoArea(final String area, final int idConcepto, final double valor,
+			final String desde, final String observacion, final String usuario) {
+		final JSONObject raiz = new JSONObject();
+		final GerenciaGastoDAO.GastoArea g = new GerenciaGastoDAO.GastoArea();
+		g.area = area;
+		g.idConcepto = idConcepto;
+		g.valorMensual = valor;
+		g.vigenciaDesde = desde;
+		g.observacion = observacion;
+
+		final String error = GerenciaGastoDAO.guardarGastoArea(g, usuario);
+		if (error.length() > 0) {
+			raiz.put("respuesta", "NOK");
+			raiz.put("detalle", error);
+			return (raiz.toJSONString());
+		}
+		capaDAOINV.GerenciaAccesoDAO.registrar(usuario, "GASTOAREA",
+				"Area " + area + " concepto " + idConcepto + " a " + valor + " desde " + desde);
+		raiz.put("respuesta", "OK");
+		return (raiz.toJSONString());
+	}
+
+	@SuppressWarnings("unchecked")
+	private JSONArray aJsonAreas(final ArrayList<GerenciaGastoDAO.GastoArea> gastos) {
+		final JSONArray lista = new JSONArray();
+		for (int i = 0; i < gastos.size(); i++) {
+			final GerenciaGastoDAO.GastoArea g = gastos.get(i);
+			final JSONObject o = new JSONObject();
+			o.put("idgasto", Integer.valueOf(g.idGasto));
+			o.put("area", g.area);
+			o.put("idconcepto", Integer.valueOf(g.idConcepto));
+			o.put("concepto", g.concepto);
+			o.put("valor", Double.valueOf(g.valorMensual));
+			o.put("desde", g.vigenciaDesde);
+			o.put("hasta", g.vigenciaHasta);
+			o.put("observacion", g.observacion);
+			o.put("usuario", g.usuario);
 			lista.add(o);
 		}
 		return (lista);

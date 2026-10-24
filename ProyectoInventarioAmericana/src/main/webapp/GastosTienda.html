@@ -79,6 +79,7 @@
 			<div class="ger-pestanas">
 				<a href="#" id="tabFijos" class="activa">Gastos fijos</a>
 				<a href="#" id="tabServicios">Servicios p&uacute;blicos</a>
+				<a href="#" id="tabAreas">Gastos de &aacute;reas</a>
 			</div>
 
 			<!-- ================= FIJOS ================= -->
@@ -161,6 +162,65 @@
 							<tbody></tbody>
 						</table>
 					</div>
+				</div>
+			</div>
+
+			<!-- ================= AREAS ================= -->
+			<div id="panelAreas" style="display:none;">
+				<div class="ger-panel">
+					<h4 class="ger-titulo">Gastos de un &aacute;rea</h4>
+					<p class="ger-sub">
+						Administrativa, log&iacute;stica, contact center y publicidad. Funcionan igual que
+						los de tienda: el valor rige hasta que usted lo cambie, y al cambiarlo
+						<strong>no se sobrescribe</strong> &mdash; se le cierra la vigencia al anterior.
+						Cada concepto lleva su propia fecha.
+					</p>
+					<div class="row">
+						<div class="col-md-3 col-sm-4">
+							<div class="ger-campo">
+								<label>&Aacute;rea</label>
+								<select id="areaSel" class="form-control">
+									<option value="ADMINISTRATIVA">Administrativa</option>
+									<option value="LOGISTICA">Log&iacute;stica y producci&oacute;n</option>
+									<option value="CONTACT">Contact center</option>
+									<option value="PUBLICIDAD">Publicidad</option>
+								</select>
+							</div>
+						</div>
+						<div class="col-md-3 col-sm-4">
+							<div class="ger-campo">
+								<label>Los cambios rigen desde</label>
+								<input type="text" id="rigeDesdeArea" class="form-control" placeholder="aaaa-mm-dd" />
+							</div>
+						</div>
+						<div class="col-md-6 col-sm-4">
+							<div class="ger-campo">
+								<label>&nbsp;</label>
+								<div>
+									<button id="btnGuardarAreas" class="btn btn-default">
+										<i class="fas fa-save"></i> Guardar cambios
+									</button>
+									<span id="cuantosAreas" class="ger-nota" style="margin-left:8px;"></span>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="table-responsive" style="margin-top:12px;">
+						<table class="ger-tabla" id="tablaAreas">
+							<thead>
+								<tr>
+									<th>Concepto</th>
+									<th class="ger-num" style="min-width:140px;">Valor mensual</th>
+									<th>Rige desde</th>
+									<th>Qui&eacute;n lo carg&oacute;</th>
+								</tr>
+							</thead>
+							<tbody></tbody>
+						</table>
+					</div>
+					<p class="ger-nota" style="margin-top:8px;">
+						Doble clic en un valor para ver su historia.
+					</p>
 				</div>
 			</div>
 

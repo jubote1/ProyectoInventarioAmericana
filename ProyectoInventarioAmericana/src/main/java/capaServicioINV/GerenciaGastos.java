@@ -47,14 +47,39 @@ public class GerenciaGastos extends HttpServlet {
 		try {
 			final GerenciaCtrl ctrl = new GerenciaCtrl();
 
-			if ("historia".equals(GerenciaSesion.texto(request, "que"))) {
-				final int idTienda = GerenciaSesion.entero(request, "idtienda", 0);
+			final String queGet = GerenciaSesion.texto(request, "que");
+
+			if ("historia".equals(queGet)) {
+				//La tienda CERO es "todas": tambien tiene historia propia y hay
+				//que poder verla, asi que se acepta desde 0 y no desde 1.
+				final int idTienda = GerenciaSesion.entero(request, "idtienda", -1);
 				final int idConcepto = GerenciaSesion.entero(request, "idconcepto", 0);
-				if (idTienda <= 0 || idConcepto <= 0) {
+				if (idTienda < 0 || idConcepto <= 0) {
 					out.write("{\"respuesta\":\"INVALIDO\",\"detalle\":\"Falta la tienda o el concepto\"}");
 					return;
 				}
 				out.write(ctrl.consultarHistoriaFijo(idTienda, idConcepto));
+				return;
+			}
+
+			if ("historiaarea".equals(queGet)) {
+				final String area = GerenciaSesion.texto(request, "area");
+				final int idConcepto = GerenciaSesion.entero(request, "idconcepto", 0);
+				if (!area.matches("^[A-Z]{4,20}$") || idConcepto <= 0) {
+					out.write("{\"respuesta\":\"INVALIDO\",\"detalle\":\"Falta el area o el concepto\"}");
+					return;
+				}
+				out.write(ctrl.consultarHistoriaArea(area, idConcepto));
+				return;
+			}
+
+			if ("area".equals(queGet)) {
+				final String area = GerenciaSesion.texto(request, "area");
+				if (!area.matches("^[A-Z]{4,20}$")) {
+					out.write("{\"respuesta\":\"INVALIDO\",\"detalle\":\"Area desconocida\"}");
+					return;
+				}
+				out.write(ctrl.consultarGastosArea(area, GerenciaSesion.texto(request, "fecha")));
 				return;
 			}
 
@@ -90,10 +115,25 @@ public class GerenciaGastos extends HttpServlet {
 			final String usuario = GerenciaSesion.usuarioDe(request);
 			final String que = GerenciaSesion.texto(request, "que");
 
-			final int idTienda = GerenciaSesion.entero(request, "idtienda", 0);
+			//El defecto es -1 y no 0 porque la tienda CERO es un valor legitimo:
+			//significa "todas las tiendas". Con 0 de defecto, un formulario al
+			//que se le olvide mandar la tienda escribiria el valor general de
+			//las once sin que nadie lo pidiera.
+			final int idTienda = GerenciaSesion.entero(request, "idtienda", -1);
 			final int idConcepto = GerenciaSesion.entero(request, "idconcepto", 0);
-			if (idTienda <= 0 || idConcepto <= 0) {
-				out.write("{\"respuesta\":\"INVALIDO\",\"detalle\":\"Falta la tienda o el concepto\"}");
+			final String area = GerenciaSesion.texto(request, "area");
+			final boolean esArea = "gastoarea".equals(que);
+
+			if (idConcepto <= 0) {
+				out.write("{\"respuesta\":\"INVALIDO\",\"detalle\":\"Falta el concepto\"}");
+				return;
+			}
+			if (esArea && area.length() == 0) {
+				out.write("{\"respuesta\":\"INVALIDO\",\"detalle\":\"Falta el area\"}");
+				return;
+			}
+			if (!esArea && idTienda < 0) {
+				out.write("{\"respuesta\":\"INVALIDO\",\"detalle\":\"Falta la tienda\"}");
 				return;
 			}
 
@@ -115,6 +155,24 @@ public class GerenciaGastos extends HttpServlet {
 					return;
 				}
 				out.write(ctrl.guardarGastoFijo(idTienda, idConcepto, valor, desde,
+						GerenciaSesion.texto(request, "observacion"), usuario));
+				return;
+			}
+
+			if (esArea) {
+				final String desde = GerenciaSesion.texto(request, "desde");
+				if (!desde.matches("^\\d{4}-\\d{2}-\\d{2}$")) {
+					out.write("{\"respuesta\":\"INVALIDO\",\"detalle\":"
+							+ "\"La fecha desde la que rige tiene que venir como aaaa-mm-dd\"}");
+					return;
+				}
+				//El area viene de un combo, pero igual se valida: va a parar a
+				//una consulta y lo que no este en la lista tiene que caer.
+				if (!area.matches("^[A-Z]{4,20}$")) {
+					out.write("{\"respuesta\":\"INVALIDO\",\"detalle\":\"Area desconocida\"}");
+					return;
+				}
+				out.write(ctrl.guardarGastoArea(area, idConcepto, valor, desde,
 						GerenciaSesion.texto(request, "observacion"), usuario));
 				return;
 			}
