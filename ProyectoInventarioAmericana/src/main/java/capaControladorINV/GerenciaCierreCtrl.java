@@ -39,6 +39,9 @@ public class GerenciaCierreCtrl {
 		sb.append(",\"pctseguridad\":").append(c.porcentajeSeguridadSocial);
 		sb.append(",\"pctliquidacion\":").append(c.porcentajeLiquidacion);
 
+		sb.append(",\"avisosgenerales\":").append(lista(c.avisosGenerales));
+		sb.append(",\"avisosgenerales\":").append(lista(c.avisosGenerales));
+
 		sb.append(",\"areas\":[");
 		for (int i = 0; i < c.areas.size(); i++) {
 			final GerenciaCierreDAO.Area a = c.areas.get(i);
@@ -47,6 +50,8 @@ public class GerenciaCierreCtrl {
 			}
 			sb.append("{\"codigo\":\"").append(esc(a.codigo)).append('"');
 			sb.append(",\"nombre\":\"").append(esc(a.nombre)).append('"');
+			sb.append(",\"tipo\":\"").append(esc(a.tipo)).append('"');
+			sb.append(",\"idtienda\":").append(a.idTienda);
 			sb.append(",\"sueldos\":").append(a.sueldos);
 			sb.append(",\"seguridadsocial\":").append(a.seguridadSocial);
 			sb.append(",\"liquidacion\":").append(a.liquidacion);

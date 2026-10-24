@@ -74,6 +74,10 @@ public class GerenciaCierreDAO {
 	public static class Area {
 		public String codigo = "";
 		public String nombre = "";
+		/** AREA para las de estructura, TIENDA para un punto de venta. */
+		public String tipo = "AREA";
+		/** Solo cuando tipo es TIENDA. */
+		public int idTienda;
 		public ArrayList<Persona> personas = new ArrayList<Persona>();
 		public double sueldos;
 		public double seguridadSocial;
@@ -101,6 +105,8 @@ public class GerenciaCierreDAO {
 		public double porcentajeSeguridadSocial;
 		public double porcentajeLiquidacion;
 		public ArrayList<Area> areas = new ArrayList<Area>();
+		/** Lo que no pertenece a una sola pestana y hay que decir arriba. */
+		public ArrayList<String> avisosGenerales = new ArrayList<String>();
 		public String error = "";
 	}
 
@@ -151,22 +157,27 @@ public class GerenciaCierreDAO {
 			c.porcentajeSeguridadSocial = parametro(cn, "SEGURIDAD_SOCIAL_ESTRUCTURA", c.hasta, 25);
 			c.porcentajeLiquidacion = parametro(cn, "LIQUIDACION_ESTRUCTURA", c.hasta, 22);
 
-			//3. Cada area.
+			//3. Cada area de estructura.
 			for (int i = 0; i < AREAS.length; i++) {
 				final Area a = new Area();
 				a.codigo = AREAS[i][0];
 				a.nombre = AREAS[i][1];
+				a.tipo = "AREA";
 				cargarPersonas(cn, a, c.porcentajeSeguridadSocial, c.porcentajeLiquidacion, factor);
 				cargarGastos(cn, a, c.hasta, c.desde, factor);
 				a.total = a.nomina + a.totalGastos;
 				c.areas.add(a);
 			}
 
-			//4. Un cargo sin area no pertenece a ninguna pestana y su gente
+			//4. Y cada punto de venta, con la misma forma, para que la pantalla
+			//   los pinte igual y se puedan comparar.
+			cargarTiendas(cn, c, factor);
+
+			//5. Un cargo sin area no pertenece a ninguna pestana y su gente
 			//   desaparece de la cuenta. Se avisa una sola vez, arriba.
 			final int sinArea = contarSinArea(cn);
 			if (sinArea > 0) {
-				c.areas.get(0).avisos.add("Hay " + sinArea + " persona(s) activa(s) con un cargo que "
+				c.avisosGenerales.add("Hay " + sinArea + " persona(s) activa(s) con un cargo que "
 						+ "todavia no tiene area asignada: no estan sumando en ninguna pestana.");
 			}
 		} catch (final Exception ex) {
@@ -248,6 +259,299 @@ public class GerenciaCierreDAO {
 			cerrar(rs);
 			cerrar(ps);
 		}
+	}
+
+	// =======================================================================
+	// Los puntos de venta
+	// =======================================================================
+
+	/**
+	 * Una pestana por punto de venta, con la misma forma que las de estructura.
+	 *
+	 * A QUE TIENDA PERTENECE CADA PERSONA: LO DICE LA BIOMETRIA
+	 *
+	 * El maestro de empleados NO tiene tienda. Y la mitad de la gente de punto
+	 * de venta trabaja en mas de una: de los 88 con marcas en julio de 2026, 44
+	 * marcaron en dos o mas, y uno en seis.
+	 *
+	 * La regla que definio gerencia es: cada quien cuenta donde MAS estuvo. Se
+	 * toma la tienda con mas marcas en el periodo, y con empate gana la de la
+	 * marca mas reciente. Verificado contra el Excel de julio: Manrique da 10
+	 * personas, Itagui 9 y Pilarica 8, los mismos del Excel.
+	 *
+	 * Es una aproximacion a proposito -la persona se carga entera a una sola
+	 * tienda, no repartida por horas- porque es lo que pidio gerencia para
+	 * arrancar. El reparto proporcional ya existe en GerenciaNominaEmpleadoDAO
+	 * y entra despues.
+	 *
+	 * QUIEN NO MARCO NO APARECE
+	 *
+	 * Sin marcas no hay como saber donde estuvo, y repartirlo a dedo o mandarlo
+	 * a la primera tienda seria inventar. Esas personas se cuentan aparte y se
+	 * avisan, para que se vea cuanta nomina quedo sin asignar.
+	 */
+	private static void cargarTiendas(final Connection cn, final Cierre c, final double factor) {
+		PreparedStatement ps = null;
+		ResultSet rs = null;
+		try {
+			ps = cn.prepareStatement(
+					"SELECT t.idtienda, t.nombre AS tienda, e.id, e.nombre_largo, e.salario,"
+					+ "      tp.descripcion AS cargo"
+					+ "  FROM (SELECT ev.id, ev.idtienda,"
+					+ "               ROW_NUMBER() OVER (PARTITION BY ev.id"
+					+ "                   ORDER BY COUNT(*) DESC, MAX(ev.fecha) DESC) rn"
+					+ "          FROM general.empleado_evento ev"
+					+ "         WHERE ev.fecha BETWEEN ? AND ?"
+					+ "         GROUP BY ev.id, ev.idtienda) x"
+					+ "  JOIN general.empleado e ON e.id = x.id"
+					+ "  JOIN general.tipo_empleado tp ON tp.idtipoempleado = e.idtipoempleado"
+					+ "  JOIN inventarioamericana.gerencia_nomina_cargo g"
+					+ "    ON g.idtipoempleado = e.idtipoempleado"
+					+ "  JOIN pizzaamericana.tienda t ON t.idtienda = x.idtienda"
+					+ " WHERE x.rn = 1 AND e.activo = 1 AND e.es_empleado = 1 AND g.area = 'TIENDA'"
+					+ " ORDER BY t.nombre, e.nombre_largo");
+			ps.setString(1, c.desde);
+			ps.setString(2, c.hasta);
+			rs = ps.executeQuery();
+
+			final java.util.LinkedHashMap<Integer, Area> porTienda =
+					new java.util.LinkedHashMap<Integer, Area>();
+			while (rs.next()) {
+				final int idTienda = rs.getInt("idtienda");
+				Area a = porTienda.get(Integer.valueOf(idTienda));
+				if (a == null) {
+					a = new Area();
+					a.tipo = "TIENDA";
+					a.idTienda = idTienda;
+					a.codigo = "T" + idTienda;
+					a.nombre = texto(rs.getString("tienda"));
+					porTienda.put(Integer.valueOf(idTienda), a);
+				}
+				final Persona p = new Persona();
+				p.id = rs.getInt("id");
+				p.nombre = texto(rs.getString("nombre_largo"));
+				p.cargo = texto(rs.getString("cargo"));
+				p.basico = rs.getDouble("salario");
+				if (p.basico <= 0) {
+					p.aviso = "Sin salario en el maestro de empleados";
+					a.sinSalario++;
+					a.personas.add(p);
+					continue;
+				}
+				p.variable = p.basico;
+				p.seguridadSocial = p.variable * c.porcentajeSeguridadSocial / 100.0;
+				p.liquidacion = p.variable * c.porcentajeLiquidacion / 100.0;
+				p.costo = p.variable + p.seguridadSocial + p.liquidacion;
+				a.sueldos += p.variable;
+				a.seguridadSocial += p.seguridadSocial;
+				a.liquidacion += p.liquidacion;
+				a.personas.add(p);
+			}
+			rs.close();
+			ps.close();
+			rs = null;
+			ps = null;
+
+			//Las tiendas que operan pero no quedaron en el recorrido entran
+			//igual, vacias: una pestana que falta se lee como que la tienda no
+			//existe, y lo que pasa es que nadie marco.
+			for (final int[] fila : tiendasQueOperan(cn)) {
+				if (!porTienda.containsKey(Integer.valueOf(fila[0]))) {
+					final Area a = new Area();
+					a.tipo = "TIENDA";
+					a.idTienda = fila[0];
+					a.codigo = "T" + fila[0];
+					a.nombre = nombreTienda(cn, fila[0]);
+					a.avisos.add("Ninguna persona marco biometria en esta tienda en el periodo.");
+					porTienda.put(Integer.valueOf(fila[0]), a);
+				}
+			}
+
+			for (final Area a : porTienda.values()) {
+				a.nomina = (a.sueldos + a.seguridadSocial + a.liquidacion) * factor;
+				a.sueldos = a.sueldos * factor;
+				a.seguridadSocial = a.seguridadSocial * factor;
+				a.liquidacion = a.liquidacion * factor;
+				if (a.sinSalario > 0) {
+					a.avisos.add(a.sinSalario + " persona(s) sin salario cargado: su costo no "
+							+ "esta sumando.");
+				}
+				cargarGastosTienda(cn, a, c.hasta, c.desde, c.anio, c.mes, factor);
+				a.total = a.nomina + a.totalGastos;
+				c.areas.add(a);
+			}
+
+			final int sinMarcar = contarSinMarcar(cn, c.desde, c.hasta);
+			if (sinMarcar > 0) {
+				c.avisosGenerales.add(sinMarcar + " persona(s) de punto de venta no marcaron "
+						+ "biometria en el periodo: no se sabe en que tienda estuvieron y su nomina "
+						+ "no esta sumando en ninguna pestana.");
+			}
+		} catch (final Exception e) {
+			c.avisosGenerales.add("No se pudieron armar las pestanas de los puntos de venta.");
+			System.out.println("GerenciaCierreDAO.cargarTiendas: " + e.toString());
+		} finally {
+			cerrar(rs);
+			cerrar(ps);
+		}
+	}
+
+	/**
+	 * Los gastos de un punto de venta: los fijos y los servicios publicos.
+	 *
+	 * EL VALOR GENERAL SE HEREDA
+	 *
+	 * Un gasto con idtienda = 0 rige en toda tienda que no tenga el suyo. Por
+	 * eso se traen los dos y gana el propio. Sin esto, una tienda que hereda la
+	 * alarma apareceria sin alarma.
+	 */
+	private static void cargarGastosTienda(final Connection cn, final Area a, final String hasta,
+			final String desde, final int anio, final int mes, final double factor) {
+		PreparedStatement ps = null;
+		ResultSet rs = null;
+		try {
+			ps = cn.prepareStatement(
+					"SELECT c.idconcepto, c.nombre, c.tipo, c.orden,"
+					//El propio manda sobre el general; MAX con el CASE escoge
+					//el propio cuando existe sin necesidad de dos consultas.
+					+ "      MAX(CASE WHEN g.idtienda = ? THEN g.valor_mensual END) AS propio,"
+					+ "      MAX(CASE WHEN g.idtienda = 0 THEN g.valor_mensual END) AS general"
+					+ "  FROM inventarioamericana.gerencia_gasto_fijo_tienda g"
+					+ "  JOIN inventarioamericana.gerencia_concepto_gasto c"
+					+ "    ON c.idconcepto = g.idconcepto AND c.activo = 'S'"
+					+ " WHERE g.idtienda IN (?, 0)"
+					+ "   AND g.vigencia_desde <= ?"
+					+ "   AND (g.vigencia_hasta IS NULL OR g.vigencia_hasta >= ?)"
+					+ " GROUP BY c.idconcepto, c.nombre, c.tipo, c.orden"
+					+ " ORDER BY c.orden");
+			ps.setInt(1, a.idTienda);
+			ps.setInt(2, a.idTienda);
+			ps.setString(3, hasta);
+			ps.setString(4, desde);
+			rs = ps.executeQuery();
+			while (rs.next()) {
+				final double propio = rs.getDouble("propio");
+				final boolean hayPropio = !rs.wasNull();
+				final double general = rs.getDouble("general");
+				final boolean hayGeneral = !rs.wasNull();
+				if (!hayPropio && !hayGeneral) {
+					continue;
+				}
+				final Gasto g = new Gasto();
+				g.idConcepto = rs.getInt("idconcepto");
+				g.nombre = texto(rs.getString("nombre"))
+						+ (hayPropio ? "" : " (general)");
+				g.tipo = texto(rs.getString("tipo"));
+				g.mensual = hayPropio ? propio : general;
+				g.periodo = g.mensual * factor;
+				a.totalGastos += g.periodo;
+				a.gastos.add(g);
+			}
+			rs.close();
+			ps.close();
+
+			//Los servicios publicos van por mes y no por vigencia: la factura
+			//llega despues y puede venir estimada. El origen viaja en el nombre
+			//para que no se lea como un valor firme.
+			ps = cn.prepareStatement(
+					"SELECT c.nombre, s.valor, s.origen"
+					+ "  FROM inventarioamericana.gerencia_gasto_servicio s"
+					+ "  JOIN inventarioamericana.gerencia_concepto_gasto c"
+					+ "    ON c.idconcepto = s.idconcepto"
+					+ " WHERE s.idtienda = ? AND s.anio = ? AND s.mes = ?"
+					+ " ORDER BY c.orden");
+			ps.setInt(1, a.idTienda);
+			ps.setInt(2, anio);
+			ps.setInt(3, mes);
+			rs = ps.executeQuery();
+			while (rs.next()) {
+				final Gasto g = new Gasto();
+				g.nombre = texto(rs.getString("nombre"))
+						+ ("ESTIMADO".equals(rs.getString("origen")) ? " (estimado)" : "");
+				g.tipo = "SERVICIO";
+				g.mensual = rs.getDouble("valor");
+				g.periodo = g.mensual * factor;
+				a.totalGastos += g.periodo;
+				a.gastos.add(g);
+			}
+		} catch (final Exception e) {
+			a.avisos.add("No se pudieron leer los gastos de la tienda.");
+			System.out.println("GerenciaCierreDAO.cargarGastosTienda " + a.nombre + ": " + e.toString());
+		} finally {
+			cerrar(rs);
+			cerrar(ps);
+		}
+	}
+
+	/** Las tiendas con host de base de datos: las que de verdad operan. */
+	private static ArrayList<int[]> tiendasQueOperan(final Connection cn) {
+		final ArrayList<int[]> lista = new ArrayList<int[]>();
+		PreparedStatement ps = null;
+		ResultSet rs = null;
+		try {
+			ps = cn.prepareStatement(
+					"SELECT idtienda FROM pizzaamericana.tienda"
+					+ " WHERE hosbd IS NOT NULL AND hosbd <> '' AND idtienda <> 12"
+					+ " ORDER BY nombre");
+			rs = ps.executeQuery();
+			while (rs.next()) {
+				lista.add(new int[] { rs.getInt(1) });
+			}
+		} catch (final Exception e) {
+			System.out.println("GerenciaCierreDAO.tiendasQueOperan: " + e.toString());
+		} finally {
+			cerrar(rs);
+			cerrar(ps);
+		}
+		return (lista);
+	}
+
+	private static String nombreTienda(final Connection cn, final int idTienda) {
+		PreparedStatement ps = null;
+		ResultSet rs = null;
+		String nombre = "Tienda " + idTienda;
+		try {
+			ps = cn.prepareStatement("SELECT nombre FROM pizzaamericana.tienda WHERE idtienda = ?");
+			ps.setInt(1, idTienda);
+			rs = ps.executeQuery();
+			if (rs.next()) {
+				nombre = texto(rs.getString(1));
+			}
+		} catch (final Exception e) {
+			System.out.println("GerenciaCierreDAO.nombreTienda: " + e.toString());
+		} finally {
+			cerrar(rs);
+			cerrar(ps);
+		}
+		return (nombre);
+	}
+
+	/** Gente de punto de venta activa que no marco en el periodo. */
+	private static int contarSinMarcar(final Connection cn, final String desde, final String hasta) {
+		PreparedStatement ps = null;
+		ResultSet rs = null;
+		int cuantas = 0;
+		try {
+			ps = cn.prepareStatement(
+					"SELECT COUNT(*) FROM general.empleado e"
+					+ "  JOIN inventarioamericana.gerencia_nomina_cargo g"
+					+ "    ON g.idtipoempleado = e.idtipoempleado"
+					+ " WHERE e.activo = 1 AND e.es_empleado = 1 AND g.area = 'TIENDA'"
+					+ "   AND NOT EXISTS (SELECT 1 FROM general.empleado_evento ev"
+					+ "                    WHERE ev.id = e.id AND ev.fecha BETWEEN ? AND ?)");
+			ps.setString(1, desde);
+			ps.setString(2, hasta);
+			rs = ps.executeQuery();
+			if (rs.next()) {
+				cuantas = rs.getInt(1);
+			}
+		} catch (final Exception e) {
+			System.out.println("GerenciaCierreDAO.contarSinMarcar: " + e.toString());
+		} finally {
+			cerrar(rs);
+			cerrar(ps);
+		}
+		return (cuantas);
 	}
 
 	// =======================================================================

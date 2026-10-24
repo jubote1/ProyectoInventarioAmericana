@@ -16,14 +16,20 @@ var CIERRE = {
 	semanas: []
 };
 
-/* Las pestanas, en el orden del Excel. Las de tienda se agregan al cargar. */
-var PESTANAS = [
-	{ codigo: 'ADMINISTRATIVA', nombre: 'Administrativa',        lista: true },
-	{ codigo: 'LOGISTICA',      nombre: 'Logística y producción', lista: true },
-	{ codigo: 'CONTACT',        nombre: 'Contact center',        lista: true },
-	{ codigo: 'TIENDAS',        nombre: 'Puntos de venta',       lista: false },
-	{ codigo: 'PUBLICIDAD',     nombre: 'Publicidad',            lista: false },
-	{ codigo: 'PORCENTAJE',     nombre: 'Porcentaje',            lista: false }
+/* Las tres de estructura van fijas y de primeras, en el orden del Excel. Las
+   de punto de venta se agregan con lo que traiga el servidor, para que una
+   tienda nueva aparezca sola sin tocar esta lista. */
+var PESTANAS_FIJAS = [
+	{ codigo: 'ADMINISTRATIVA', nombre: 'Administrativa' },
+	{ codigo: 'LOGISTICA',      nombre: 'Logística y producción' },
+	{ codigo: 'CONTACT',        nombre: 'Contact center' }
+];
+
+/* Las que todavia no estan armadas. Salen igual en la fila: esconderlas daria
+   la impresion de que el cierre ya esta completo. */
+var PESTANAS_PENDIENTES = [
+	{ codigo: 'PUBLICIDAD', nombre: 'Publicidad' },
+	{ codigo: 'PORCENTAJE', nombre: 'Porcentaje' }
 ];
 
 /*
@@ -114,6 +120,9 @@ function consultar() {
 		}
 		CIERRE.datos = d;
 		pintarPeriodo();
+		//Las pestanas se repintan con cada consulta porque las de tienda salen
+		//del resultado: si una tienda deja de aparecer, su pestana tambien.
+		pintarPestanas();
 		pintarPestana();
 	}).fail(function () {
 		$('#contenidoPestana').html('<div class="ger-alerta">No se pudo consultar el cierre.</div>');
@@ -127,6 +136,12 @@ function pintarPeriodo() {
 	$('#periodo').html(t);
 
 	var avisos = '';
+	/* Lo que no pertenece a una sola pestana va arriba: gente sin area, gente
+	   que no marco. Si se pusiera dentro de una, en las otras no se veria. */
+	for (var i = 0; i < (d.avisosgenerales || []).length; i++) {
+		avisos += '<div class="ger-alerta" style="margin-top:8px;">'
+			+ esc(d.avisosgenerales[i]) + '</div>';
+	}
 	if (d.prorrateado) {
 		/* Decirlo arriba y no en una nota al pie: con el periodo parcial, la
 		   nomina y el arriendo van repartidos en partes iguales, y eso no es lo
@@ -145,12 +160,26 @@ function pintarPeriodo() {
 /* ------------------------------------------------------------------ */
 
 function pintarPestanas() {
+	var lista = PESTANAS_FIJAS.slice(0);
+	/* Las tiendas salen del propio cierre. Van entre las areas y las
+	   pendientes, igual que en el Excel. */
+	if (CIERRE.datos) {
+		var areas = CIERRE.datos.areas || [];
+		for (var t = 0; t < areas.length; t++) {
+			if (areas[t].tipo === 'TIENDA') {
+				lista.push({ codigo: areas[t].codigo, nombre: areas[t].nombre, tienda: true });
+			}
+		}
+	}
+	lista = lista.concat(PESTANAS_PENDIENTES);
+
 	var h = '';
-	for (var i = 0; i < PESTANAS.length; i++) {
-		var p = PESTANAS[i];
+	for (var i = 0; i < lista.length; i++) {
+		var p = lista[i];
 		h += '<a href="javascript:void(0)" data-codigo="' + p.codigo + '"'
-			+ (p.codigo === CIERRE.activa ? ' class="activa"' : '') + '>'
-			+ p.nombre + '</a>';
+			+ (p.codigo === CIERRE.activa ? ' class="activa"' : '')
+			+ (p.tienda ? ' style="font-style:italic;"' : '') + '>'
+			+ esc(p.nombre) + '</a>';
 	}
 	$('#pestanas').html(h);
 	$('#pestanas a').click(function () {
@@ -185,7 +214,6 @@ function areaDe(codigo) {
 
 function pendiente(codigo) {
 	var que = {
-		TIENDAS: 'La n&oacute;mina y los gastos de cada punto de venta.',
 		PUBLICIDAD: 'El costo de la agencia, el publicista y las pautas.',
 		PORCENTAJE: 'Las catorce l&iacute;neas sobre la venta de cada punto de venta.'
 	};
