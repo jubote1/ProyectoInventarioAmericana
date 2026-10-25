@@ -164,6 +164,7 @@ public class GerenciaCierreDAO {
 				a.nombre = AREAS[i][1];
 				a.tipo = "AREA";
 				cargarPersonas(cn, a, c.porcentajeSeguridadSocial, c.porcentajeLiquidacion, factor);
+				cargarNominaDigitada(cn, a, c.anio, c.mes, factor);
 				cargarGastos(cn, a, c.hasta, c.desde, factor);
 				a.total = a.nomina + a.totalGastos;
 				c.areas.add(a);
@@ -194,6 +195,67 @@ public class GerenciaCierreDAO {
 	// =======================================================================
 
 	/**
+	 * La nomina digitada del area, cuando el mes la tiene.
+	 *
+	 * POR QUE NO ALCANZA CON SUMAR LAS PERSONAS
+	 *
+	 * El total que el libro de gerencia reporta como "NOMINA (n)" de cada area es
+	 * la columna SUELDO VARIABLE -lo que de verdad se pago, con recargos y
+	 * extras-, no el basico. Comprobado exacto contra las pestanas: logistica
+	 * 22.425.000 y contact 26.652.000.
+	 *
+	 * El variable no esta en ninguna parte del sistema. cargarPersonas hace
+	 * variable = basico porque no tiene de donde sacarlo, y eso deja por fuera
+	 * entre el 6% y el 33% de la nomina de un area segun el mes.
+	 *
+	 * Por eso se digita, igual que ya se digitan los servicios y la nomina de las
+	 * tiendas. Cuando el mes tiene fila en gerencia_nomina_area, manda esa y la
+	 * lista de personas queda como detalle de quien la compone. Cuando no la
+	 * tiene, no se toca nada: queda lo calculado, y la pantalla ya avisa que el
+	 * variable es igual al basico.
+	 *
+	 * El factor es el mismo prorrateo de semanas que usa el resto del cierre: un
+	 * mes a medias trae la parte que le toca.
+	 */
+	private static void cargarNominaDigitada(final Connection cn, final Area a, final int anio,
+			final int mes, final double factor) {
+		PreparedStatement ps = null;
+		ResultSet rs = null;
+		try {
+			ps = cn.prepareStatement(
+					"SELECT sueldo_variable, seguridad_social, liquidacion, personas"
+					+ "  FROM inventarioamericana.gerencia_nomina_area"
+					+ " WHERE area = ? AND anio = ? AND mes = ?");
+			ps.setString(1, a.codigo);
+			ps.setInt(2, anio);
+			ps.setInt(3, mes);
+			rs = ps.executeQuery();
+			if (!rs.next()) {
+				return;
+			}
+			a.sueldos = rs.getDouble("sueldo_variable") * factor;
+			a.seguridadSocial = rs.getDouble("seguridad_social") * factor;
+			a.liquidacion = rs.getDouble("liquidacion") * factor;
+			a.nomina = a.sueldos + a.seguridadSocial + a.liquidacion;
+			//El aviso de "sin salario" era sobre lo calculado, que ya no se esta
+			//usando: dejarlo seria mandar a corregir algo que no esta sumando.
+			a.sinSalario = 0;
+			final int personas = rs.getInt("personas");
+			if (personas > 0 && personas != a.personas.size()) {
+				a.avisos.add("La nomina digitada del mes cuenta " + personas + " persona(s) y en el "
+						+ "maestro de empleados hay " + a.personas.size()
+						+ ": la lista de abajo no explica el total completo.");
+			}
+		} catch (final Exception e) {
+			a.avisos.add("No se pudo leer la nomina digitada del area.");
+			System.out.println("GerenciaCierreDAO.cargarNominaDigitada " + a.codigo + ": " + e.toString());
+		} finally {
+			cerrar(rs);
+			cerrar(ps);
+		}
+	}
+
+	/**
 	 * Las personas del area, con su costo.
 	 *
 	 * El BASICO sale del maestro de empleados, que es donde lo mantiene gestion
@@ -212,9 +274,28 @@ public class GerenciaCierreDAO {
 					+ "  JOIN general.tipo_empleado t ON t.idtipoempleado = e.idtipoempleado"
 					+ "  JOIN inventarioamericana.gerencia_nomina_cargo c"
 					+ "    ON c.idtipoempleado = e.idtipoempleado"
-					//es_empleado deja por fuera las cuentas que no son personas,
-					//como el usuario tecnico SuperUsuario.
-					+ " WHERE e.activo = 1 AND e.es_empleado = 1 AND c.area = ?"
+					//La excepcion por persona manda sobre el area del cargo. El area
+					//sale del CARGO, y quien se movio a la oficina sin que se lo
+					//cambiaran queda contado en la tienda: es el caso de Vanessa
+					//Arroyave -cargo Artesano- y Mayra Mazo -Administrador Punto de
+					//Venta-, que hoy apoyan administrativa y asi las cuenta el Excel.
+					//
+					//La marca NO va en empleado.idtipoempleado2, que era lo primero
+					//que se penso: ese campo ya tiene duenio. UsuarioDAO lo usa para
+					//mandarle al POS el rol administrativo de quien apoya como
+					//administrador del punto -Vanessa tiene ahi el rol 1 y de ahi
+					//salen sus permisos-, EmpleadoEventoDAO cuenta pizzeros por el y
+					//DesempenoDomiciliarioDAO mira los dos roles. Pisarlo la dejaria
+					//con permisos de artesana.
+					+ "  LEFT JOIN inventarioamericana.gerencia_persona_area x"
+					+ "    ON x.id = e.id"
+					//es_empleado deja por fuera las cuentas que no son personas. No
+					//alcanza: el usuario tecnico SuperUsuario esta marcado como
+					//empleado y no se le puede apagar, porque en el POS un
+					//es_empleado = 0 significa "es temporal" y le tumbaria el
+					//ingreso. Se excluye con area NINGUNA en la tabla de excepciones.
+					+ " WHERE e.activo = 1 AND e.es_empleado = 1"
+					+ "   AND IFNULL(x.area, c.area) = ?"
 					+ " ORDER BY e.nombre_largo");
 			ps.setString(1, a.codigo);
 			rs = ps.executeQuery();
@@ -307,8 +388,14 @@ public class GerenciaCierreDAO {
 					+ "  JOIN general.tipo_empleado tp ON tp.idtipoempleado = e.idtipoempleado"
 					+ "  JOIN inventarioamericana.gerencia_nomina_cargo g"
 					+ "    ON g.idtipoempleado = e.idtipoempleado"
+					//La misma excepcion por persona que en las areas. Sin esto,
+					//quien se paso a la oficina quedaria contado DOS veces: en su
+					//area y en la tienda donde todavia marca.
+					+ "  LEFT JOIN inventarioamericana.gerencia_persona_area px"
+					+ "    ON px.id = e.id"
 					+ "  JOIN pizzaamericana.tienda t ON t.idtienda = x.idtienda"
-					+ " WHERE x.rn = 1 AND e.activo = 1 AND e.es_empleado = 1 AND g.area = 'TIENDA'"
+					+ " WHERE x.rn = 1 AND e.activo = 1 AND e.es_empleado = 1"
+					+ "   AND IFNULL(px.area, g.area) = 'TIENDA'"
 					+ " ORDER BY t.nombre, e.nombre_largo");
 			ps.setString(1, c.desde);
 			ps.setString(2, c.hasta);
@@ -536,7 +623,10 @@ public class GerenciaCierreDAO {
 					"SELECT COUNT(*) FROM general.empleado e"
 					+ "  JOIN inventarioamericana.gerencia_nomina_cargo g"
 					+ "    ON g.idtipoempleado = e.idtipoempleado"
-					+ " WHERE e.activo = 1 AND e.es_empleado = 1 AND g.area = 'TIENDA'"
+					+ "  LEFT JOIN inventarioamericana.gerencia_persona_area px"
+					+ "    ON px.id = e.id"
+					+ " WHERE e.activo = 1 AND e.es_empleado = 1"
+					+ "   AND IFNULL(px.area, g.area) = 'TIENDA'"
 					+ "   AND NOT EXISTS (SELECT 1 FROM general.empleado_evento ev"
 					+ "                    WHERE ev.id = e.id AND ev.fecha BETWEEN ? AND ?)");
 			ps.setString(1, desde);
@@ -680,7 +770,11 @@ public class GerenciaCierreDAO {
 					"SELECT COUNT(*) FROM general.empleado e"
 					+ "  LEFT JOIN inventarioamericana.gerencia_nomina_cargo c"
 					+ "    ON c.idtipoempleado = e.idtipoempleado"
-					+ " WHERE e.activo = 1 AND e.es_empleado = 1"
+					//Quien tiene excepcion por persona YA tiene area, aunque su
+					//cargo no la tenga: no hay nada que avisar de el.
+					+ "  LEFT JOIN inventarioamericana.gerencia_persona_area x"
+					+ "    ON x.id = e.id"
+					+ " WHERE e.activo = 1 AND e.es_empleado = 1 AND x.area IS NULL"
 					+ "   AND (c.area IS NULL OR c.area = 'SIN DEFINIR')");
 			rs = ps.executeQuery();
 			if (rs.next()) {
