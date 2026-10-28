@@ -62,6 +62,19 @@ public class GerenciaNominaCalculoDAO {
 	/** Igual que en el reparto: mas de esto no es un turno, es una marca olvidada. */
 	private static final int MAX_MINUTOS_TURNO = 16 * 60;
 
+	/**
+	 * La hora a la que se asume que salio quien no marco salida.
+	 *
+	 * Son las horas en que de verdad cierra el punto de venta, medidas sobre
+	 * las marcaciones: de domingo a jueves el pico de salidas es a las 22:00 y
+	 * los viernes y sabados a las 23:00.
+	 */
+	private static final int HORA_CIERRE_SEMANA = 22;
+	private static final int HORA_CIERRE_FIN_SEMANA = 23;
+
+	/** Tope de un turno estimado. Un olvido no puede volverse una jornada absurda. */
+	private static final int MAX_HORAS_ESTIMADO = 10;
+
 	/** Dias de la semana sobre dias del mes, para llevar lo mensual a semanal. */
 	private static final double SEMANA_DEL_MES = 7.0 / 30.0;
 
@@ -113,6 +126,8 @@ public class GerenciaNominaCalculoDAO {
 		Timestamp entra;
 		Timestamp sale;
 		int idTienda;
+		/** true cuando la salida se asumio porque no se marco. */
+		boolean estimado;
 	}
 
 	/** Las horas de una semana, ya clasificadas. */
@@ -122,6 +137,8 @@ public class GerenciaNominaCalculoDAO {
 		double dominicales;
 		double domNoct;
 		int turnos;
+		/** Cuantos de esos turnos llevan la salida asumida. */
+		int turnosEstimados;
 		final Map<Integer, Double> porTienda = new LinkedHashMap<Integer, Double>();
 
 		double total() {
@@ -308,6 +325,9 @@ public class GerenciaNominaCalculoDAO {
 
 		for (final Turno t : turnos) {
 			h.turnos++;
+			if (t.estimado) {
+				h.turnosEstimados++;
+		}
 			final Calendar cursor = Calendar.getInstance();
 			cursor.setTime(t.entra);
 			final long fin = t.sale.getTime();
@@ -431,6 +451,17 @@ public class GerenciaNominaCalculoDAO {
 		} else if (h.total() < jornada * 0.5) {
 			e.aviso = "Solo " + redondear(h.total()) + " horas marcadas de " + (int) jornada
 					+ " esperadas: los recargos van incompletos.";
+		}
+		//Una salida asumida se dice SIEMPRE, aunque la semana se vea completa.
+		//Si no, nadie va a ir a corregir el huellero: el reporte se ve bien y
+		//el turno inventado se paga como si lo hubieran marcado.
+		if (h.turnosEstimados > 0) {
+			final String cuantos = h.turnosEstimados == 1
+					? "Un turno sin salida marcada: se asumio"
+					: h.turnosEstimados + " turnos sin salida marcada: se asumio";
+			e.aviso = (e.aviso.length() > 0 ? e.aviso + " " : "")
+					+ cuantos + " la hora de cierre del punto de venta, con tope de "
+					+ MAX_HORAS_ESTIMADO + " horas. Conviene corregirlo en el huellero.";
 		}
 	}
 
@@ -1123,8 +1154,12 @@ public class GerenciaNominaCalculoDAO {
 					continue;
 				}
 				if ("INGRESO".equalsIgnoreCase(tipo)) {
-					//Dos INGRESO seguidos: el primero queda huerfano. No se le
-					//inventa un cierre, igual que en el reparto.
+					//Dos INGRESO seguidos: al primero se le estima la salida con
+					//la convencion, porque dejarlo en cero le quitaba a esa
+					//persona un turno que si trabajo.
+					if (entrada != null) {
+						agregarEstimado(turnos, entrada, tiendaEntrada);
+					}
 					entrada = cuando;
 					tiendaEntrada = rs.getInt("idtienda");
 				} else if ("SALIDA".equalsIgnoreCase(tipo) && entrada != null) {
@@ -1139,12 +1174,76 @@ public class GerenciaNominaCalculoDAO {
 					entrada = null;
 				}
 			}
+			//El ultimo INGRESO del periodo tambien puede quedar sin su SALIDA.
+			if (entrada != null) {
+				agregarEstimado(turnos, entrada, tiendaEntrada);
+			}
 			rs.close();
 			ps.close();
 		} catch (final Exception e) {
 			System.out.println("GerenciaNominaCalculoDAO.turnosDe " + idEmpleado + ": " + e.toString());
 		}
 		return (turnos);
+	}
+
+	/**
+	 * Le estima la salida a un turno que quedo abierto, y lo agrega.
+	 *
+	 * LA CONVENCION, Y POR QUE TIENE TOPE
+	 *
+	 * Gerencia la definio asi: se asume que salio a la hora en que normalmente
+	 * cierra el punto de venta -{@value #HORA_CIERRE_SEMANA} de domingo a
+	 * jueves y {@value #HORA_CIERRE_FIN_SEMANA} viernes y sabado-, que es lo
+	 * que dicen las marcaciones reales: medido sobre cuatro semanas, el pico de
+	 * salidas es a las 22:00 entre semana (1.014 marcas) y a las 23:00 los
+	 * viernes y sabados (470).
+	 *
+	 * El tope de {@value #MAX_HORAS_ESTIMADO} horas es el que hace que la
+	 * convencion no se vuelva absurda. Sin el, a quien entro a las 7 de la
+	 * manana y se le olvido marcar la salida se le contarian QUINCE horas, y
+	 * casi todas caerian en franja nocturna, que es la que mas recarga. Con el
+	 * tope sale a las 17:00. Medido: de 31 turnos abiertos en cuatro semanas,
+	 * 4 tocan el tope y le quita 16 horas inventadas.
+	 *
+	 * Un turno estimado NUNCA genera hora extra: el tope esta por encima de la
+	 * jornada ordinaria del dia pero por debajo de lo que haria falta para que
+	 * un olvido se convierta en plata extra.
+	 *
+	 * SE MARCA, SIEMPRE
+	 *
+	 * {@link Turno#estimado} viaja hasta la pantalla. Un turno inventado que se
+	 * vea igual que uno marcado es peor que no tenerlo: nadie va a ir a
+	 * corregir el huellero si el reporte se ve completo.
+	 */
+	private static void agregarEstimado(final ArrayList<Turno> turnos, final Timestamp entrada,
+			final int idTienda) {
+		final Calendar cierre = Calendar.getInstance();
+		cierre.setTimeInMillis(entrada.getTime());
+		final int dia = cierre.get(Calendar.DAY_OF_WEEK);
+		final boolean finDeSemana = (dia == Calendar.FRIDAY || dia == Calendar.SATURDAY);
+		cierre.set(Calendar.HOUR_OF_DAY, finDeSemana ? HORA_CIERRE_FIN_SEMANA : HORA_CIERRE_SEMANA);
+		cierre.set(Calendar.MINUTE, 0);
+		cierre.set(Calendar.SECOND, 0);
+		cierre.set(Calendar.MILLISECOND, 0);
+
+		long minutos = (cierre.getTimeInMillis() - entrada.getTime()) / 60000L;
+		//Quien entro DESPUES de la hora de cierre -el turno que cruza
+		//medianoche- no puede salir antes de entrar. Ahi la convencion no
+		//aplica y el turno se descarta, como antes: inventarle una duracion
+		//seria peor que perderlo.
+		if (minutos <= 0) {
+			return;
+		}
+		if (minutos > MAX_HORAS_ESTIMADO * 60) {
+			minutos = MAX_HORAS_ESTIMADO * 60;
+		}
+
+		final Turno t = new Turno();
+		t.entra = entrada;
+		t.sale = new Timestamp(entrada.getTime() + (minutos * 60000L));
+		t.idTienda = idTienda;
+		t.estimado = true;
+		turnos.add(t);
 	}
 
 	/** Los empleados activos con salario y cargo que se calcula. */

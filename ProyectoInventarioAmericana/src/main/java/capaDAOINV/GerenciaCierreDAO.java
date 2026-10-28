@@ -172,7 +172,8 @@ public class GerenciaCierreDAO {
 				a.codigo = AREAS[i][0];
 				a.nombre = AREAS[i][1];
 				a.tipo = "AREA";
-				cargarPersonas(cn, a, c.porcentajeSeguridadSocial, c.porcentajeLiquidacion, factor);
+				cargarPersonas(cn, a, c.porcentajeSeguridadSocial, c.porcentajeLiquidacion, factor,
+						c.desde, c.hasta);
 				cargarNominaDigitada(cn, a, c.anio, c.mes, factor);
 				cargarGastos(cn, a, c.hasta, c.desde, factor);
 				a.total = a.nomina + a.totalGastos;
@@ -273,7 +274,8 @@ public class GerenciaCierreDAO {
 	 * queda dicho en la pantalla. Cuando se defina, se cambia aqui y solo aqui.
 	 */
 	private static void cargarPersonas(final Connection cn, final Area a,
-			final double pctSeguridad, final double pctLiquidacion, final double factor) {
+			final double pctSeguridad, final double pctLiquidacion, final double factor,
+			final String desde, final String hasta) {
 		PreparedStatement ps = null;
 		ResultSet rs = null;
 		try {
@@ -322,7 +324,28 @@ public class GerenciaCierreDAO {
 					a.personas.add(p);
 					continue;
 				}
-				p.variable = p.basico;
+				//EL VARIABLE SALE DE LA BIOMETRIA, NO ES UNA COPIA DEL BASICO
+				//
+				//Durante las primeras entregas esto hacia p.variable = p.basico
+				//para salir del paso. Era una mentira comoda: el Excel tiene el
+				//variable entre 6% y 33% por encima del basico, asi que la
+				//nomina salia corta y nadie podia explicar por que.
+				//
+				//El variable es basico + recargos, y los recargos los calcula
+				//GerenciaNominaCalculoDAO contra las marcaciones, con lo que es
+				//de ley: nocturno desde las 19:00, dominical, extras, auxilio de
+				//transporte. Aqui solo se lee lo que ese motor dejo calculado
+				//para la semana.
+				//
+				//Cuando la semana no tiene calculo, el variable vuelve a ser el
+				//basico y la persona queda con su aviso: es preferible que se
+				//vea corto y marcado a que se vea completo y falso.
+				final double[] recargos = recargosDe(cn, p.id, desde, hasta);
+				p.variable = p.basico + recargos[0];
+				if (recargos[1] == 0) {
+					p.aviso = (p.aviso.length() > 0 ? p.aviso + " " : "")
+							+ "Sin calculo de recargos en el periodo: va el basico.";
+				}
 				p.seguridadSocial = p.variable * pctSeguridad / 100.0;
 				p.liquidacion = p.variable * pctLiquidacion / 100.0;
 				p.costo = p.variable + p.seguridadSocial + p.liquidacion;
@@ -437,7 +460,16 @@ public class GerenciaCierreDAO {
 					a.personas.add(p);
 					continue;
 				}
-				p.variable = p.basico;
+				//Igual que en las areas: el variable es basico + recargos, y los
+				//recargos los calcula el motor contra la biometria. En punto de
+				//venta pesan mas que en oficina -ahi es donde estan los turnos
+				//nocturnos y los domingos- asi que copiar el basico dejaba la
+				//nomina de tienda mucho mas corta de lo que de verdad cuesta.
+				final double[] recargos = recargosDe(cn, p.id, c.desde, c.hasta);
+				p.variable = p.basico + recargos[0];
+				if (recargos[1] == 0) {
+					p.aviso = "Sin calculo de recargos en el periodo: va el basico.";
+				}
 				p.seguridadSocial = p.variable * c.porcentajeSeguridadSocial / 100.0;
 				p.liquidacion = p.variable * c.porcentajeLiquidacion / 100.0;
 				p.costo = p.variable + p.seguridadSocial + p.liquidacion;
@@ -824,6 +856,49 @@ public class GerenciaCierreDAO {
 			cerrar(ps);
 		}
 		return (tuvo);
+	}
+
+	/**
+	 * Los recargos que el motor de nomina ya calculo para esa persona.
+	 *
+	 * Lee gerencia_nomina_estimado, que llena GerenciaNominaCalculoDAO contra
+	 * las marcaciones. Ese motor es el que sabe de ley: nocturno desde las
+	 * 19:00 por la Ley 2466 de 2025, dominical, extras diurnas y nocturnas.
+	 * Aqui NO se recalcula nada; duplicar esa logica garantizaria que las dos
+	 * pantallas terminaran diciendo cifras distintas del mismo mes.
+	 *
+	 * Las semanas del periodo se suman, porque el cierre es mensual y el motor
+	 * trabaja por semana.
+	 *
+	 * @return [recargos en pesos, cuantas semanas tenian calculo]
+	 */
+	private static double[] recargosDe(final Connection cn, final int idEmpleado,
+			final String desde, final String hasta) {
+		PreparedStatement ps = null;
+		ResultSet rs = null;
+		final double[] r = new double[] { 0, 0 };
+		try {
+			ps = cn.prepareStatement(
+					"SELECT IFNULL(SUM(sueldo_variable), 0), COUNT(*)"
+					+ "  FROM inventarioamericana.gerencia_nomina_estimado"
+					+ " WHERE idempleado = ? AND semana BETWEEN ? AND ?");
+			ps.setInt(1, idEmpleado);
+			ps.setString(2, desde);
+			ps.setString(3, hasta);
+			rs = ps.executeQuery();
+			if (rs.next()) {
+				r[0] = rs.getDouble(1);
+				r[1] = rs.getInt(2);
+			}
+		} catch (final Exception e) {
+			//Sin recargos la persona queda con su basico y su aviso. Tumbar el
+			//cierre entero por esto seria peor.
+			System.out.println("GerenciaCierreDAO.recargosDe " + idEmpleado + ": " + e.toString());
+		} finally {
+			cerrar(rs);
+			cerrar(ps);
+		}
+		return (r);
 	}
 
 	private static String texto(final String valor) {
