@@ -43,10 +43,19 @@ import conexionINV.ConexionBaseDatos;
 public class GerenciaCierreDAO {
 
 	/** Las areas de estructura, en el orden en que van las pestanas. */
+	/**
+	 * Las areas de estructura, en el orden de las pestanas del libro.
+	 *
+	 * PUBLICIDAD no tiene nomina: ninguna persona esta asignada a esa area y en
+	 * el Excel esa hoja son tres renglones de gasto. Entra igual porque sus
+	 * 9.587.100 al mes se reparten entre las once tiendas, y mientras no tuvo
+	 * pestana ese dinero estaba cargado en la base sin verse en ninguna parte.
+	 */
 	private static final String[][] AREAS = {
 		{ "ADMINISTRATIVA", "Administrativa" },
 		{ "LOGISTICA",      "Logistica y produccion" },
 		{ "CONTACT",        "Contact center" },
+		{ "PUBLICIDAD",     "Publicidad" },
 	};
 
 	public static class Persona {
@@ -330,7 +339,10 @@ public class GerenciaCierreDAO {
 			if (a.sinSalario > 0) {
 				a.avisos.add(a.sinSalario + " persona(s) sin salario cargado: su costo no esta sumando.");
 			}
-			if (a.personas.isEmpty()) {
+			//Publicidad no tiene gente por diseno -en el libro esa hoja son tres
+			//renglones de gasto- asi que avisar que le faltan personas seria
+			//mandar a buscar un dato que no existe.
+			if (a.personas.isEmpty() && !"PUBLICIDAD".equals(a.codigo)) {
 				a.avisos.add("No hay personas activas con un cargo asignado a esta area.");
 			}
 		} catch (final Exception e) {

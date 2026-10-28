@@ -16,19 +16,19 @@ var CIERRE = {
 	semanas: []
 };
 
-/* Las tres de estructura van fijas y de primeras, en el orden del Excel. Las
+/* Las cuatro de estructura van fijas y de primeras, en el orden del Excel. Las
    de punto de venta se agregan con lo que traiga el servidor, para que una
    tienda nueva aparezca sola sin tocar esta lista. */
 var PESTANAS_FIJAS = [
 	{ codigo: 'ADMINISTRATIVA', nombre: 'Administrativa' },
 	{ codigo: 'LOGISTICA',      nombre: 'Logística y producción' },
-	{ codigo: 'CONTACT',        nombre: 'Contact center' }
+	{ codigo: 'CONTACT',        nombre: 'Contact center' },
+	{ codigo: 'PUBLICIDAD',     nombre: 'Publicidad' }
 ];
 
 /* Las que todavia no estan armadas. Salen igual en la fila: esconderlas daria
    la impresion de que el cierre ya esta completo. */
 var PESTANAS_PENDIENTES = [
-	{ codigo: 'PUBLICIDAD', nombre: 'Publicidad' },
 	{ codigo: 'PORCENTAJE', nombre: 'Porcentaje' }
 ];
 
