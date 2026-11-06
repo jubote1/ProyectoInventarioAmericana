@@ -42,7 +42,7 @@ import conexionINV.ConexionBaseDatos;
  */
 public class GerenciaAccesoDAO {
 
-	/** El nombre del rol en pizzaamericana.rol. Lo siembra la migracion. */
+	/** El nombre del rol en pizzaamericana.rol, cuyo catalogo de pantallas define cuales son de Gerencia. Lo siembra la migracion. */
 	public static final String ROL = "Gerencia";
 
 	/** Lo que se necesita saber de quien entro. */
@@ -140,12 +140,24 @@ public class GerenciaAccesoDAO {
 		final Connection cn = con.obtenerConexionBDPedidosLocal();
 		final StringBuilder lista = new StringBuilder();
 		try {
+			//Una pantalla es "de Gerencia" si la tiene el rol Gerencia. Antes se miraba
+			//el NOMBRE DEL MODULO, y al reorganizar el menu del central el modulo paso
+			//de "Gerencia" a "Personal y Gerencia": la consulta dio vacio para todos y
+			//hasta quien tenia el rol vio "no tiene el rol Gerencia". Ademas ese modulo
+			//ahora trae pantallas de otros roles (Novedades de Biometria, del Lider
+			//Administrativo), que no deben abrir la puerta a nomina. Tampoco basta una
+			//pantalla compartida (Operacion Domiciliarios Red la tienen tambien otros
+			//roles): para entrar hay que TENER el rol Gerencia o ser Superadministrador.
 			final String sql = "SELECT p.url_html FROM usuario_rol ur"
 					+ " JOIN rol r ON r.idrol = ur.idrol AND r.activo = 'S'"
+					+ " AND r.nombre IN ('Gerencia', 'Superadministrador')"
 					+ " JOIN rol_pantalla rp ON rp.idrol = r.idrol"
 					+ " JOIN pantalla p ON p.idpantalla = rp.idpantalla AND p.activo = 'S'"
-					+ " JOIN menu_modulo m ON m.idmodulo = p.idmodulo"
-					+ " WHERE ur.idusuario = ? AND m.nombre = ?"
+					+ " WHERE ur.idusuario = ?"
+					+ " AND EXISTS (SELECT 1 FROM rol_pantalla g"
+					+ " JOIN rol rg ON rg.idrol = g.idrol AND rg.nombre = ? AND rg.activo = 'S'"
+					+ " WHERE g.idpantalla = p.idpantalla)"
+					+ " GROUP BY p.idpantalla, p.url_html, p.orden"
 					+ " ORDER BY p.orden";
 			final PreparedStatement ps = cn.prepareStatement(sql);
 			ps.setInt(1, idUsuario);
