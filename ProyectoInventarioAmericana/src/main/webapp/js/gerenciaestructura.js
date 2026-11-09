@@ -29,6 +29,7 @@ function arrancarE() {
 	$('#btnConsultar').on('click', consultarE);
 	$('#anio, #mes').on('change', consultarE);
 	$('#btnGuardarPools').on('click', guardarPools);
+	$('#btnCargarDesdeCierre').on('click', cargarDesdeCierre);
 	$('#btnGuardarNomina').on('click', guardarNomina);
 	pintarBolsas();
 	consultarE();
@@ -64,6 +65,12 @@ function pintarBolsas() {
 	}
 	$('#bolsas').html(html);
 	$('.bolsa').on('input', calcularReparto);
+	$('.bolsa').on('blur', function () {
+		var n = Gerencia.numero($(this).val());
+		if (n !== null && n > 0) {
+			$(this).val(milesE(n));
+		}
+	});
 }
 
 function consultarE() {
@@ -190,6 +197,43 @@ function guardarPools() {
 			Gerencia.avisar('No se pudo guardar: ' + fallos.join(' | '));
 		}
 		consultarE();
+	});
+}
+
+function cargarDesdeCierre() {
+	var p = periodoE();
+	var $btn = $('#btnCargarDesdeCierre');
+	$btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Consultando Cierre...');
+
+	$.getJSON('GerenciaCierre', { anio: p.anio, mes: p.mes, desde: 0, hasta: 0 }, function (d) {
+		$btn.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Traer totales desde Cierre de Gerencia');
+		if (!Gerencia.respondio(d)) { return; }
+		if (!d.areas || d.areas.length === 0) {
+			Gerencia.avisar('No se encontraron datos en Cierre de Gerencia para ' + MESES_E[p.mes] + ' de ' + p.anio);
+			return;
+		}
+
+		var cargados = 0;
+		for (var i = 0; i < d.areas.length; i++) {
+			var a = d.areas[i];
+			var $input = $('#bolsa_' + a.codigo);
+			if ($input.length && a.total !== undefined) {
+				var val = Math.round(a.total);
+				$input.val(val > 0 ? milesE(val) : '');
+				cargados++;
+			}
+		}
+
+		calcularReparto();
+
+		if (cargados > 0) {
+			Gerencia.avisar('Totales traídos desde Cierre de Gerencia (' + MESES_E[p.mes] + ' ' + p.anio + '). Revise la tabla y haga clic en "Guardar las bolsas".', true);
+		} else {
+			Gerencia.avisar('No se encontraron áreas de estructura en Cierre para ' + MESES_E[p.mes] + ' de ' + p.anio);
+		}
+	}).fail(function () {
+		$btn.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Traer totales desde Cierre de Gerencia');
+		Gerencia.avisar('No se pudo consultar el Cierre de Gerencia.');
 	});
 }
 
