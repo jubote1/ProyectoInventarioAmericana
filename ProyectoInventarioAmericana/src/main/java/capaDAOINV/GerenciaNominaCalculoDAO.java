@@ -4,6 +4,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
@@ -117,6 +119,27 @@ public class GerenciaNominaCalculoDAO {
 		public String novedadObs = "";
 		public int novedadDias = 7;
 		public boolean novedadPermanente = false;
+		// Valores reales liquidados (cargados de SIIGO o manual)
+		public double realBasico;
+		public double realVariable;
+		public double realSegSocial;
+		public double realLiquidacion;
+		public double realCostoTotal;
+	}
+
+	public static class EmpleadoInfo {
+		public int id;
+		public String cedula = "";
+		public String nombreLargo = "";
+		public double salario;
+		public boolean activo;
+	}
+
+	public static class PeriodoNomina {
+		public int idPeriodo;
+		public String fechaInferior = "";
+		public String fechaSuperior = "";
+		public ArrayList<String> domingos = new ArrayList<String>();
 	}
 
 	public static class NovedadReg {
@@ -731,9 +754,14 @@ public class GerenciaNominaCalculoDAO {
 					+ "    FROM gerencia_nomina_empleado_tienda_semana r"
 					+ "   WHERE r.idempleado = e.idempleado AND r.semana = e.semana"
 					+ "   ORDER BY r.minutos DESC LIMIT 1), 0) AS idtienda,"
-					+ " (SELECT n.origen FROM gerencia_nomina_empleado_semana n"
-					+ "   WHERE n.idempleado = e.idempleado AND n.semana = e.semana) AS origen_cargado"
+					+ " n.origen AS origen_cargado,"
+					+ " IFNULL(n.sueldo_basico, 0) AS real_basico,"
+					+ " IFNULL(n.sueldo_variable, 0) AS real_variable,"
+					+ " IFNULL(n.seguridad_social, 0) AS real_seg_social,"
+					+ " IFNULL(n.liquidacion, 0) AS real_liquidacion"
 					+ " FROM gerencia_nomina_estimado e"
+					+ " LEFT JOIN gerencia_nomina_empleado_semana n"
+					+ "   ON n.idempleado = e.idempleado AND n.semana = e.semana"
 					+ " WHERE e.semana = ?"
 					+ " ORDER BY e.costo_total DESC");
 			ps.setString(1, semana);
@@ -765,6 +793,11 @@ public class GerenciaNominaCalculoDAO {
 				e.aviso = texto(rs.getString("aviso"));
 				e.idTiendaPrincipal = rs.getInt("idtienda");
 				e.origenCargado = texto(rs.getString("origen_cargado"));
+				e.realBasico = rs.getDouble("real_basico");
+				e.realVariable = rs.getDouble("real_variable");
+				e.realSegSocial = rs.getDouble("real_seg_social");
+				e.realLiquidacion = rs.getDouble("real_liquidacion");
+				e.realCostoTotal = redondear(e.realBasico + e.realVariable + e.realSegSocial + e.realLiquidacion);
 
 				final double vh = e.salarioBase > 0 ? e.salarioBase / 240.0 : 0;
 				e.recargoNocturno = redondear((e.horasNocturnas + e.horasDomNoct) * vh * 0.35);
@@ -1188,11 +1221,56 @@ public class GerenciaNominaCalculoDAO {
 	 */
 	public static ResultadoCarga cargarLote(final String semana, final String pegado,
 			final String origen, final String usuario) {
+		return (cargarLote(semana, pegado, origen, usuario, 0));
+	}
+
+	public static ResultadoCarga cargarLote(final String semana, final String pegado,
+			final String origen, final String usuario, final int idPeriodo) {
 		final ResultadoCarga r = new ResultadoCarga();
-		if (rangoDeLaSemana(semana) == null) {
-			r.problemas.add("La semana debe ser un domingo, en formato aaaa-mm-dd.");
-			return (r);
+		final ArrayList<String> domingos = new ArrayList<String>();
+
+		if (idPeriodo > 0) {
+			final ConexionBaseDatos conGen = new ConexionBaseDatos();
+			final Connection cnGen = conGen.obtenerConexionBDGeneral();
+			if (cnGen != null) {
+				try {
+					final PreparedStatement psPer = cnGen.prepareStatement(
+							"SELECT fecha_inferior, fecha_superior FROM periodo_nomina WHERE idperiodo = ?");
+					psPer.setInt(1, idPeriodo);
+					final ResultSet rsPer = psPer.executeQuery();
+					if (rsPer.next()) {
+						final String fInf = rsPer.getString("fecha_inferior");
+						final String fSup = rsPer.getString("fecha_superior");
+						if (fInf != null && fSup != null && fInf.length() == 10 && fSup.length() == 10) {
+							final LocalDate ini = LocalDate.parse(fInf);
+							final LocalDate fin = LocalDate.parse(fSup);
+							LocalDate cur = ini;
+							while (!cur.isAfter(fin)) {
+								if (cur.getDayOfWeek() == DayOfWeek.SUNDAY) {
+									domingos.add(cur.toString());
+								}
+								cur = cur.plusDays(1);
+							}
+						}
+					}
+					rsPer.close();
+					psPer.close();
+				} catch (final Exception ex) {
+					System.out.println("GerenciaNominaCalculoDAO.cargarLote periodo: " + ex.toString());
+				} finally {
+					cerrar(cnGen);
+				}
+			}
 		}
+
+		if (domingos.isEmpty()) {
+			if (rangoDeLaSemana(semana) == null) {
+				r.problemas.add("La semana debe ser un domingo, en formato aaaa-mm-dd.");
+				return (r);
+			}
+			domingos.add(semana);
+		}
+
 		final ConexionBaseDatos con = new ConexionBaseDatos();
 		final Connection cn = con.obtenerConexionBDPrincipalLocal();
 		if (cn == null) {
@@ -1200,14 +1278,16 @@ public class GerenciaNominaCalculoDAO {
 			return (r);
 		}
 		try {
-			final HashSet<Integer> existen = idsDeEmpleados();
+			final HashMap<String, EmpleadoInfo> mapaEmp = mapaEmpleadosPorIdent();
+			final Parametros params = parametrosAl(cn, domingos.get(0));
+			final double smlv = params.de("SMLV", 1300000);
+			final double auxilioMensual = params.de("AUXILIO_TRANSPORTE", 162000);
+
 			final PreparedStatement ps = cn.prepareStatement(
 					"INSERT INTO gerencia_nomina_empleado_semana"
 					+ " (idempleado, semana, sueldo_basico, sueldo_variable, seguridad_social,"
 					+ "  liquidacion, origen, usuario)"
 					+ " VALUES (?,?,?,?,?,?,?,?)"
-					//Un real pisa a un estimado sin preguntar, que es justo lo
-					//que se quiere cuando por fin llega la cifra de verdad.
 					+ " ON DUPLICATE KEY UPDATE"
 					+ "   sueldo_basico = ?, sueldo_variable = ?, seguridad_social = ?,"
 					+ "   liquidacion = ?, origen = ?, usuario = ?");
@@ -1219,61 +1299,103 @@ public class GerenciaNominaCalculoDAO {
 					continue;
 				}
 				final String[] campos = partirCampos(linea);
-				if (campos.length < 5) {
-					r.ilegibles++;
-					r.problemas.add("Linea " + (i + 1) + ": se esperaban 5 columnas y vinieron "
-							+ campos.length + " -> " + recorte(linea));
-					continue;
-				}
-				final int id = entero(campos[0]);
-				//La primera linea suele ser el encabezado de la exportacion: si
-				//el documento no es un numero, se salta sin contarla como error.
-				if (id <= 0) {
+				if (campos.length < 2) {
 					if (i == 0) {
-						continue;
+						continue; // Encabezado de una columna
 					}
 					r.ilegibles++;
-					r.problemas.add("Linea " + (i + 1) + ": el documento no es un numero -> "
-							+ recorte(campos[0]));
-					continue;
-				}
-				if (!existen.contains(Integer.valueOf(id))) {
-					r.noEncontrados++;
-					r.problemas.add("Linea " + (i + 1) + ": el documento " + id
-							+ " no existe en el maestro de empleados. NO se cargo.");
-					continue;
-				}
-				final double basico = pesos(campos[1]);
-				final double variable = pesos(campos[2]);
-				final double segSocial = pesos(campos[3]);
-				final double liquidacion = pesos(campos[4]);
-				if (basico < 0 || variable < 0 || segSocial < 0 || liquidacion < 0) {
-					r.ilegibles++;
-					r.problemas.add("Linea " + (i + 1) + ": hay un valor que no se entiende -> "
-							+ recorte(linea));
+					r.problemas.add("Linea " + (i + 1) + ": se esperaban al menos 2 columnas -> " + recorte(linea));
 					continue;
 				}
 
-				int k = 1;
-				ps.setInt(k++, id);
-				ps.setString(k++, semana);
-				ps.setDouble(k++, basico);
-				ps.setDouble(k++, variable);
-				ps.setDouble(k++, segSocial);
-				ps.setDouble(k++, liquidacion);
-				ps.setString(k++, origen);
-				ps.setString(k++, usuario);
-				ps.setDouble(k++, basico);
-				ps.setDouble(k++, variable);
-				ps.setDouble(k++, segSocial);
-				ps.setDouble(k++, liquidacion);
-				ps.setString(k++, origen);
-				ps.setString(k++, usuario);
-				ps.addBatch();
+				final String docRaw = campos[0].trim();
+				final String docLimpio = docRaw.replace(".", "").replace(",", "").replace("\"", "").replace(" ", "");
+				final EmpleadoInfo emp = mapaEmp.get(docLimpio);
+				if (emp == null) {
+					// Si es la primera linea y no es numero o no existe, ignorar como encabezado
+					if (i == 0 && (!esNumero(docLimpio) || entero(docLimpio) <= 0)) {
+						continue;
+					}
+					r.noEncontrados++;
+					r.problemas.add("Linea " + (i + 1) + ": el documento '" + docRaw
+							+ "' no existe en el maestro de empleados. NO se cargo.");
+					continue;
+				}
+
+				// Si la columna 1 es texto no numerico (ej. nombre del empleado), desplazar las columnas numericas
+				int idxNum = 1;
+				if (campos.length > 2 && !esNumero(campos[1])) {
+					idxNum = 2;
+				}
+
+				final int numCols = campos.length - idxNum;
+				double basicoTotal = -1;
+				double varTotal = 0;
+				double segTotal = -1;
+				double liqTotal = -1;
+
+				if (numCols == 1) {
+					varTotal = pesos(campos[idxNum]);
+				} else if (numCols == 2) {
+					basicoTotal = pesos(campos[idxNum]);
+					varTotal = pesos(campos[idxNum + 1]);
+				} else if (numCols == 3) {
+					basicoTotal = pesos(campos[idxNum]);
+					varTotal = pesos(campos[idxNum + 1]);
+					segTotal = pesos(campos[idxNum + 2]);
+				} else if (numCols >= 4) {
+					basicoTotal = pesos(campos[idxNum]);
+					varTotal = pesos(campos[idxNum + 1]);
+					segTotal = pesos(campos[idxNum + 2]);
+					liqTotal = pesos(campos[idxNum + 3]);
+				}
+
+				if (varTotal < 0) {
+					r.ilegibles++;
+					r.problemas.add("Linea " + (i + 1) + ": el valor variable no se entiende -> " + recorte(linea));
+					continue;
+				}
+
+				final int numSemanas = domingos.size();
+				// Para cada semana (domingo) asignada
+				for (int s = 0; s < numSemanas; s++) {
+					final String sem = domingos.get(s);
+					// Fijo semanal: salario mensual / 30 * 7
+					final double basicoSem = (basicoTotal > 0 && numSemanas == 1) ? basicoTotal
+							: redondear(emp.salario * SEMANA_DEL_MES);
+					final double varSem = redondear(varTotal / (double) numSemanas);
+					final double auxSem = (emp.salario <= smlv * 2) ? redondear(auxilioMensual * SEMANA_DEL_MES) : 0;
+					final double segSem = (segTotal >= 0 && numSemanas == 1) ? segTotal
+							: redondear((basicoSem + varSem) * 0.205);
+					final double liqSem = (liqTotal >= 0 && numSemanas == 1) ? liqTotal
+							: redondear((basicoSem + varSem + auxSem) * 0.2183);
+
+					int k = 1;
+					ps.setInt(k++, emp.id);
+					ps.setString(k++, sem);
+					ps.setDouble(k++, basicoSem);
+					ps.setDouble(k++, varSem);
+					ps.setDouble(k++, segSem);
+					ps.setDouble(k++, liqSem);
+					ps.setString(k++, origen);
+					ps.setString(k++, usuario);
+					ps.setDouble(k++, basicoSem);
+					ps.setDouble(k++, varSem);
+					ps.setDouble(k++, segSem);
+					ps.setDouble(k++, liqSem);
+					ps.setString(k++, origen);
+					ps.setString(k++, usuario);
+					ps.addBatch();
+				}
 				r.cargados++;
 			}
 			ps.executeBatch();
 			ps.close();
+
+			// Medir desviaciones contra lo estimado para todas las semanas afectadas
+			for (int s = 0; s < domingos.size(); s++) {
+				registrarDesviacion(domingos.get(s));
+			}
 		} catch (final Exception e) {
 			System.out.println("GerenciaNominaCalculoDAO.cargarLote: " + e.toString());
 			r.problemas.add("Error guardando: " + e.toString());
@@ -1281,6 +1403,98 @@ public class GerenciaNominaCalculoDAO {
 			cerrar(cn);
 		}
 		return (r);
+	}
+
+	public static HashMap<String, EmpleadoInfo> mapaEmpleadosPorIdent() {
+		final HashMap<String, EmpleadoInfo> map = new HashMap<String, EmpleadoInfo>();
+		final ConexionBaseDatos con = new ConexionBaseDatos();
+		final Connection cn = con.obtenerConexionBDGeneral();
+		if (cn == null) {
+			return (map);
+		}
+		try {
+			final PreparedStatement ps = cn.prepareStatement(
+					"SELECT id, nombre, nombre_largo, IFNULL(salario, 0) AS salario, activo FROM empleado");
+			final ResultSet rs = ps.executeQuery();
+			while (rs.next()) {
+				final EmpleadoInfo emp = new EmpleadoInfo();
+				emp.id = rs.getInt("id");
+				emp.cedula = texto(rs.getString("nombre")).trim();
+				emp.nombreLargo = texto(rs.getString("nombre_largo")).trim();
+				emp.salario = rs.getDouble("salario");
+				emp.activo = rs.getInt("activo") == 1;
+
+				final String cedLimpia = emp.cedula.replace(".", "").replace(",", "").replace("\"", "").trim();
+				if (cedLimpia.length() > 0) {
+					map.put(cedLimpia, emp);
+				}
+				map.put(String.valueOf(emp.id), emp);
+			}
+			rs.close();
+			ps.close();
+		} catch (final Exception e) {
+			System.out.println("GerenciaNominaCalculoDAO.mapaEmpleadosPorIdent: " + e.toString());
+		} finally {
+			cerrar(cn);
+		}
+		return (map);
+	}
+
+	public static ArrayList<PeriodoNomina> listarPeriodosRecientes() {
+		final ArrayList<PeriodoNomina> lista = new ArrayList<PeriodoNomina>();
+		final ConexionBaseDatos con = new ConexionBaseDatos();
+		final Connection cn = con.obtenerConexionBDGeneral();
+		if (cn == null) {
+			return (lista);
+		}
+		try {
+			final PreparedStatement ps = cn.prepareStatement(
+					"SELECT idperiodo, fecha_inferior, fecha_superior FROM periodo_nomina"
+					+ " WHERE fecha_superior >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)"
+					+ " ORDER BY idperiodo DESC LIMIT 20");
+			final ResultSet rs = ps.executeQuery();
+			while (rs.next()) {
+				final PeriodoNomina p = new PeriodoNomina();
+				p.idPeriodo = rs.getInt("idperiodo");
+				p.fechaInferior = texto(rs.getString("fecha_inferior"));
+				p.fechaSuperior = texto(rs.getString("fecha_superior"));
+				if (p.fechaInferior.length() == 10 && p.fechaSuperior.length() == 10) {
+					final LocalDate ini = LocalDate.parse(p.fechaInferior);
+					final LocalDate fin = LocalDate.parse(p.fechaSuperior);
+					LocalDate cur = ini;
+					while (!cur.isAfter(fin)) {
+						if (cur.getDayOfWeek() == DayOfWeek.SUNDAY) {
+							p.domingos.add(cur.toString());
+						}
+						cur = cur.plusDays(1);
+					}
+				}
+				lista.add(p);
+			}
+			rs.close();
+			ps.close();
+		} catch (final Exception e) {
+			System.out.println("GerenciaNominaCalculoDAO.listarPeriodosRecientes: " + e.toString());
+		} finally {
+			cerrar(cn);
+		}
+		return (lista);
+	}
+
+	private static boolean esNumero(final String s) {
+		if (s == null) {
+			return (false);
+		}
+		final String t = s.trim().replace(".", "").replace(",", "").replace("$", "").replace("-", "");
+		if (t.length() == 0) {
+			return (false);
+		}
+		for (int i = 0; i < t.length(); i++) {
+			if (!Character.isDigit(t.charAt(i))) {
+				return (false);
+			}
+		}
+		return (true);
 	}
 
 	private static HashSet<Integer> idsDeEmpleados() {

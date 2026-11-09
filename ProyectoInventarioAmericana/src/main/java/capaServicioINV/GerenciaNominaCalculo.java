@@ -61,6 +61,10 @@ public class GerenciaNominaCalculo extends HttpServlet {
 				out.write(ctrl.consultarParametros());
 				return;
 			}
+			if ("periodos".equals(que)) {
+				out.write(ctrl.consultarPeriodos());
+				return;
+			}
 
 			final String semana = GerenciaSesion.texto(request, "semana");
 			if (!esFecha(semana)) {
@@ -151,7 +155,7 @@ public class GerenciaNominaCalculo extends HttpServlet {
 				}
 				if (pegado.length() > MAX_PEGADO) {
 					out.write("{\"respuesta\":\"INVALIDO\",\"detalle\":"
-							+ "\"Lo pegado es demasiado grande. Cargue una semana a la vez.\"}");
+							+ "\"Lo pegado es demasiado grande.\"}");
 					return;
 				}
 				//El origen marca el dato de por vida: es lo que distingue un real
@@ -163,7 +167,8 @@ public class GerenciaNominaCalculo extends HttpServlet {
 							+ "\"El origen debe ser SIIGO o MANUAL\"}");
 					return;
 				}
-				out.write(ctrl.cargar(semana, pegado, origen, usuario));
+				final int idPeriodo = (int) GerenciaSesion.valor(request, "idperiodo");
+				out.write(ctrl.cargar(semana, pegado, origen, usuario, idPeriodo));
 				return;
 			}
 

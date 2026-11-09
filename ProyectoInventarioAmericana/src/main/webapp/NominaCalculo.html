@@ -204,6 +204,29 @@
 						</div>
 					</div>
 
+					<!-- Modo de visualización: Real vs Estimado vs Comparativo -->
+					<div class="row" style="margin-bottom:12px; padding:6px 0; border-top:1px solid #E2E8F0; border-bottom:1px solid #E2E8F0; align-items:center;">
+						<div class="col-md-7 col-sm-8">
+							<span style="font-size:12px; font-weight:600; color:#475569; margin-right:8px;">Vista:</span>
+							<div class="btn-group btn-group-sm" id="grupoModoVista">
+								<button type="button" class="btn btn-primary active btn-modo" data-modo="real">
+									<i class="fas fa-check-double"></i> Real / Definitivo (Predeterminado)
+								</button>
+								<button type="button" class="btn btn-default btn-modo" data-modo="estimado">
+									<i class="fas fa-calculator"></i> Estimado Biometr&iacute;a
+								</button>
+								<button type="button" class="btn btn-default btn-modo" data-modo="comparativo">
+									<i class="fas fa-balance-scale"></i> Comparativo (Real vs Estimado)
+								</button>
+							</div>
+						</div>
+						<div class="col-md-5 col-sm-4 text-right">
+							<span id="badgeResumenVista" class="badge" style="background:#102F6F; padding:6px 12px; font-size:11.5px; font-weight:normal;">
+								<i class="fas fa-info-circle"></i> Mostrando nómina real
+							</span>
+						</div>
+					</div>
+
 					<div class="ger-tabla-sticky-wrapper">
 						<table class="ger-tabla" id="tablaEstimado">
 							<thead>
@@ -245,12 +268,29 @@
 					<p class="ger-sub">
 						La API p&uacute;blica de SIIGO Nube no expone n&oacute;mina &mdash; solo
 						contabilidad y facturaci&oacute;n &mdash; as&iacute; que el real entra por
-						aqu&iacute;, pegado desde la exportaci&oacute;n. Lo que se cargue
-						<strong>reemplaza al estimado</strong> y queda marcado como real para
-						siempre.
+						aqu&iacute;, pegado desde la exportaci&oacute;n de Excel. Lo que se cargue
+						<strong>reemplaza al estimado</strong> y queda registrado como real.
 					</p>
+
 					<div class="row">
-						<div class="col-md-3 col-sm-4">
+						<div class="col-md-4 col-sm-6">
+							<div class="ger-campo">
+								<label>Destino del cargue</label>
+								<select id="selDestinoCargue" class="form-control">
+									<option value="SEMANA">Semana actual seleccionada</option>
+									<option value="PERIODO">Quincena completa (programaci&oacute;n de vales / SIIGO)</option>
+								</select>
+							</div>
+						</div>
+						<div class="col-md-5 col-sm-6" id="divSelPeriodo" style="display:none;">
+							<div class="ger-campo">
+								<label>Seleccionar Quincena (Per&iacute;odo de n&oacute;mina)</label>
+								<select id="selPeriodoNomina" class="form-control">
+									<option value="">Cargando per&iacute;odos...</option>
+								</select>
+							</div>
+						</div>
+						<div class="col-md-3 col-sm-6">
 							<div class="ger-campo">
 								<label>Origen del dato</label>
 								<select id="origen" class="form-control">
@@ -259,24 +299,35 @@
 								</select>
 							</div>
 						</div>
-						<div class="col-md-9 col-sm-8">
-							<div class="ger-campo">
-								<label>Formato esperado, una l&iacute;nea por persona</label>
-								<div class="ger-nota" style="padding-top:6px;">
-									<code>documento ; b&aacute;sico ; variable ; seguridad social ; liquidaci&oacute;n</code>
-									&nbsp;&middot;&nbsp; sirve pegar directo de Excel (separado por tabulaci&oacute;n).
-									El encabezado se ignora solo.
-								</div>
-							</div>
+					</div>
+
+					<div class="alert alert-info" style="margin:10px 0 14px 0; padding:10px 14px; font-size:12px; background:#F8FAFC; border:1px solid #CBD5E1; color:#1E293B; border-radius:6px;">
+						<div style="font-weight:600; color:#102F6F; margin-bottom:4px;">
+							<i class="fas fa-calculator"></i> Regla de c&aacute;lculo aplicada autom&aacute;ticamente:
+						</div>
+						<div>
+							&bull; <strong>Salario Fijo Semanal:</strong> <code>(Salario mensual / 30) &times; 7</code>.
+							<br/>
+							&bull; <strong>Salario Variable:</strong> Se toma de lo liquidado en SIIGO para la quincena o semana. Si se carga la quincena, se distribuye entre las semanas del per&iacute;odo.
+							<br/>
+							&bull; <strong>Seguridad Social y Prestaciones:</strong> Se autocalculan sobre la base (20.5% patronal y 21.83% provisiones de ley) si no vienen desglosadas.
+						</div>
+						<div style="margin-top:6px; font-size:11.5px; color:#64748B;">
+							<strong>Columnas que puedes pegar directo de Excel:</strong>
+							<code>C&eacute;dula &nbsp; Variable</code> &nbsp;&middot;&nbsp;
+							<code>C&eacute;dula &nbsp; B&aacute;sico &nbsp; Variable</code> &nbsp;&middot;&nbsp;
+							<code>C&eacute;dula &nbsp; Nombre &nbsp; Variable</code> &nbsp;&middot;&nbsp;
+							<code>C&eacute;dula &nbsp; B&aacute;sico &nbsp; Variable &nbsp; SegSocial &nbsp; Liquidaci&oacute;n</code>
 						</div>
 					</div>
+
 					<div class="ger-campo">
 						<textarea id="pegado" class="form-control" rows="12"
-							placeholder="1045512830&#9;1200000&#9;340000&#9;280000&#9;260000"
+							placeholder="1045512830&#9;340000&#10;7700926&#9;150000"
 							style="font-family:monospace;font-size:12.5px;"></textarea>
 					</div>
 					<button id="btnCargar" class="btn btn-primary">
-						<i class="fas fa-upload"></i> Cargar la semana
+						<i class="fas fa-upload"></i> Cargar n&oacute;mina
 					</button>
 					<span class="ger-nota" style="margin-left:10px;">
 						Al cargar se mide sola la desviaci&oacute;n contra lo estimado.

@@ -23,6 +23,8 @@ var codigoEnCambio = '';
 var filtroActivo = 'todos';
 var textoFiltro = '';
 var empleadoEnModal = null;
+var modoVista = 'real'; // 'real', 'estimado', 'comparativo'
+var listaPeriodos = [];
 
 $(function () {
 	Gerencia.proteger('ger-contenido', arrancar);
@@ -40,6 +42,24 @@ function arrancar() {
 	$('#tabCargar').on('click', function (e) { e.preventDefault(); verPestana('cargar'); });
 	$('#tabCalibracion').on('click', function (e) { e.preventDefault(); verPestana('calibracion'); });
 	$('#tabParametros').on('click', function (e) { e.preventDefault(); verPestana('parametros'); });
+
+	// Modos de vista: Real vs Estimado vs Comparativo
+	$('.btn-modo').on('click', function () {
+		$('.btn-modo').removeClass('active btn-primary').addClass('btn-default');
+		$(this).addClass('active btn-primary').removeClass('btn-default');
+		modoVista = $(this).data('modo');
+		actualizarBadgeModo();
+		pintarEstimado();
+	});
+
+	// Destino del cargue: Semana vs Quincena
+	$('#selDestinoCargue').on('change', function () {
+		if ($(this).val() === 'PERIODO') {
+			$('#divSelPeriodo').show();
+		} else {
+			$('#divSelPeriodo').hide();
+		}
+	});
 
 	// Filtros y buscador
 	$('#filtroEmpleado').on('input', function () {
@@ -64,6 +84,33 @@ function arrancar() {
 
 	consultar();
 	cargarParametros();
+	cargarPeriodosNomina();
+}
+
+function actualizarBadgeModo() {
+	if (modoVista === 'real') {
+		$('#badgeResumenVista').html('<i class="fas fa-check-double text-success"></i> Modo Real (Predeterminado: muestra SIIGO donde haya real y Estimado donde falte)');
+	} else if (modoVista === 'estimado') {
+		$('#badgeResumenVista').html('<i class="fas fa-calculator text-info"></i> Modo Estimado (Cálculo biométrico puro de la semana)');
+	} else if (modoVista === 'comparativo') {
+		$('#badgeResumenVista').html('<i class="fas fa-balance-scale text-warning"></i> Modo Comparativo (Auditoría: Estimado Biometría vs Real Pagado SIIGO)');
+	}
+}
+
+function cargarPeriodosNomina() {
+	$.getJSON('GerenciaNominaCalculo', { que: 'periodos' }, function (data) {
+		if (!data || !data.periodos) { return; }
+		listaPeriodos = data.periodos;
+		var html = '';
+		for (var i = 0; i < listaPeriodos.length; i++) {
+			var p = listaPeriodos[i];
+			var cantSemanas = p.semanas ? p.semanas.length : 2;
+			html += '<option value="' + p.id + '">'
+				+ 'Quincena #' + p.id + ' (' + p.desde + ' al ' + p.hasta + ') — '
+				+ cantSemanas + ' semana' + (cantSemanas !== 1 ? 's' : '') + '</option>';
+		}
+		$('#selPeriodoNomina').html(html);
+	});
 }
 
 /**
@@ -170,17 +217,65 @@ function pintarEstimado() {
 	$('#cntAvisos').text(cntAvisos);
 	$('#cntJustificados').text(cntJustificados);
 
+	// Resumen de cajas según modo
+	var totalEstimado = d.total || 0;
+	var totalCorregido = d.total_corregido || totalEstimado;
+	var totalReal = d.total_real || 0;
+	var conReal = d.con_real || 0;
+
 	var html = '';
 	html += caja('Personas', lista.length, false);
-	html += caja('Costo estimado', '$' + milesNC(d.total), false);
-	if (Math.round(d.total_corregido) !== Math.round(d.total)) {
-		html += caja('Con correccion', '$' + milesNC(d.total_corregido), false);
+	if (modoVista === 'comparativo') {
+		html += caja('Estimado Biometría', '$' + milesNC(totalCorregido), false);
+		html += caja('Real Pagado SIIGO', '$' + milesNC(totalReal), conReal > 0);
+		var difTotal = totalReal - totalCorregido;
+		var pctTotal = totalCorregido > 0 ? (difTotal / totalCorregido * 100) : 0;
+		var signo = difTotal > 0 ? '+' : '';
+		html += caja('Desviación Neta', (conReal > 0 ? (signo + '$' + milesNC(difTotal) + ' (' + unaDecimal(pctTotal) + '%)') : 'Sin real cargado'), difTotal > 0);
+	} else if (modoVista === 'real') {
+		var totalVigente = (conReal > 0 ? totalReal : totalCorregido);
+		html += caja('Nómina Total Vigente', '$' + milesNC(totalVigente), false);
+		html += caja('Con Real SIIGO', conReal + ' / ' + lista.length, conReal === lista.length);
+		html += caja('Con aviso / novedad', cntAvisos, cntAvisos > 0);
+	} else {
+		html += caja('Costo estimado', '$' + milesNC(totalEstimado), false);
+		if (Math.round(totalCorregido) !== Math.round(totalEstimado)) {
+			html += caja('Con correccion', '$' + milesNC(totalCorregido), false);
+		}
+		html += caja('Con aviso', cntAvisos, cntAvisos > 0);
 	}
-	html += caja('Con aviso', cntAvisos, cntAvisos > 0);
 	$('#cajasEstimado').html(html);
 
+	// Encabezado de la tabla según modo
+	var thHtml = '';
+	if (modoVista === 'comparativo') {
+		thHtml = '<tr>'
+			+ '<th>Empleado</th><th>Cargo</th><th class="ger-num">Salario</th>'
+			+ '<th class="ger-num" title="Costo estimado por biometría">Estimado Biometr&iacute;a</th>'
+			+ '<th class="ger-num" title="Costo real liquidado en SIIGO">Real Pagado (SIIGO)</th>'
+			+ '<th class="ger-num" title="Diferencia en pesos">Diferencia ($)</th>'
+			+ '<th class="ger-num" title="Porcentaje de variación">% Desv.</th>'
+			+ '<th>Origen</th><th>Novedad / Estado</th></tr>';
+	} else {
+		var esReal = (modoVista === 'real');
+		thHtml = '<tr>'
+			+ '<th>Empleado</th><th>Cargo</th><th class="ger-num">Salario</th>'
+			+ '<th class="ger-num">Horas</th>'
+			+ '<th class="ger-num" title="Horas y valor en la franja de 19:00 a 06:00 (Ley 2466)">Rec. Nocturno<span class="th-sub">horas &middot; valor $</span></th>'
+			+ '<th class="ger-num" title="Horas y valor en domingos y festivos">Dom / Fes<span class="th-sub">horas &middot; valor $</span></th>'
+			+ '<th class="ger-num" title="Horas extra semanales">Extra<span class="th-sub">horas &middot; valor $</span></th>'
+			+ '<th class="ger-num">' + (esReal ? 'B&aacute;sico (Fijo)' : 'B&aacute;sico') + '</th>'
+			+ '<th class="ger-num" title="Variable de SIIGO o recargos de biometría">' + (esReal ? 'Variable Pagado' : 'Total Variable') + '</th>'
+			+ '<th class="ger-num">Seg. Social</th>'
+			+ '<th class="ger-num" title="Cesantías, intereses, prima y vacaciones">Provisiones</th>'
+			+ '<th class="ger-num">' + (esReal ? 'Costo Total Real' : 'Costo Total') + '</th>'
+			+ '<th>Novedad / Estado</th></tr>';
+	}
+	$('#tablaEstimado thead').html(thHtml);
+
+	var colsTotal = (modoVista === 'comparativo' ? 9 : 13);
 	if (lista.length === 0) {
-		$('#tablaEstimado tbody').html('<tr><td colspan="13" class="ger-vacio">'
+		$('#tablaEstimado tbody').html('<tr><td colspan="' + colsTotal + '" class="ger-vacio">'
 			+ 'Esta semana no esta calculada. Use el boton de arriba.</td></tr>');
 		return;
 	}
@@ -198,63 +293,99 @@ function pintarEstimado() {
 
 		visibles++;
 
-		// Repetir encabezado cada 25 filas visibles para no perderse al avanzar
+		// Repetir encabezado cada 25 filas visibles
 		if (visibles > 1 && (visibles - 1) % 25 === 0) {
-			cuerpo += '<tr class="sub-header-repite">'
-				+ '<td>Empleado</td><td>Cargo</td><td class="ger-num">Salario</td>'
-				+ '<td class="ger-num">Horas</td><td class="ger-num">Rec. Nocturno</td>'
-				+ '<td class="ger-num">Dom / Fes</td><td class="ger-num">Extra</td>'
-				+ '<td class="ger-num">B&aacute;sico</td><td class="ger-num">Total Variable</td>'
-				+ '<td class="ger-num">Seg. Social</td><td class="ger-num">Provisiones</td>'
-				+ '<td class="ger-num">Costo Total</td><td>Novedad / Estado</td></tr>';
+			if (modoVista === 'comparativo') {
+				cuerpo += '<tr class="sub-header-repite">'
+					+ '<td>Empleado</td><td>Cargo</td><td class="ger-num">Salario</td>'
+					+ '<td class="ger-num">Estimado Biometr&iacute;a</td>'
+					+ '<td class="ger-num">Real Pagado (SIIGO)</td>'
+					+ '<td class="ger-num">Diferencia ($)</td>'
+					+ '<td class="ger-num">% Desv.</td>'
+					+ '<td>Origen</td><td>Novedad / Estado</td></tr>';
+			} else {
+				cuerpo += '<tr class="sub-header-repite">'
+					+ '<td>Empleado</td><td>Cargo</td><td class="ger-num">Salario</td>'
+					+ '<td class="ger-num">Horas</td><td class="ger-num">Rec. Nocturno</td>'
+					+ '<td class="ger-num">Dom / Fes</td><td class="ger-num">Extra</td>'
+					+ '<td class="ger-num">B&aacute;sico</td><td class="ger-num">Total Variable</td>'
+					+ '<td class="ger-num">Seg. Social</td><td class="ger-num">Provisiones</td>'
+					+ '<td class="ger-num">Costo Total</td><td>Novedad / Estado</td></tr>';
+			}
 		}
 
-		var yaReal = e.origen_cargado && e.origen_cargado !== '' && e.origen_cargado !== 'ESTIMADO';
-		var estilo = yaReal ? ' style="opacity:.55;"' : '';
-		cuerpo += '<tr' + estilo + '>';
-		cuerpo += '<td><strong>' + escNC(e.nombre) + '</strong></td>';
-		cuerpo += '<td style="font-size:11.5px;color:#6C7482;">' + escNC(e.cargo) + '</td>';
-		cuerpo += '<td class="ger-num">' + (e.salario > 0 ? '$' + milesNC(e.salario)
-			: '<span class="ger-vacio">sin salario</span>') + '</td>';
-		cuerpo += '<td class="ger-num"><strong>' + unaDecimal(e.h_totales) + '</strong>'
-			+ '<div style="font-size:10.5px;color:#6C7482;">' + e.turnos + ' turnos</div></td>';
+		var yaReal = (e.real_costo && e.real_costo > 0) || (e.origen_cargado && e.origen_cargado !== '' && e.origen_cargado !== 'ESTIMADO');
 
-		// Recargo nocturno (horas + monto)
-		var hNoc = e.h_nocturnas + e.h_dom_noct;
-		var vNoc = e.recargo_nocturno || 0;
-		cuerpo += '<td class="ger-num">'
-			+ (hNoc > 0 ? '<strong>' + unaDecimal(hNoc) + ' h</strong>'
-				+ (vNoc > 0 ? '<div style="font-size:11px;color:#102F6F;font-weight:600;">$' + milesNC(vNoc) + '</div>' : '')
-				: '<span style="color:#94A3B8;">&mdash;</span>') + '</td>';
+		if (modoVista === 'comparativo') {
+			var estC = e.costo_corregido || e.costo || 0;
+			var realC = yaReal ? (e.real_costo || estC) : 0;
+			var dif = realC - estC;
+			var pct = estC > 0 ? (dif / estC * 100) : 0;
+			var colDif = dif > 0 ? '#C21C1F' : (dif < 0 ? '#166534' : '#64748B');
 
-		// Dominical / Festivo (horas + monto)
-		var hDom = e.h_dominicales + e.h_dom_noct;
-		var vDom = e.recargo_dominical || 0;
-		cuerpo += '<td class="ger-num">'
-			+ (hDom > 0 ? '<strong>' + unaDecimal(hDom) + ' h</strong>'
-				+ (vDom > 0 ? '<div style="font-size:11px;color:#102F6F;font-weight:600;">$' + milesNC(vDom) + '</div>' : '')
-				: '<span style="color:#94A3B8;">&mdash;</span>') + '</td>';
+			cuerpo += '<tr>';
+			cuerpo += '<td><strong>' + escNC(e.nombre) + '</strong></td>';
+			cuerpo += '<td style="font-size:11.5px;color:#6C7482;">' + escNC(e.cargo) + '</td>';
+			cuerpo += '<td class="ger-num">' + (e.salario > 0 ? '$' + milesNC(e.salario) : '<span class="ger-vacio">-</span>') + '</td>';
+			cuerpo += '<td class="ger-num">$' + milesNC(estC) + '</td>';
+			cuerpo += '<td class="ger-num">' + (yaReal ? '<strong>$' + milesNC(realC) + '</strong>' : '<span class="badge" style="background:#F1F5F9; color:#94A3B8;">Pendiente</span>') + '</td>';
+			cuerpo += '<td class="ger-num" style="font-weight:bold; color:' + colDif + ';">' + (yaReal ? (dif > 0 ? '+' : '') + '$' + milesNC(dif) : '&mdash;') + '</td>';
+			cuerpo += '<td class="ger-num" style="color:' + colDif + ';">' + (yaReal ? (pct > 0 ? '+' : '') + unaDecimal(pct) + '%' : '&mdash;') + '</td>';
+			cuerpo += '<td>' + (yaReal ? '<span class="ger-origen ger-real">' + escNC(e.origen_cargado || 'SIIGO') + '</span>' : '<span class="badge" style="background:#E2E8F0; color:#64748B;">Estimado</span>') + '</td>';
+		} else {
+			// Modo Real (predeterminado) o Modo Estimado
+			var esReal = (modoVista === 'real');
+			var bas = (esReal && yaReal && e.real_basico > 0) ? e.real_basico : e.basico;
+			var varM = (esReal && yaReal) ? e.real_variable : e.variable;
+			var seg = (esReal && yaReal && e.real_seg_social > 0) ? e.real_seg_social : e.seg_social;
+			var liq = (esReal && yaReal && e.real_liquidacion > 0) ? e.real_liquidacion : e.liquidacion;
+			var tot = (esReal && yaReal && e.real_costo > 0) ? e.real_costo : e.costo_corregido;
 
-		// Horas extra (horas + monto)
-		var hExt = e.h_extra || 0;
-		var vExt = e.recargo_extra || 0;
-		cuerpo += '<td class="ger-num">'
-			+ (hExt > 0 ? '<strong>' + unaDecimal(hExt) + ' h</strong>'
-				+ (vExt > 0 ? '<div style="font-size:11px;color:#102F6F;font-weight:600;">$' + milesNC(vExt) + '</div>' : '')
-				: '<span style="color:#94A3B8;">&mdash;</span>') + '</td>';
+			cuerpo += '<tr>';
+			cuerpo += '<td><strong>' + escNC(e.nombre) + '</strong></td>';
+			cuerpo += '<td style="font-size:11.5px;color:#6C7482;">' + escNC(e.cargo) + '</td>';
+			cuerpo += '<td class="ger-num">' + (e.salario > 0 ? '$' + milesNC(e.salario)
+				: '<span class="ger-vacio">sin salario</span>') + '</td>';
+			cuerpo += '<td class="ger-num"><strong>' + unaDecimal(e.h_totales) + '</strong>'
+				+ '<div style="font-size:10.5px;color:#6C7482;">' + e.turnos + ' turnos</div></td>';
 
-		cuerpo += '<td class="ger-num">$' + milesNC(e.basico) + '</td>';
-		cuerpo += '<td class="ger-num">' + (e.variable > 0 ? '<strong>$' + milesNC(e.variable) + '</strong>' : '$0')
-			+ (e.auxilio > 0 ? '<div style="font-size:11px;color:#6C7482;">+$'
-				+ milesNC(e.auxilio) + ' aux</div>' : '') + '</td>';
-		cuerpo += '<td class="ger-num">$' + milesNC(e.seg_social) + '</td>';
-		cuerpo += '<td class="ger-num">$' + milesNC(e.liquidacion) + '</td>';
-		cuerpo += '<td class="ger-num" style="font-weight:bold; color:#102F6F;">$' + milesNC(e.costo_corregido)
-			+ (e.correccion !== 0 ? '<div style="font-size:11px;color:#8A6400;">'
-				+ (e.correccion > 0 ? '+' : '') + unaDecimal(e.correccion) + '% corregido</div>' : '')
-			+ '</td>';
+			// Recargo nocturno (horas + monto)
+			var hNoc = e.h_nocturnas + e.h_dom_noct;
+			var vNoc = e.recargo_nocturno || 0;
+			cuerpo += '<td class="ger-num">'
+				+ (hNoc > 0 ? '<strong>' + unaDecimal(hNoc) + ' h</strong>'
+					+ (vNoc > 0 ? '<div style="font-size:11px;color:#102F6F;font-weight:600;">$' + milesNC(vNoc) + '</div>' : '')
+					: '<span style="color:#94A3B8;">&mdash;</span>') + '</td>';
 
-		// Novedad / Estado
+			// Dominical / Festivo (horas + monto)
+			var hDom = e.h_dominicales + e.h_dom_noct;
+			var vDom = e.recargo_dominical || 0;
+			cuerpo += '<td class="ger-num">'
+				+ (hDom > 0 ? '<strong>' + unaDecimal(hDom) + ' h</strong>'
+					+ (vDom > 0 ? '<div style="font-size:11px;color:#102F6F;font-weight:600;">$' + milesNC(vDom) + '</div>' : '')
+					: '<span style="color:#94A3B8;">&mdash;</span>') + '</td>';
+
+			// Horas extra (horas + monto)
+			var hExt = e.h_extra || 0;
+			var vExt = e.recargo_extra || 0;
+			cuerpo += '<td class="ger-num">'
+				+ (hExt > 0 ? '<strong>' + unaDecimal(hExt) + ' h</strong>'
+					+ (vExt > 0 ? '<div style="font-size:11px;color:#102F6F;font-weight:600;">$' + milesNC(vExt) + '</div>' : '')
+					: '<span style="color:#94A3B8;">&mdash;</span>') + '</td>';
+
+			cuerpo += '<td class="ger-num">$' + milesNC(bas) + '</td>';
+			cuerpo += '<td class="ger-num">' + (varM > 0 ? '<strong>$' + milesNC(varM) + '</strong>' : '$0')
+				+ (!esReal && e.auxilio > 0 ? '<div style="font-size:11px;color:#6C7482;">+$' + milesNC(e.auxilio) + ' aux</div>' : '') + '</td>';
+			cuerpo += '<td class="ger-num">$' + milesNC(seg) + '</td>';
+			cuerpo += '<td class="ger-num">$' + milesNC(liq) + '</td>';
+			cuerpo += '<td class="ger-num" style="font-weight:bold; color:#102F6F;">$' + milesNC(tot)
+				+ (!esReal && e.correccion !== 0 ? '<div style="font-size:11px;color:#8A6400;">'
+					+ (e.correccion > 0 ? '+' : '') + unaDecimal(e.correccion) + '% corregido</div>' : '')
+				+ (esReal && yaReal ? '<div style="font-size:11px;color:#166534;"><i class="fas fa-check"></i> ' + escNC(e.origen_cargado || 'SIIGO') + '</div>' : '')
+				+ '</td>';
+		}
+
+		// Novedad / Estado (común a todos los modos)
 		cuerpo += '<td style="white-space:nowrap;">';
 		if (e.novedad_tipo) {
 			var badgeClase = 'badge-directivo';
@@ -274,7 +405,7 @@ function pintarEstimado() {
 			cuerpo += '<button class="btn btn-xs btn-warning btn-resolver-nov" onclick="abrirModalNovedad(' + e.idempleado + ')">'
 				+ '<i class="fas fa-exclamation-triangle"></i> Resolver</button>';
 		} else if (yaReal) {
-			cuerpo += '<span class="ger-origen ger-real">' + escNC(e.origen_cargado) + '</span>';
+			cuerpo += '<span class="ger-origen ger-real">' + escNC(e.origen_cargado || 'SIIGO') + '</span>';
 		} else {
 			cuerpo += '<span class="badge-nov" style="background:#F1F5F9; color:#64748B;"><i class="fas fa-check"></i> Normal</span> '
 				+ '<button class="btn btn-default btn-xs" style="padding:1px 5px; opacity:0.6;" onclick="abrirModalNovedad(' + e.idempleado + ')" title="Marcar novedad">'
@@ -284,11 +415,11 @@ function pintarEstimado() {
 
 		if (e.aviso) {
 			if (e.novedad_tipo) {
-				cuerpo += '<tr style="background:#F0FDF4;"><td colspan="13" style="font-size:11.5px; color:#166534; padding:3px 10px;">'
+				cuerpo += '<tr style="background:#F0FDF4;"><td colspan="' + colsTotal + '" style="font-size:11.5px; color:#166534; padding:3px 10px;">'
 					+ '<i class="fas fa-check-circle text-success"></i> ' + escNC(e.aviso)
 					+ (e.novedad_obs ? ' &mdash; <em>' + escNC(e.novedad_obs) + '</em>' : '') + '</td></tr>';
 			} else {
-				cuerpo += '<tr class="ger-fila-sinbase"><td colspan="13" style="font-size:11.5px; padding:3px 10px;">'
+				cuerpo += '<tr class="ger-fila-sinbase"><td colspan="' + colsTotal + '" style="font-size:11.5px; padding:3px 10px;">'
 					+ '<i class="fas fa-exclamation-triangle" style="color:#C21C1F;"></i> '
 					+ escNC(e.aviso) + '</td></tr>';
 			}
@@ -296,7 +427,7 @@ function pintarEstimado() {
 	}
 
 	if (visibles === 0) {
-		cuerpo = '<tr><td colspan="13" class="ger-vacio" style="padding:24px; text-align:center;">'
+		cuerpo = '<tr><td colspan="' + colsTotal + '" class="ger-vacio" style="padding:24px; text-align:center;">'
 			+ 'No se encontraron empleados con el filtro seleccionado.</td></tr>';
 	}
 	$('#tablaEstimado tbody').html(cuerpo);
@@ -433,20 +564,31 @@ function cargar() {
 		Gerencia.avisar('Pegue primero la informacion.');
 		return;
 	}
-	$('#btnCargar').prop('disabled', true).text('Cargando...');
-	$.post('GerenciaNominaCalculo',
-		{ que: 'cargar', semana: semana(), origen: $('#origen').val(), datos: texto },
-		function (data) {
-			$('#btnCargar').prop('disabled', false)
-				.html('<i class="fas fa-upload"></i> Cargar la semana');
-			if (!Gerencia.respondio(data)) { return; }
-			pintarResultadoCarga(data);
-			consultar();
-		}, 'json').fail(function () {
-			$('#btnCargar').prop('disabled', false)
-				.html('<i class="fas fa-upload"></i> Cargar la semana');
-			Gerencia.avisar('No se pudo cargar.');
-		});
+	var destino = $('#selDestinoCargue').val();
+	var idPeriodo = 0;
+	if (destino === 'PERIODO') {
+		idPeriodo = parseInt($('#selPeriodoNomina').val(), 10) || 0;
+		if (idPeriodo <= 0) {
+			Gerencia.avisar('Seleccione una quincena (período de nómina).');
+			return;
+		}
+	}
+	$('#btnCargar').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Cargando nómina...');
+	$.post('GerenciaNominaCalculo', {
+		que: 'cargar',
+		semana: semana(),
+		idperiodo: idPeriodo,
+		origen: $('#origen').val(),
+		datos: texto
+	}, function (data) {
+		$('#btnCargar').prop('disabled', false).html('<i class="fas fa-upload"></i> Cargar nómina');
+		if (!Gerencia.respondio(data)) { return; }
+		pintarResultadoCarga(data);
+		consultar();
+	}, 'json').fail(function () {
+		$('#btnCargar').prop('disabled', false).html('<i class="fas fa-upload"></i> Cargar nómina');
+		Gerencia.avisar('No se pudo cargar.');
+	});
 }
 
 function pintarResultadoCarga(d) {

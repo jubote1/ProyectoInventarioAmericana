@@ -20,6 +20,8 @@ public class GerenciaNominaCalculoCtrl {
 		sb.append(esc(semana)).append("\",\"estimados\":[");
 		double total = 0;
 		double totalCorregido = 0;
+		double totalReal = 0;
+		int conReal = 0;
 		int conAviso = 0;
 		for (int i = 0; i < lista.size(); i++) {
 			final GerenciaNominaCalculoDAO.Estimado e = lista.get(i);
@@ -47,6 +49,11 @@ public class GerenciaNominaCalculoCtrl {
 			sb.append(",\"correccion\":").append(num(e.factorCorreccion));
 			sb.append(",\"costo_corregido\":").append(num(e.costoCorregido));
 			sb.append(",\"origen_cargado\":\"").append(esc(e.origenCargado)).append('"');
+			sb.append(",\"real_basico\":").append(num(e.realBasico));
+			sb.append(",\"real_variable\":").append(num(e.realVariable));
+			sb.append(",\"real_seg_social\":").append(num(e.realSegSocial));
+			sb.append(",\"real_liquidacion\":").append(num(e.realLiquidacion));
+			sb.append(",\"real_costo\":").append(num(e.realCostoTotal));
 			sb.append(",\"recargo_nocturno\":").append(num(e.recargoNocturno));
 			sb.append(",\"recargo_dominical\":").append(num(e.recargoDominical));
 			sb.append(",\"recargo_extra\":").append(num(e.recargoExtra));
@@ -58,12 +65,18 @@ public class GerenciaNominaCalculoCtrl {
 			sb.append(",\"aviso\":\"").append(esc(e.aviso)).append("\"}");
 			total += e.costoTotal;
 			totalCorregido += e.costoCorregido;
+			if (e.realCostoTotal > 0 || (e.origenCargado != null && e.origenCargado.length() > 0 && !"ESTIMADO".equals(e.origenCargado))) {
+				totalReal += (e.realCostoTotal > 0 ? e.realCostoTotal : e.costoCorregido);
+				conReal++;
+			}
 			if (e.aviso.length() > 0) {
 				conAviso++;
 			}
 		}
 		sb.append("],\"total\":").append(num(total));
 		sb.append(",\"total_corregido\":").append(num(totalCorregido));
+		sb.append(",\"total_real\":").append(num(totalReal));
+		sb.append(",\"con_real\":").append(conReal);
 		sb.append(",\"con_aviso\":").append(conAviso);
 		return (sb.append('}').toString());
 	}
@@ -126,23 +139,45 @@ public class GerenciaNominaCalculoCtrl {
 		return ("{\"respuesta\":\"OK\",\"filas\":" + n + "}");
 	}
 
+	public String consultarPeriodos() {
+		final ArrayList<GerenciaNominaCalculoDAO.PeriodoNomina> lista =
+				GerenciaNominaCalculoDAO.listarPeriodosRecientes();
+		final StringBuilder sb = new StringBuilder("{\"respuesta\":\"OK\",\"periodos\":[");
+		for (int i = 0; i < lista.size(); i++) {
+			final GerenciaNominaCalculoDAO.PeriodoNomina p = lista.get(i);
+			if (i > 0) {
+				sb.append(',');
+			}
+			sb.append("{\"id\":").append(p.idPeriodo);
+			sb.append(",\"desde\":\"").append(esc(p.fechaInferior)).append('"');
+			sb.append(",\"hasta\":\"").append(esc(p.fechaSuperior)).append('"');
+			sb.append(",\"semanas\":[");
+			for (int j = 0; j < p.domingos.size(); j++) {
+				if (j > 0) {
+					sb.append(',');
+				}
+				sb.append('"').append(esc(p.domingos.get(j))).append('"');
+			}
+			sb.append("]}");
+		}
+		return (sb.append("]}").toString());
+	}
+
 	public String cargar(final String semana, final String pegado, final String origen,
 			final String usuario) {
+		return (cargar(semana, pegado, origen, usuario, 0));
+	}
+
+	public String cargar(final String semana, final String pegado, final String origen,
+			final String usuario, final int idPeriodo) {
 		final GerenciaNominaCalculoDAO.ResultadoCarga r =
-				GerenciaNominaCalculoDAO.cargarLote(semana, pegado, origen, usuario);
-		//Apenas entra un real, se mide contra el estimado que ya existia. Hacerlo
-		//aqui y no en un boton aparte es lo que hace que el historico de
-		//desviacion se arme solo, sin que nadie tenga que acordarse.
-		final int medidas = r.cargados > 0 ? GerenciaNominaCalculoDAO.registrarDesviacion(semana) : 0;
+				GerenciaNominaCalculoDAO.cargarLote(semana, pegado, origen, usuario, idPeriodo);
 
 		final StringBuilder sb = new StringBuilder("{\"respuesta\":\"OK\"");
 		sb.append(",\"cargados\":").append(r.cargados);
 		sb.append(",\"no_encontrados\":").append(r.noEncontrados);
 		sb.append(",\"ilegibles\":").append(r.ilegibles);
-		sb.append(",\"desviaciones\":").append(Math.max(medidas, 0));
 		sb.append(",\"problemas\":[");
-		//Se muestran los primeros cincuenta: con mas que eso el problema no es
-		//una linea suelta, es el formato del archivo.
 		final int tope = Math.min(r.problemas.size(), 50);
 		for (int i = 0; i < tope; i++) {
 			if (i > 0) {
