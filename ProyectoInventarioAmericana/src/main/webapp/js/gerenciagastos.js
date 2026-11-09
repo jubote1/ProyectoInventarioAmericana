@@ -187,15 +187,37 @@ function filaFijos(tienda, conceptos, esGeneral) {
 
 		var llave = tienda.idtienda + '_' + concepto.idconcepto;
 		var excepcion = (propio && general && propio.valor !== general.valor);
+
+		var tooltip = escapar(tienda.nombre + ' / ' + concepto.nombre);
+		var subtexto = '';
+		if (propio && propio.desde) {
+			tooltip += ' | Rige desde: ' + propio.desde + (propio.hasta ? ' hasta ' + propio.hasta : ' en adelante');
+			if (propio.observacion) { tooltip += ' (' + propio.observacion + ')'; }
+			tooltip += ' | Doble clic para historia';
+			subtexto = '<div class="ger-mini text-muted" style="font-size:10px; margin-top:2px;" title="' + tooltip + '">'
+				+ '<i class="fas fa-calendar-alt" style="font-size:9px;"></i> ' + propio.desde.substring(0, 7) + '</div>';
+		} else if (!esGeneral && general && general.desde) {
+			tooltip += ' | Hereda valor general desde: ' + general.desde;
+			tooltip += ' | Doble clic para historia';
+			subtexto = '<div class="ger-mini text-muted" style="font-size:10px; margin-top:2px;" title="' + tooltip + '">'
+				+ '<i class="fas fa-layer-group" style="font-size:9px;"></i> gen ' + general.desde.substring(0, 7) + '</div>';
+		} else if (esGeneral && propio && propio.desde) {
+			tooltip += ' | Rige desde: ' + propio.desde;
+			tooltip += ' | Doble clic para historia';
+			subtexto = '<div class="ger-mini text-muted" style="font-size:10px; margin-top:2px;" title="' + tooltip + '">'
+				+ '<i class="fas fa-calendar-alt" style="font-size:9px;"></i> ' + propio.desde.substring(0, 7) + '</div>';
+		}
+
 		fila += '<td class="ger-num">'
 			+ '<input type="text" class="ger-entrada celda-fijo" data-llave="' + llave + '"'
 			+ ' data-tienda="' + tienda.idtienda + '" data-concepto="' + concepto.idconcepto + '"'
 			+ ' data-original="' + valor + '"'
 			+ ' data-nombre="' + escapar(tienda.nombre + ' / ' + concepto.nombre) + '"'
 			+ (heredado > 0 ? ' placeholder="' + miles(heredado) + '"' : '')
-			+ (excepcion ? ' title="Excepcion: el general es ' + miles(general.valor) + '"'
-				+ ' style="border-color:#E0A800;"' : '')
-			+ ' value="' + (valor === 0 ? '' : miles(valor)) + '" /></td>';
+			+ (excepcion ? ' style="border-color:#E0A800;"' : '')
+			+ ' title="' + tooltip + '"'
+			+ ' value="' + (valor === 0 ? '' : miles(valor)) + '" />'
+			+ subtexto + '</td>';
 	}
 	return (fila + '<td class="ger-num"><strong>'
 		+ (esGeneral ? '&mdash;' : Gerencia.pesos(total)) + '</strong></td></tr>');

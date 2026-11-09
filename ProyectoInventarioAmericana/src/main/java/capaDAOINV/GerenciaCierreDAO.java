@@ -67,6 +67,9 @@ public class GerenciaCierreDAO {
 		public double seguridadSocial;
 		public double liquidacion;
 		public double costo;
+		public boolean esSena;
+		public String fechaIngreso = "";
+		public int diasLiquidados = 30;
 		/** Vacio cuando esta completa; con texto cuando le falta algo. */
 		public String aviso = "";
 	}
@@ -113,6 +116,8 @@ public class GerenciaCierreDAO {
 		public boolean prorrateado;
 		public double porcentajeSeguridadSocial;
 		public double porcentajeLiquidacion;
+		public double porcentajeSeguridadSocialSena;
+		public double porcentajeLiquidacionSena;
 		public ArrayList<Area> areas = new ArrayList<Area>();
 		/** Lo que no pertenece a una sola pestana y hay que decir arriba. */
 		public ArrayList<String> avisosGenerales = new ArrayList<String>();
@@ -165,6 +170,8 @@ public class GerenciaCierreDAO {
 			//   siguen dando lo que ya se reporto.
 			c.porcentajeSeguridadSocial = parametro(cn, "SEGURIDAD_SOCIAL_ESTRUCTURA", c.hasta, 25);
 			c.porcentajeLiquidacion = parametro(cn, "LIQUIDACION_ESTRUCTURA", c.hasta, 22);
+			c.porcentajeSeguridadSocialSena = parametro(cn, "SEGURIDAD_SOCIAL_SENA", c.hasta, 15);
+			c.porcentajeLiquidacionSena = parametro(cn, "LIQUIDACION_SENA", c.hasta, 0);
 
 			//3. Cada area de estructura.
 			for (int i = 0; i < AREAS.length; i++) {
@@ -172,8 +179,8 @@ public class GerenciaCierreDAO {
 				a.codigo = AREAS[i][0];
 				a.nombre = AREAS[i][1];
 				a.tipo = "AREA";
-				cargarPersonas(cn, a, c.porcentajeSeguridadSocial, c.porcentajeLiquidacion, factor,
-						c.desde, c.hasta);
+				cargarPersonas(cn, a, c, factor);
+
 				cargarNominaDigitada(cn, a, c.anio, c.mes, factor);
 				cargarGastos(cn, a, c.hasta, c.desde, factor);
 				a.total = a.nomina + a.totalGastos;
@@ -273,14 +280,50 @@ public class GerenciaCierreDAO {
 	 * todavia no tiene de donde salir, asi que por ahora es igual al basico y
 	 * queda dicho en la pantalla. Cuando se defina, se cambia aqui y solo aqui.
 	 */
-	private static void cargarPersonas(final Connection cn, final Area a,
-			final double pctSeguridad, final double pctLiquidacion, final double factor,
-			final String desde, final String hasta) {
+	/**
+	 * Calcula los dias a liquidar en un mes de 30 dias (mes comercial)
+	 * segun la fecha de ingreso del empleado.
+	 *
+	 * Si el empleado ingreso dentro del mes que se esta liquidando (anio y mes coinciden):
+	 * dias = 30 - diaIngreso + 1. (Ej: ingresa el 28 -> 30 - 28 + 1 = 3 dias: 28, 29 y 30).
+	 * Si ingreso despues del mes: 0 dias (no debe salir en este mes).
+	 * Si ingreso antes del mes o la fecha es nula: 30 dias (mes completo).
+	 */
+	private static int calcularDiasLiquidados(final String fechaIngreso, final int anio, final int mes) {
+		if (fechaIngreso == null || fechaIngreso.trim().isEmpty()) {
+			return (30);
+		}
+		try {
+			final String f = fechaIngreso.trim();
+			if (f.length() >= 10) {
+				final int a = Integer.parseInt(f.substring(0, 4));
+				final int m = Integer.parseInt(f.substring(5, 7));
+				final int d = Integer.parseInt(f.substring(8, 10));
+				if (a == anio && m == mes) {
+					if (d > 1) {
+						final int dias = Math.max(1, 30 - d + 1);
+						return (Math.min(30, dias));
+					}
+					return (30);
+				} else if (a > anio || (a == anio && m > mes)) {
+					return (0);
+				}
+			}
+		} catch (final Exception e) {
+			// Fecha no parseable, se asume mes completo
+		}
+		return (30);
+	}
+
+	private static void cargarPersonas(final Connection cn, final Area a, final Cierre c, final double factor) {
+
+
 		PreparedStatement ps = null;
 		ResultSet rs = null;
 		try {
 			ps = cn.prepareStatement(
-					"SELECT e.id, e.nombre_largo, t.descripcion AS cargo, e.salario"
+					"SELECT e.id, e.nombre_largo, t.descripcion AS cargo, e.salario,"
+					+ "      IFNULL(e.es_sena, 0) AS es_sena, e.fecha_ingreso"
 					+ "  FROM general.empleado e"
 					+ "  JOIN general.tipo_empleado t ON t.idtipoempleado = e.idtipoempleado"
 					+ "  JOIN inventarioamericana.gerencia_nomina_cargo c"
@@ -316,6 +359,16 @@ public class GerenciaCierreDAO {
 				p.nombre = texto(rs.getString("nombre_largo"));
 				p.cargo = texto(rs.getString("cargo"));
 				p.basico = rs.getDouble("salario");
+				p.esSena = rs.getInt("es_sena") == 1;
+				p.fechaIngreso = texto(rs.getString("fecha_ingreso"));
+				p.diasLiquidados = calcularDiasLiquidados(p.fechaIngreso, c.anio, c.mes);
+				if (p.diasLiquidados == 0) {
+					continue;
+				}
+				if (p.diasLiquidados < 30) {
+					p.basico = (p.basico * p.diasLiquidados) / 30.0;
+					p.aviso = "Ingreso el " + p.fechaIngreso + " (" + p.diasLiquidados + " dias prorrateados).";
+				}
 				if (p.basico <= 0) {
 					//Entra a la lista para que se vea que existe, pero sin sumar:
 					//un cero inventado abarata la nomina y nadie lo nota.
@@ -340,14 +393,20 @@ public class GerenciaCierreDAO {
 				//Cuando la semana no tiene calculo, el variable vuelve a ser el
 				//basico y la persona queda con su aviso: es preferible que se
 				//vea corto y marcado a que se vea completo y falso.
-				final double[] recargos = recargosDe(cn, p.id, desde, hasta);
+				final double[] recargos = recargosDe(cn, p.id, c.desde, c.hasta);
 				p.variable = p.basico + recargos[0];
-				if (recargos[1] == 0) {
+				if (recargos[1] == 0 && !p.esSena) {
 					p.aviso = (p.aviso.length() > 0 ? p.aviso + " " : "")
 							+ "Sin calculo de recargos en el periodo: va el basico.";
 				}
-				p.seguridadSocial = p.variable * pctSeguridad / 100.0;
-				p.liquidacion = p.variable * pctLiquidacion / 100.0;
+				if (p.esSena) {
+					p.aviso = (p.aviso.length() > 0 ? p.aviso + " " : "")
+							+ "Aprendiz SENA (SS 15%, sin liquidacion).";
+				}
+				final double pctSS = p.esSena ? c.porcentajeSeguridadSocialSena : c.porcentajeSeguridadSocial;
+				final double pctLiq = p.esSena ? c.porcentajeLiquidacionSena : c.porcentajeLiquidacion;
+				p.seguridadSocial = p.variable * pctSS / 100.0;
+				p.liquidacion = p.variable * pctLiq / 100.0;
 				p.costo = p.variable + p.seguridadSocial + p.liquidacion;
 
 				a.sueldos += p.variable;
@@ -412,7 +471,7 @@ public class GerenciaCierreDAO {
 		try {
 			ps = cn.prepareStatement(
 					"SELECT t.idtienda, t.nombre AS tienda, e.id, e.nombre_largo, e.salario,"
-					+ "      tp.descripcion AS cargo"
+					+ "      tp.descripcion AS cargo, IFNULL(e.es_sena, 0) AS es_sena, e.fecha_ingreso"
 					+ "  FROM (SELECT ev.id, ev.idtienda,"
 					+ "               ROW_NUMBER() OVER (PARTITION BY ev.id"
 					+ "                   ORDER BY COUNT(*) DESC, MAX(ev.fecha) DESC) rn"
@@ -454,6 +513,16 @@ public class GerenciaCierreDAO {
 				p.nombre = texto(rs.getString("nombre_largo"));
 				p.cargo = texto(rs.getString("cargo"));
 				p.basico = rs.getDouble("salario");
+				p.esSena = rs.getInt("es_sena") == 1;
+				p.fechaIngreso = texto(rs.getString("fecha_ingreso"));
+				p.diasLiquidados = calcularDiasLiquidados(p.fechaIngreso, c.anio, c.mes);
+				if (p.diasLiquidados == 0) {
+					continue;
+				}
+				if (p.diasLiquidados < 30) {
+					p.basico = (p.basico * p.diasLiquidados) / 30.0;
+					p.aviso = "Ingreso el " + p.fechaIngreso + " (" + p.diasLiquidados + " dias prorrateados).";
+				}
 				if (p.basico <= 0) {
 					p.aviso = "Sin salario en el maestro de empleados";
 					a.sinSalario++;
@@ -467,11 +536,17 @@ public class GerenciaCierreDAO {
 				//nomina de tienda mucho mas corta de lo que de verdad cuesta.
 				final double[] recargos = recargosDe(cn, p.id, c.desde, c.hasta);
 				p.variable = p.basico + recargos[0];
-				if (recargos[1] == 0) {
+				if (recargos[1] == 0 && !p.esSena) {
 					p.aviso = "Sin calculo de recargos en el periodo: va el basico.";
 				}
-				p.seguridadSocial = p.variable * c.porcentajeSeguridadSocial / 100.0;
-				p.liquidacion = p.variable * c.porcentajeLiquidacion / 100.0;
+				if (p.esSena) {
+					p.aviso = (p.aviso.length() > 0 ? p.aviso + " " : "")
+							+ "Aprendiz SENA (SS 15%, sin liquidacion).";
+				}
+				final double pctSS = p.esSena ? c.porcentajeSeguridadSocialSena : c.porcentajeSeguridadSocial;
+				final double pctLiq = p.esSena ? c.porcentajeLiquidacionSena : c.porcentajeLiquidacion;
+				p.seguridadSocial = p.variable * pctSS / 100.0;
+				p.liquidacion = p.variable * pctLiq / 100.0;
 				p.costo = p.variable + p.seguridadSocial + p.liquidacion;
 				a.sueldos += p.variable;
 				a.seguridadSocial += p.seguridadSocial;
@@ -874,6 +949,7 @@ public class GerenciaCierreDAO {
 	 */
 	private static double[] recargosDe(final Connection cn, final int idEmpleado,
 			final String desde, final String hasta) {
+
 		PreparedStatement ps = null;
 		ResultSet rs = null;
 		final double[] r = new double[] { 0, 0 };

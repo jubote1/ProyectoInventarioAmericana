@@ -262,10 +262,17 @@ function pintarArea(a) {
 			+ '</tr></thead><tbody>';
 		for (var j = 0; j < a.personas.length; j++) {
 			var p = a.personas[j];
-			var falta = (p.aviso || '').length > 0;
+			var falta = !p.basico || p.basico <= 0;
+			var badges = '';
+			if (p.essena) {
+				badges += ' <span class="label label-info" style="font-size:10px; background:#0284c7; margin-left:4px;">SENA (SS ' + (d.pctseguridadsena || 15) + '%)</span>';
+			}
+			if (p.dias && p.dias < 30) {
+				badges += ' <span class="label label-warning" style="font-size:10px; background:#d97706; margin-left:4px;">' + p.dias + ' d&iacute;as</span>';
+			}
 			h += '<tr' + (falta ? ' class="ger-fila-sinbase"' : '') + '>'
-				+ '<td>' + esc(p.nombre)
-				+ (falta ? ' <span class="ger-mini ger-aviso-mal">' + esc(p.aviso) + '</span>' : '')
+				+ '<td>' + esc(p.nombre) + badges
+				+ (p.aviso ? ' <div class="ger-mini ' + (falta ? 'ger-aviso-mal' : 'text-muted') + '">' + esc(p.aviso) + '</div>' : '')
 				+ '</td>'
 				+ '<td>' + esc(p.cargo) + '</td>'
 				+ '<td class="ger-num">' + (falta ? '&mdash;' : pesos(p.basico)) + '</td>'

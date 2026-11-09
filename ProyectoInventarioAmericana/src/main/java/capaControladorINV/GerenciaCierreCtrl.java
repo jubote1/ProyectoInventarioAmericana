@@ -38,8 +38,9 @@ public class GerenciaCierreCtrl {
 		sb.append(",\"prorrateado\":").append(c.prorrateado);
 		sb.append(",\"pctseguridad\":").append(c.porcentajeSeguridadSocial);
 		sb.append(",\"pctliquidacion\":").append(c.porcentajeLiquidacion);
+		sb.append(",\"pctseguridadsena\":").append(c.porcentajeSeguridadSocialSena);
+		sb.append(",\"pctliquidacionsena\":").append(c.porcentajeLiquidacionSena);
 
-		sb.append(",\"avisosgenerales\":").append(lista(c.avisosGenerales));
 		sb.append(",\"avisosgenerales\":").append(lista(c.avisosGenerales));
 
 		sb.append(",\"areas\":[");
@@ -75,6 +76,9 @@ public class GerenciaCierreCtrl {
 				sb.append(",\"seguridadsocial\":").append(p.seguridadSocial);
 				sb.append(",\"liquidacion\":").append(p.liquidacion);
 				sb.append(",\"costo\":").append(p.costo);
+				sb.append(",\"essena\":").append(p.esSena);
+				sb.append(",\"fechaingreso\":\"").append(esc(p.fechaIngreso)).append('"');
+				sb.append(",\"dias\":").append(p.diasLiquidados);
 				sb.append(",\"aviso\":\"").append(esc(p.aviso)).append("\"}");
 			}
 			sb.append(']');
