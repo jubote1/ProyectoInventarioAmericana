@@ -278,6 +278,8 @@ public class GerenciaNominaCalculoDAO {
 			}
 			final HashSet<String> festivos = festivosDe(cn, rango[0], rango[1]);
 			final Map<Integer, double[]> cargos = cargosConfigurados(cn);
+			final Map<Integer, String> areas = areasCargo(cn);
+			final Map<Integer, String> excepciones = excepcionesPersona(cn);
 			final ArrayList<Estimado> gente = empleadosParaCalcular(cnG, cargos);
 
 			//La correccion por desviacion historica, una vez por tienda.
@@ -302,7 +304,8 @@ public class GerenciaNominaCalculoDAO {
 			int cuantos = 0;
 			for (final Estimado e : gente) {
 				final ArrayList<Turno> turnos = turnosDe(cnG, e.idEmpleado, rango[0], rango[1]);
-				final Horas h = clasificar(turnos, festivos, p);
+				final boolean horasEnteras = esHorasEnteras(e.idEmpleado, e.idTipoEmpleado, areas, excepciones);
+				final Horas h = clasificar(turnos, festivos, p, horasEnteras);
 				calcularCosto(e, h, p, cargos);
 
 				final NovedadReg nov = novedades.get(Integer.valueOf(e.idEmpleado));
@@ -431,7 +434,7 @@ public class GerenciaNominaCalculoDAO {
 	}
 
 	private static Horas clasificar(final ArrayList<Turno> turnos, final HashSet<String> festivos,
-			final Parametros p) {
+			final Parametros p, final boolean horasEnteras) {
 		final Horas h = new Horas();
 		final int nocIni = (int) p.de("HORA_NOCTURNA_INICIO", 19);
 		final int nocFin = (int) p.de("HORA_NOCTURNA_FIN", 6);
@@ -495,43 +498,60 @@ public class GerenciaNominaCalculoDAO {
 					Double.valueOf((previo == null ? 0 : previo.doubleValue()) + minutosTurno));
 		}
 
-		// APROXIMACION DIARIA SEGUN REGLA POS (sin decimales):
-		// Por cada dia del empleado se redondean las horas al entero mas cercano (Math.round).
-		// Ej: 3.2 horas -> 3 horas, 3.7 horas -> 4 horas.
-		// El total semanal es la suma de los dias ya redondeados a enteros.
-		for (final AcumuladoDia dia : dias.values()) {
-			final double minutosTot = dia.minutosTotales();
-			if (minutosTot <= 0) {
-				continue;
-			}
-			final long horasDia = Math.round(minutosTot / 60.0);
-			if (horasDia <= 0) {
-				continue;
-			}
+		if (horasEnteras) {
+			// PUNTO DE VENTA: Regla de aproximacion diaria a enteros sin decimales (Math.round).
+			// Ej: 3.2 horas -> 3 horas, 3.7 horas -> 4 horas.
+			// El total semanal es la suma de los dias ya redondeados a enteros.
+			for (final AcumuladoDia dia : dias.values()) {
+				final double minutosTot = dia.minutosTotales();
+				if (minutosTot <= 0) {
+					continue;
+				}
+				final long horasDia = Math.round(minutosTot / 60.0);
+				if (horasDia <= 0) {
+					continue;
+				}
 
-			// Repartir horasDia entre componentes proporcionales
-			final double[] compMin = new double[] {
-					dia.minutosOrdinarios, dia.minutosNocturnos,
-					dia.minutosDominicales, dia.minutosDomNoct };
-			final long[] compHoras = repartirHorasEnteras(compMin, horasDia);
+				// Repartir horasDia entre componentes proporcionales
+				final double[] compMin = new double[] {
+						dia.minutosOrdinarios, dia.minutosNocturnos,
+						dia.minutosDominicales, dia.minutosDomNoct };
+				final long[] compHoras = repartirHorasEnteras(compMin, horasDia);
 
-			h.ordinarias += compHoras[0];
-			h.nocturnas += compHoras[1];
-			h.dominicales += compHoras[2];
-			h.domNoct += compHoras[3];
+				h.ordinarias += compHoras[0];
+				h.nocturnas += compHoras[1];
+				h.dominicales += compHoras[2];
+				h.domNoct += compHoras[3];
 
-			// Repartir horasDia entre tiendas del dia
-			final ArrayList<Integer> idsTienda = new ArrayList<Integer>(dia.minutosPorTienda.keySet());
-			final double[] tiendasMin = new double[idsTienda.size()];
-			for (int k = 0; k < idsTienda.size(); k++) {
-				tiendasMin[k] = dia.minutosPorTienda.get(idsTienda.get(k)).doubleValue();
+				// Repartir horasDia entre tiendas del dia
+				final ArrayList<Integer> idsTienda = new ArrayList<Integer>(dia.minutosPorTienda.keySet());
+				final double[] tiendasMin = new double[idsTienda.size()];
+				for (int k = 0; k < idsTienda.size(); k++) {
+					tiendasMin[k] = dia.minutosPorTienda.get(idsTienda.get(k)).doubleValue();
+				}
+				final long[] tiendasHoras = repartirHorasEnteras(tiendasMin, horasDia);
+				for (int k = 0; k < idsTienda.size(); k++) {
+					final Integer idT = idsTienda.get(k);
+					final Double prevT = h.porTienda.get(idT);
+					h.porTienda.put(idT,
+							Double.valueOf((prevT == null ? 0 : prevT.doubleValue()) + tiendasHoras[k]));
+				}
 			}
-			final long[] tiendasHoras = repartirHorasEnteras(tiendasMin, horasDia);
-			for (int k = 0; k < idsTienda.size(); k++) {
-				final Integer idT = idsTienda.get(k);
-				final Double prevT = h.porTienda.get(idT);
-				h.porTienda.put(idT,
-						Double.valueOf((prevT == null ? 0 : prevT.doubleValue()) + tiendasHoras[k]));
+		} else {
+			// BODEGA Y ADMINISTRATIVOS: Conservan los decimales exactos.
+			// Marcan varias entradas/salidas al dia (desayuno, almuerzo, pausas), por lo que
+			// no se redondea a entero diario para no desfigurar la jornada.
+			for (final AcumuladoDia dia : dias.values()) {
+				h.ordinarias += dia.minutosOrdinarios / 60.0;
+				h.nocturnas += dia.minutosNocturnos / 60.0;
+				h.dominicales += dia.minutosDominicales / 60.0;
+				h.domNoct += dia.minutosDomNoct / 60.0;
+				for (final Map.Entry<Integer, Double> entry : dia.minutosPorTienda.entrySet()) {
+					final Integer idT = entry.getKey();
+					final Double prevT = h.porTienda.get(idT);
+					h.porTienda.put(idT,
+							Double.valueOf((prevT == null ? 0 : prevT.doubleValue()) + entry.getValue().doubleValue() / 60.0));
+				}
 			}
 		}
 
@@ -1903,6 +1923,72 @@ public class GerenciaNominaCalculoDAO {
 			System.out.println("GerenciaNominaCalculoDAO.cargosConfigurados: " + e.toString());
 		}
 		return (mapa);
+	}
+
+	private static Map<Integer, String> areasCargo(final Connection cn) {
+		final Map<Integer, String> mapa = new HashMap<Integer, String>();
+		try {
+			final PreparedStatement ps = cn.prepareStatement(
+					"SELECT idtipoempleado, IFNULL(area, '') AS area FROM gerencia_nomina_cargo");
+			final ResultSet rs = ps.executeQuery();
+			while (rs.next()) {
+				mapa.put(Integer.valueOf(rs.getInt("idtipoempleado")), texto(rs.getString("area")));
+			}
+			rs.close();
+			ps.close();
+		} catch (final Exception e) {
+			System.out.println("GerenciaNominaCalculoDAO.areasCargo: " + e.toString());
+		}
+		return (mapa);
+	}
+
+	private static Map<Integer, String> excepcionesPersona(final Connection cn) {
+		final Map<Integer, String> mapa = new HashMap<Integer, String>();
+		try {
+			final PreparedStatement ps = cn.prepareStatement(
+					"SELECT id, IFNULL(area, '') AS area FROM gerencia_persona_area");
+			final ResultSet rs = ps.executeQuery();
+			while (rs.next()) {
+				mapa.put(Integer.valueOf(rs.getInt("id")), texto(rs.getString("area")));
+			}
+			rs.close();
+			ps.close();
+		} catch (final Exception e) {
+			System.out.println("GerenciaNominaCalculoDAO.excepcionesPersona: " + e.toString());
+		}
+		return (mapa);
+	}
+
+	/**
+	 * Decide si las horas de un empleado se aproximan a ENTERAS por dia (Punto de Venta)
+	 * o si CONSERVAN LOS DECIMALES (Bodega y Administrativos).
+	 *
+	 * Decision de Gerencia: Punto de Venta se redondea a entero por dia para evitar
+	 * regateos en tienda (Math.round). Bodega (logistica/produccion) y personal
+	 * administrativo marcan varias entradas y salidas (desayuno, almuerzo, etc.), por
+	 * lo que sus horas SI conservan decimales.
+	 */
+	public static boolean esHorasEnteras(final int idEmpleado, final int idTipoEmpleado,
+			final Map<Integer, String> areas, final Map<Integer, String> excepciones) {
+		String area = excepciones != null ? excepciones.get(Integer.valueOf(idEmpleado)) : null;
+		if (area == null || area.isEmpty()) {
+			area = areas != null ? areas.get(Integer.valueOf(idTipoEmpleado)) : null;
+		}
+		if (area != null && !area.isEmpty()) {
+			// LOGISTICA (bodega y produccion) y ADMINISTRATIVA: conservan decimales.
+			if ("LOGISTICA".equalsIgnoreCase(area) || "ADMINISTRATIVA".equalsIgnoreCase(area)) {
+				return (false);
+			}
+			// TIENDA y CONTACT: punto de venta / contact center van en enteras sin decimales.
+			if ("TIENDA".equalsIgnoreCase(area) || "CONTACT".equalsIgnoreCase(area)) {
+				return (true);
+			}
+		}
+		// Respaldo por tipo de empleado: cargos de tienda y contact center en enteras (1, 2, 3, 4, 5, 7, 18).
+		// Bodega (8, 9, 10, 12, 14, 33, 37) y Administrativos (6, 11, 13, 15, 16...) -> false (decimales).
+		return (idTipoEmpleado == 1 || idTipoEmpleado == 2 || idTipoEmpleado == 3
+				|| idTipoEmpleado == 4 || idTipoEmpleado == 5 || idTipoEmpleado == 7
+				|| idTipoEmpleado == 18);
 	}
 
 	private static HashSet<String> festivosDe(final Connection cn, final String desde, final String hasta) {
