@@ -364,17 +364,94 @@ public class GerenciaNominaCalculoDAO {
 	 * cuatro horas. Con la franja nocturna arrancando a las 19:00, eso le pasa
 	 * a la mayoria de los turnos de la compania.
 	 */
+	/**
+	 * Acumulado de minutos por dia de un empleado para la regla de aproximacion diaria.
+	 */
+	private static class AcumuladoDia {
+		double minutosOrdinarios;
+		double minutosNocturnos;
+		double minutosDominicales;
+		double minutosDomNoct;
+		final Map<Integer, Double> minutosPorTienda = new LinkedHashMap<Integer, Double>();
+
+		double minutosTotales() {
+			return (minutosOrdinarios + minutosNocturnos + minutosDominicales + minutosDomNoct);
+		}
+	}
+
+	/**
+	 * Reparte un total de horas enteras redondeadas entre varios componentes
+	 * proporcionales usando el metodo de mayor residuo (Hamilton / Hare-Niemeyer).
+	 * Garantiza que la suma de los enteros asignados sea exactamente igual a totalHoras.
+	 */
+	private static long[] repartirHorasEnteras(final double[] minutosComponentes, final long totalHoras) {
+		final int n = minutosComponentes.length;
+		final long[] resultado = new long[n];
+		if (totalHoras <= 0) {
+			return (resultado);
+		}
+		double totalMin = 0;
+		for (int i = 0; i < n; i++) {
+			if (minutosComponentes[i] > 0) {
+				totalMin += minutosComponentes[i];
+			}
+		}
+		if (totalMin <= 0) {
+			return (resultado);
+		}
+		final double[] ideales = new double[n];
+		final double[] residuos = new double[n];
+		long sumaPisos = 0;
+		for (int i = 0; i < n; i++) {
+			if (minutosComponentes[i] > 0) {
+				ideales[i] = totalHoras * (minutosComponentes[i] / totalMin);
+				resultado[i] = (long) Math.floor(ideales[i]);
+				residuos[i] = ideales[i] - resultado[i];
+				sumaPisos += resultado[i];
+			}
+		}
+		long faltante = totalHoras - sumaPisos;
+		while (faltante > 0) {
+			int mejorIdx = -1;
+			double mejorRes = -1;
+			for (int i = 0; i < n; i++) {
+				if (residuos[i] > mejorRes) {
+					mejorRes = residuos[i];
+					mejorIdx = i;
+				}
+			}
+			if (mejorIdx < 0) {
+				break;
+			}
+			resultado[mejorIdx]++;
+			residuos[mejorIdx] = -1;
+			faltante--;
+		}
+		return (resultado);
+	}
+
 	private static Horas clasificar(final ArrayList<Turno> turnos, final HashSet<String> festivos,
 			final Parametros p) {
 		final Horas h = new Horas();
 		final int nocIni = (int) p.de("HORA_NOCTURNA_INICIO", 19);
 		final int nocFin = (int) p.de("HORA_NOCTURNA_FIN", 6);
 
+		final Map<String, AcumuladoDia> dias = new LinkedHashMap<String, AcumuladoDia>();
+
 		for (final Turno t : turnos) {
 			h.turnos++;
 			if (t.estimado) {
 				h.turnosEstimados++;
-		}
+			}
+			final Calendar calEntra = Calendar.getInstance();
+			calEntra.setTime(t.entra);
+			final String diaKey = fecha(calEntra);
+			AcumuladoDia dia = dias.get(diaKey);
+			if (dia == null) {
+				dia = new AcumuladoDia();
+				dias.put(diaKey, dia);
+			}
+
 			final Calendar cursor = Calendar.getInstance();
 			cursor.setTime(t.entra);
 			final long fin = t.sale.getTime();
@@ -400,23 +477,64 @@ public class GerenciaNominaCalculoDAO {
 						|| festivos.contains(fecha(cursor));
 
 				if (esDomingo && esNoche) {
-					h.domNoct += minutos / 60.0;
+					dia.minutosDomNoct += minutos;
 				} else if (esDomingo) {
-					h.dominicales += minutos / 60.0;
+					dia.minutosDominicales += minutos;
 				} else if (esNoche) {
-					h.nocturnas += minutos / 60.0;
+					dia.minutosNocturnos += minutos;
 				} else {
-					h.ordinarias += minutos / 60.0;
+					dia.minutosOrdinarios += minutos;
 				}
 				minutosTurno += minutos;
 				cursor.setTimeInMillis(hasta);
 			}
 
 			final Integer tienda = Integer.valueOf(t.idTienda);
-			final Double previo = h.porTienda.get(tienda);
-			h.porTienda.put(tienda,
-					Double.valueOf((previo == null ? 0 : previo.doubleValue()) + minutosTurno / 60.0));
+			final Double previo = dia.minutosPorTienda.get(tienda);
+			dia.minutosPorTienda.put(tienda,
+					Double.valueOf((previo == null ? 0 : previo.doubleValue()) + minutosTurno));
 		}
+
+		// APROXIMACION DIARIA SEGUN REGLA POS (sin decimales):
+		// Por cada dia del empleado se redondean las horas al entero mas cercano (Math.round).
+		// Ej: 3.2 horas -> 3 horas, 3.7 horas -> 4 horas.
+		// El total semanal es la suma de los dias ya redondeados a enteros.
+		for (final AcumuladoDia dia : dias.values()) {
+			final double minutosTot = dia.minutosTotales();
+			if (minutosTot <= 0) {
+				continue;
+			}
+			final long horasDia = Math.round(minutosTot / 60.0);
+			if (horasDia <= 0) {
+				continue;
+			}
+
+			// Repartir horasDia entre componentes proporcionales
+			final double[] compMin = new double[] {
+					dia.minutosOrdinarios, dia.minutosNocturnos,
+					dia.minutosDominicales, dia.minutosDomNoct };
+			final long[] compHoras = repartirHorasEnteras(compMin, horasDia);
+
+			h.ordinarias += compHoras[0];
+			h.nocturnas += compHoras[1];
+			h.dominicales += compHoras[2];
+			h.domNoct += compHoras[3];
+
+			// Repartir horasDia entre tiendas del dia
+			final ArrayList<Integer> idsTienda = new ArrayList<Integer>(dia.minutosPorTienda.keySet());
+			final double[] tiendasMin = new double[idsTienda.size()];
+			for (int k = 0; k < idsTienda.size(); k++) {
+				tiendasMin[k] = dia.minutosPorTienda.get(idsTienda.get(k)).doubleValue();
+			}
+			final long[] tiendasHoras = repartirHorasEnteras(tiendasMin, horasDia);
+			for (int k = 0; k < idsTienda.size(); k++) {
+				final Integer idT = idsTienda.get(k);
+				final Double prevT = h.porTienda.get(idT);
+				h.porTienda.put(idT,
+						Double.valueOf((prevT == null ? 0 : prevT.doubleValue()) + tiendasHoras[k]));
+			}
+		}
+
 		return (h);
 	}
 

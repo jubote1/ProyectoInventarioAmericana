@@ -346,14 +346,14 @@ function pintarEstimado() {
 			cuerpo += '<td style="font-size:11.5px;color:#6C7482;">' + escNC(e.cargo) + '</td>';
 			cuerpo += '<td class="ger-num">' + (e.salario > 0 ? '$' + milesNC(e.salario)
 				: '<span class="ger-vacio">sin salario</span>') + '</td>';
-			cuerpo += '<td class="ger-num"><strong>' + unaDecimal(e.h_totales) + '</strong>'
+			cuerpo += '<td class="ger-num"><strong>' + formatearHorasNC(e.h_totales) + '</strong>'
 				+ '<div style="font-size:10.5px;color:#6C7482;">' + e.turnos + ' turnos</div></td>';
 
 			// Recargo nocturno (horas + monto)
 			var hNoc = e.h_nocturnas + e.h_dom_noct;
 			var vNoc = e.recargo_nocturno || 0;
 			cuerpo += '<td class="ger-num">'
-				+ (hNoc > 0 ? '<strong>' + unaDecimal(hNoc) + ' h</strong>'
+				+ (hNoc > 0 ? '<strong>' + formatearHorasNC(hNoc) + ' h</strong>'
 					+ (vNoc > 0 ? '<div style="font-size:11px;color:#102F6F;font-weight:600;">$' + milesNC(vNoc) + '</div>' : '')
 					: '<span style="color:#94A3B8;">&mdash;</span>') + '</td>';
 
@@ -361,7 +361,7 @@ function pintarEstimado() {
 			var hDom = e.h_dominicales + e.h_dom_noct;
 			var vDom = e.recargo_dominical || 0;
 			cuerpo += '<td class="ger-num">'
-				+ (hDom > 0 ? '<strong>' + unaDecimal(hDom) + ' h</strong>'
+				+ (hDom > 0 ? '<strong>' + formatearHorasNC(hDom) + ' h</strong>'
 					+ (vDom > 0 ? '<div style="font-size:11px;color:#102F6F;font-weight:600;">$' + milesNC(vDom) + '</div>' : '')
 					: '<span style="color:#94A3B8;">&mdash;</span>') + '</td>';
 
@@ -369,7 +369,7 @@ function pintarEstimado() {
 			var hExt = e.h_extra || 0;
 			var vExt = e.recargo_extra || 0;
 			cuerpo += '<td class="ger-num">'
-				+ (hExt > 0 ? '<strong>' + unaDecimal(hExt) + ' h</strong>'
+				+ (hExt > 0 ? '<strong>' + formatearHorasNC(hExt) + ' h</strong>'
 					+ (vExt > 0 ? '<div style="font-size:11px;color:#102F6F;font-weight:600;">$' + milesNC(vExt) + '</div>' : '')
 					: '<span style="color:#94A3B8;">&mdash;</span>') + '</td>';
 
@@ -448,7 +448,7 @@ function abrirModalNovedad(idempleado) {
 	$('#novEmpNombre').text(emp.nombre);
 	$('#novEmpCargo').text(emp.cargo);
 	$('#novEmpSalario').text('$' + milesNC(emp.salario));
-	$('#novEmpHoras').text(unaDecimal(emp.h_totales) + ' horas · ' + emp.turnos + ' turnos');
+	$('#novEmpHoras').text(formatearHorasNC(emp.h_totales) + ' horas · ' + emp.turnos + ' turnos');
 	$('#novAvisoActual').html(emp.aviso
 		? '<i class="fas fa-info-circle"></i> ' + escNC(emp.aviso)
 		: '<span style="color:#166534;"><i class="fas fa-check-circle"></i> Sin alertas previas</span>');
@@ -749,9 +749,22 @@ function milesNC(valor) {
 	return (signo + Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.'));
 }
 
+function formatearHorasNC(v) {
+	if (v === null || v === undefined || isNaN(v)) { return ('0'); }
+	var r = Math.round(v * 10) / 10;
+	if (Math.abs(r - Math.round(r)) < 0.05) {
+		return Math.round(r);
+	}
+	return r;
+}
+
 function unaDecimal(v) {
 	if (v === null || v === undefined || isNaN(v)) { return (''); }
-	return (Math.round(v * 10) / 10);
+	var r = Math.round(v * 10) / 10;
+	if (Math.abs(r - Math.round(r)) < 0.05) {
+		return Math.round(r);
+	}
+	return r;
 }
 
 function escNC(texto) {
