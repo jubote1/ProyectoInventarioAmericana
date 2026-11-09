@@ -9,6 +9,93 @@
 	<link href="css/gerencia.css" rel="stylesheet" type="text/css" />
 	<script type="text/javascript" src="js/jquery-1.11.0.min.js"></script>
 	<script type="text/javascript" src="js/bootstrap.min.js"></script>
+	<style>
+		/* Sticky header y contenedor con scroll suave */
+		.ger-tabla-sticky-wrapper {
+			max-height: 72vh;
+			overflow-y: auto;
+			overflow-x: auto;
+			border: 1px solid #D6DCE5;
+			border-radius: 6px;
+			background: #fff;
+			box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+		}
+		#tablaEstimado {
+			margin-bottom: 0 !important;
+		}
+		#tablaEstimado thead th {
+			position: sticky;
+			top: 0;
+			background: #102F6F !important;
+			color: #ffffff !important;
+			z-index: 20;
+			border-top: none !important;
+			border-bottom: 2px solid #081B44 !important;
+			box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+			white-space: nowrap;
+			vertical-align: middle;
+		}
+		#tablaEstimado thead th .th-sub {
+			display: block;
+			font-size: 10px;
+			font-weight: normal;
+			color: #DDE7FA;
+			letter-spacing: 0.3px;
+		}
+		#tablaEstimado tfoot th {
+			position: sticky;
+			bottom: 0;
+			background: #0E275C !important;
+			color: #ffffff !important;
+			z-index: 15;
+			box-shadow: 0 -2px 4px rgba(0,0,0,0.12);
+		}
+		.sub-header-repite td {
+			background: #EAEFF8 !important;
+			color: #102F6F !important;
+			font-weight: bold;
+			font-size: 11px;
+			padding: 5px 8px !important;
+			border-top: 1px solid #CBD5E1;
+			border-bottom: 1px solid #CBD5E1;
+		}
+		.badge-nov {
+			display: inline-block;
+			padding: 2px 8px;
+			border-radius: 12px;
+			font-size: 11px;
+			font-weight: 600;
+			white-space: nowrap;
+		}
+		.badge-directivo { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+		.badge-vacaciones { background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; }
+		.badge-incapacidad { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+		.badge-excluido { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+		.badge-permiso { background: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe; }
+		.opcion-novedad-card {
+			display: block;
+			border: 1px solid #e2e8f0;
+			border-radius: 6px;
+			padding: 10px 14px;
+			margin-bottom: 8px;
+			cursor: pointer;
+			transition: all 0.15s ease-in-out;
+			background: #fff;
+		}
+		.opcion-novedad-card:hover {
+			border-color: #102F6F;
+			background: #F8FAFC;
+		}
+		.opcion-novedad-card input[type="radio"] {
+			margin-right: 8px;
+			transform: scale(1.15);
+		}
+		.opcion-novedad-card.activa {
+			border-color: #102F6F;
+			background: #EFF6FF;
+			box-shadow: 0 0 0 1px #102F6F;
+		}
+	</style>
 </head>
 <body>
 
@@ -88,13 +175,36 @@
 					<div class="ger-resumen-mes" id="cajasEstimado"></div>
 				</div>
 				<div class="ger-panel">
-					<h4 class="ger-titulo">Lo que cost&oacute; cada persona</h4>
-					<p class="ger-sub">
-						El b&aacute;sico sale del salario mensual, no de las horas: a quien tiene
-						salario mensual se le paga igual trabaje 40 o 44. Lo que la biometr&iacute;a
-						determina son los <strong>recargos</strong> y en qu&eacute; tienda cayeron.
-					</p>
-					<div class="table-responsive">
+					<div class="row" style="margin-bottom:12px; align-items:center;">
+						<div class="col-md-5 col-sm-6">
+							<h4 class="ger-titulo" style="margin:0 0 4px 0;">Lo que cost&oacute; cada persona</h4>
+							<p class="ger-sub" style="margin:0;">
+								El b&aacute;sico es salario mensual * 7/30. La biometr&iacute;a calcula los
+								<strong>recargos nocturnos, dominicales y extras</strong>.
+							</p>
+						</div>
+						<div class="col-md-7 col-sm-6 text-right">
+							<div class="form-inline" style="display:inline-block;">
+								<div class="input-group input-group-sm" style="width:230px; margin-right:8px;">
+									<input type="text" id="filtroEmpleado" class="form-control" placeholder="Buscar empleado o cargo..." />
+									<span class="input-group-addon"><i class="fas fa-search"></i></span>
+								</div>
+								<div class="btn-group btn-group-sm" id="grupoFiltros">
+									<button type="button" class="btn btn-primary btn-filtro active" data-filtro="todos">
+										Todos (<span id="cntTodos">0</span>)
+									</button>
+									<button type="button" class="btn btn-default btn-filtro" data-filtro="aviso">
+										<i class="fas fa-exclamation-triangle text-danger"></i> Novedades (<span id="cntAvisos">0</span>)
+									</button>
+									<button type="button" class="btn btn-default btn-filtro" data-filtro="justificados">
+										<i class="fas fa-check-circle text-success"></i> Justificados (<span id="cntJustificados">0</span>)
+									</button>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="ger-tabla-sticky-wrapper">
 						<table class="ger-tabla" id="tablaEstimado">
 							<thead>
 								<tr>
@@ -102,15 +212,24 @@
 									<th>Cargo</th>
 									<th class="ger-num">Salario</th>
 									<th class="ger-num">Horas</th>
-									<th class="ger-num" title="Horas en la franja de 19:00 a 6:00">Noche</th>
-									<th class="ger-num" title="Domingos y festivos">Dom/Fes</th>
-									<th class="ger-num">Extra</th>
+									<th class="ger-num" title="Horas y valor en la franja de 19:00 a 06:00 (Ley 2466)">
+										Rec. Nocturno
+										<span class="th-sub">horas &middot; valor $</span>
+									</th>
+									<th class="ger-num" title="Horas y valor en domingos y festivos">
+										Dom / Fes
+										<span class="th-sub">horas &middot; valor $</span>
+									</th>
+									<th class="ger-num" title="Horas extra semanales">
+										Extra
+										<span class="th-sub">horas &middot; valor $</span>
+									</th>
 									<th class="ger-num">B&aacute;sico</th>
-									<th class="ger-num" title="Recargos y extras">Variable</th>
+									<th class="ger-num" title="Suma de recargos + auxilio transporte">Total Variable</th>
 									<th class="ger-num">Seg. social</th>
 									<th class="ger-num" title="Cesant&iacute;as, intereses, prima y vacaciones">Provisiones</th>
-									<th class="ger-num">Costo</th>
-									<th>&nbsp;</th>
+									<th class="ger-num">Costo Total</th>
+									<th>Novedad / Estado</th>
 								</tr>
 							</thead>
 							<tbody></tbody>
@@ -261,6 +380,107 @@
 				</div>
 			</div>
 
+		</div>
+	</div>
+
+	<!-- MODAL GESTIONAR NOVEDAD -->
+	<div class="modal fade" id="modalNovedad" tabindex="-1" role="dialog" aria-labelledby="modalNovedadLabel">
+		<div class="modal-dialog modal-lg" role="document">
+			<div class="modal-content">
+				<div class="modal-header" style="background:#102F6F; color:#fff;">
+					<button type="button" class="close" data-dismiss="modal" style="color:#fff; opacity:0.8;">&times;</button>
+					<h4 class="modal-title" id="modalNovedadLabel">
+						<i class="fas fa-user-check"></i> Gestionar Novedad de N&oacute;mina
+					</h4>
+				</div>
+				<div class="modal-body" style="padding:20px;">
+					<div class="well well-sm" style="background:#F8FAFC; margin-bottom:15px; border-left:4px solid #102F6F;">
+						<div class="row">
+							<div class="col-sm-7">
+								<h4 style="margin:0 0 5px 0; color:#102F6F; font-weight:bold;" id="novEmpNombre">Empleado</h4>
+								<span id="novEmpCargo" style="color:#64748B; font-size:13px;">Cargo</span>
+							</div>
+							<div class="col-sm-5 text-right">
+								<div><strong>Salario:</strong> <span id="novEmpSalario">$0</span></div>
+								<div id="novEmpHoras" style="color:#475569; font-size:12px;">0 horas &middot; 0 turnos</div>
+							</div>
+						</div>
+						<div id="novAvisoActual" style="margin-top:10px; font-size:12.5px; color:#B91C1C; font-weight:500;"></div>
+					</div>
+
+					<h5 style="color:#102F6F; font-weight:bold; margin-bottom:12px;">
+						<i class="fas fa-hand-pointer"></i> Seleccione la situaci&oacute;n y decisi&oacute;n:
+					</h5>
+
+					<div class="opciones-novedad-lista">
+						<label class="opcion-novedad-card">
+							<input type="radio" name="optNovedad" value="DIRECTIVO_INCLUIR" data-accion="INCLUIR" />
+							<strong>Directivo / Administrativo (No marca biometr&iacute;a) &rarr; TENER EN CUENTA</strong>
+							<div class="ger-nota" style="margin-left:24px;">Paga el sueldo b&aacute;sico completo de la semana y seguridad social normal. Ideal para Gerente General (Alexander Vigoya), directores de &aacute;rea o personal administrativo exento.</div>
+						</label>
+
+						<label class="opcion-novedad-card">
+							<input type="radio" name="optNovedad" value="VACACIONES_EXCLUIR" data-accion="EXCLUIR" />
+							<strong>Vacaciones completas &rarr; NO TENER EN CUENTA en n&oacute;mina corriente</strong>
+							<div class="ger-nota" style="margin-left:24px;">El costo de la semana va a $0 porque las vacaciones se pagan desde la provisi&oacute;n de prestaciones sociales, evitando duplicar el gasto en la tienda.</div>
+						</label>
+
+						<label class="opcion-novedad-card">
+							<input type="radio" name="optNovedad" value="VACACIONES_PARCIAL" data-accion="AJUSTAR" />
+							<strong>Vacaciones parciales &rarr; Liquidar solo los d&iacute;as laborados</strong>
+							<div class="ger-nota" style="margin-left:24px;">
+								Liquida proporcionalmente en n&oacute;mina los d&iacute;as que s&iacute; trabaj&oacute; en la semana:
+								<div style="margin-top:6px;">
+									<label style="font-weight:normal; margin-right:6px;">D&iacute;as a pagar en n&oacute;mina:</label>
+									<input type="number" id="novDiasLaborados" class="form-control input-sm" style="width:70px; display:inline-block;" min="1" max="6" value="3" />
+								</div>
+							</div>
+						</label>
+
+						<label class="opcion-novedad-card">
+							<input type="radio" name="optNovedad" value="INCAPACIDAD_INCLUIR" data-accion="INCLUIR" />
+							<strong>Incapacidad &rarr; TENER EN CUENTA</strong>
+							<div class="ger-nota" style="margin-left:24px;">Mantiene la inclusi&oacute;n en n&oacute;mina conforme a la ley con su justificaci&oacute;n registrada.</div>
+						</label>
+
+						<label class="opcion-novedad-card">
+							<input type="radio" name="optNovedad" value="PERMISO_INCLUIR" data-accion="INCLUIR" />
+							<strong>Falta justificada / Permiso remunerado &rarr; TENER EN CUENTA</strong>
+							<div class="ger-nota" style="margin-left:24px;">Se liquida el b&aacute;sico completo con visto bueno de administraci&oacute;n.</div>
+						</label>
+
+						<label class="opcion-novedad-card">
+							<input type="radio" name="optNovedad" value="NO_LABORO_EXCLUIR" data-accion="EXCLUIR" />
+							<strong>No labor&oacute; / Desvinculado &rarr; NO TENER EN CUENTA (Costo en $0)</strong>
+							<div class="ger-nota" style="margin-left:24px;">No genera costo de n&oacute;mina para esta semana.</div>
+						</label>
+					</div>
+
+					<div class="checkbox" style="margin-top:14px; margin-bottom:14px; background:#FFFBEB; border:1px solid #FDE68A; padding:10px 12px; border-radius:6px;">
+						<label style="font-weight:600; color:#92400E;">
+							<input type="checkbox" id="novPermanente" style="margin-top:2px;" />
+							<i class="fas fa-history"></i> Recordar esta condici&oacute;n para todas las semanas (Permanente para este empleado)
+						</label>
+						<div style="font-size:11.5px; color:#B45309; margin-left:20px;">
+							Marca autom&aacute;ticamente a este empleado en los pr&oacute;ximos c&aacute;lculos semanales sin tener que resolver la novedad cada semana.
+						</div>
+					</div>
+
+					<div class="form-group" style="margin-bottom:0;">
+						<label>Observaci&oacute;n / Sustento (opcional):</label>
+						<input type="text" id="novObservacion" class="form-control" placeholder="Ej. Aprobado por Gerencia General..." />
+					</div>
+				</div>
+				<div class="modal-footer" style="background:#F8FAFC;">
+					<button type="button" id="btnRestablecerNov" class="btn btn-default pull-left" style="display:none; color:#DC2626;">
+						<i class="fas fa-trash-alt"></i> Quitar novedad (volver al c&aacute;lculo biom&eacute;trico)
+					</button>
+					<button type="button" class="btn btn-default" data-dismiss="modal">Cancelar</button>
+					<button type="button" id="btnGuardarNov" class="btn btn-primary" style="background:#102F6F; border-color:#102F6F;">
+						<i class="fas fa-save"></i> Guardar decisi&oacute;n y recalcular
+					</button>
+				</div>
+			</div>
 		</div>
 	</div>
 

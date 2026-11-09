@@ -128,6 +128,17 @@ public class GerenciaNominaCalculo extends HttpServlet {
 				out.write(ctrl.calcular(semana, usuario));
 				return;
 			}
+			if ("novedad".equals(que)) {
+				final int idEmpleado = Integer.parseInt(GerenciaSesion.texto(request, "idempleado"));
+				final String tipoNovedad = GerenciaSesion.texto(request, "tipo_novedad");
+				final String accion = GerenciaSesion.texto(request, "accion");
+				final int dias = (int) GerenciaSesion.valor(request, "dias");
+				final boolean permanente = "1".equals(request.getParameter("permanente"))
+						|| "true".equalsIgnoreCase(request.getParameter("permanente"));
+				final String observacion = GerenciaSesion.texto(request, "observacion");
+				out.write(ctrl.guardarNovedad(semana, idEmpleado, tipoNovedad, accion, dias, permanente, observacion, usuario));
+				return;
+			}
 			if ("pasar".equals(que)) {
 				out.write(ctrl.pasarANomina(semana, usuario));
 				return;

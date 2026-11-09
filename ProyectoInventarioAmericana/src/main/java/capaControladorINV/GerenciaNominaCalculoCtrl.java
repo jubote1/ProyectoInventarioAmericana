@@ -47,6 +47,14 @@ public class GerenciaNominaCalculoCtrl {
 			sb.append(",\"correccion\":").append(num(e.factorCorreccion));
 			sb.append(",\"costo_corregido\":").append(num(e.costoCorregido));
 			sb.append(",\"origen_cargado\":\"").append(esc(e.origenCargado)).append('"');
+			sb.append(",\"recargo_nocturno\":").append(num(e.recargoNocturno));
+			sb.append(",\"recargo_dominical\":").append(num(e.recargoDominical));
+			sb.append(",\"recargo_extra\":").append(num(e.recargoExtra));
+			sb.append(",\"novedad_tipo\":\"").append(esc(e.novedadTipo)).append('"');
+			sb.append(",\"novedad_accion\":\"").append(esc(e.novedadAccion)).append('"');
+			sb.append(",\"novedad_obs\":\"").append(esc(e.novedadObs)).append('"');
+			sb.append(",\"novedad_dias\":").append(e.novedadDias);
+			sb.append(",\"novedad_permanente\":").append(e.novedadPermanente);
 			sb.append(",\"aviso\":\"").append(esc(e.aviso)).append("\"}");
 			total += e.costoTotal;
 			totalCorregido += e.costoCorregido;
@@ -150,6 +158,16 @@ public class GerenciaNominaCalculoCtrl {
 	public String guardarParametro(final String codigo, final double valor, final String desde,
 			final String observacion, final String usuario) {
 		return (GerenciaNominaCalculoDAO.guardarParametro(codigo, valor, desde, observacion, usuario));
+	}
+
+	public String guardarNovedad(final String semana, final int idEmpleado,
+			final String tipoNovedad, final String accion, final int dias,
+			final boolean permanente, final String observacion, final String usuario) {
+		final String err = GerenciaNominaCalculoDAO.guardarNovedad(semana, idEmpleado, tipoNovedad, accion, dias, permanente, observacion, usuario);
+		if (err != null && !err.isEmpty()) {
+			return ("{\"respuesta\":\"NOK\",\"detalle\":\"" + esc(err) + "\"}");
+		}
+		return (consultarEstimados(semana));
 	}
 
 	private static String num(final double d) {

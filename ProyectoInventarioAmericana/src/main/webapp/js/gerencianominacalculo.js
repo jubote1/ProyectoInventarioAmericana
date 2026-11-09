@@ -20,6 +20,9 @@ var NC_SEMANAS_ATRAS = 16;
 var datosEstimado = null;
 var parametros = null;
 var codigoEnCambio = '';
+var filtroActivo = 'todos';
+var textoFiltro = '';
+var empleadoEnModal = null;
 
 $(function () {
 	Gerencia.proteger('ger-contenido', arrancar);
@@ -37,6 +40,28 @@ function arrancar() {
 	$('#tabCargar').on('click', function (e) { e.preventDefault(); verPestana('cargar'); });
 	$('#tabCalibracion').on('click', function (e) { e.preventDefault(); verPestana('calibracion'); });
 	$('#tabParametros').on('click', function (e) { e.preventDefault(); verPestana('parametros'); });
+
+	// Filtros y buscador
+	$('#filtroEmpleado').on('input', function () {
+		textoFiltro = $.trim($(this).val()).toLowerCase();
+		pintarEstimado();
+	});
+	$('.btn-filtro').on('click', function () {
+		$('.btn-filtro').removeClass('active btn-primary').addClass('btn-default');
+		$(this).addClass('active btn-primary').removeClass('btn-default');
+		filtroActivo = $(this).data('filtro');
+		pintarEstimado();
+	});
+
+	// Modal Novedad
+	$('.opcion-novedad-card').on('click', function () {
+		$(this).find('input[type="radio"]').prop('checked', true);
+		$('.opcion-novedad-card').removeClass('activa');
+		$(this).addClass('activa');
+	});
+	$('#btnGuardarNov').on('click', guardarNovedad);
+	$('#btnRestablecerNov').on('click', restablecerNovedad);
+
 	consultar();
 	cargarParametros();
 }
@@ -122,13 +147,28 @@ function pintarEstimado() {
 	var d = datosEstimado;
 	var lista = d.estimados || [];
 
+	// Contadores para filtros
+	var cntTodos = lista.length;
+	var cntAvisos = 0;
+	var cntJustificados = 0;
+	for (var c = 0; c < lista.length; c++) {
+		if (lista[c].novedad_tipo) {
+			cntJustificados++;
+		} else if (lista[c].aviso) {
+			cntAvisos++;
+		}
+	}
+	$('#cntTodos').text(cntTodos);
+	$('#cntAvisos').text(cntAvisos);
+	$('#cntJustificados').text(cntJustificados);
+
 	var html = '';
 	html += caja('Personas', lista.length, false);
 	html += caja('Costo estimado', '$' + milesNC(d.total), false);
 	if (Math.round(d.total_corregido) !== Math.round(d.total)) {
 		html += caja('Con correccion', '$' + milesNC(d.total_corregido), false);
 	}
-	html += caja('Con aviso', d.con_aviso, d.con_aviso > 0);
+	html += caja('Con aviso', cntAvisos, cntAvisos > 0);
 	$('#cajasEstimado').html(html);
 
 	if (lista.length === 0) {
@@ -138,47 +178,235 @@ function pintarEstimado() {
 	}
 
 	var cuerpo = '';
+	var visibles = 0;
 	for (var i = 0; i < lista.length; i++) {
 		var e = lista[i];
-		//La fila que ya tiene un real cargado se apaga: el estimado sigue ahi
-		//para poder compararlo, pero no es lo que manda.
+
+		// Filtrado
+		if (filtroActivo === 'aviso' && (!e.aviso || e.novedad_tipo)) { continue; }
+		if (filtroActivo === 'justificados' && !e.novedad_tipo) { continue; }
+		if (textoFiltro && (e.nombre.toLowerCase().indexOf(textoFiltro) === -1
+				&& e.cargo.toLowerCase().indexOf(textoFiltro) === -1)) { continue; }
+
+		visibles++;
+
+		// Repetir encabezado cada 25 filas visibles para no perderse al avanzar
+		if (visibles > 1 && (visibles - 1) % 25 === 0) {
+			cuerpo += '<tr class="sub-header-repite">'
+				+ '<td>Empleado</td><td>Cargo</td><td class="ger-num">Salario</td>'
+				+ '<td class="ger-num">Horas</td><td class="ger-num">Rec. Nocturno</td>'
+				+ '<td class="ger-num">Dom / Fes</td><td class="ger-num">Extra</td>'
+				+ '<td class="ger-num">B&aacute;sico</td><td class="ger-num">Total Variable</td>'
+				+ '<td class="ger-num">Seg. Social</td><td class="ger-num">Provisiones</td>'
+				+ '<td class="ger-num">Costo Total</td><td>Novedad / Estado</td></tr>';
+		}
+
 		var yaReal = e.origen_cargado && e.origen_cargado !== '' && e.origen_cargado !== 'ESTIMADO';
 		var estilo = yaReal ? ' style="opacity:.55;"' : '';
 		cuerpo += '<tr' + estilo + '>';
-		cuerpo += '<td>' + escNC(e.nombre) + '</td>';
+		cuerpo += '<td><strong>' + escNC(e.nombre) + '</strong></td>';
 		cuerpo += '<td style="font-size:11.5px;color:#6C7482;">' + escNC(e.cargo) + '</td>';
 		cuerpo += '<td class="ger-num">' + (e.salario > 0 ? '$' + milesNC(e.salario)
 			: '<span class="ger-vacio">sin salario</span>') + '</td>';
-		cuerpo += '<td class="ger-num">' + unaDecimal(e.h_totales)
-			+ '<div style="font-size:11px;color:#6C7482;">' + e.turnos + ' turnos</div></td>';
-		cuerpo += '<td class="ger-num">' + unaDecimal(e.h_nocturnas + e.h_dom_noct) + '</td>';
-		cuerpo += '<td class="ger-num">' + unaDecimal(e.h_dominicales + e.h_dom_noct) + '</td>';
-		cuerpo += '<td class="ger-num">' + (e.h_extra > 0 ? unaDecimal(e.h_extra) : '') + '</td>';
+		cuerpo += '<td class="ger-num"><strong>' + unaDecimal(e.h_totales) + '</strong>'
+			+ '<div style="font-size:10.5px;color:#6C7482;">' + e.turnos + ' turnos</div></td>';
+
+		// Recargo nocturno (horas + monto)
+		var hNoc = e.h_nocturnas + e.h_dom_noct;
+		var vNoc = e.recargo_nocturno || 0;
+		cuerpo += '<td class="ger-num">'
+			+ (hNoc > 0 ? '<strong>' + unaDecimal(hNoc) + ' h</strong>'
+				+ (vNoc > 0 ? '<div style="font-size:11px;color:#102F6F;font-weight:600;">$' + milesNC(vNoc) + '</div>' : '')
+				: '<span style="color:#94A3B8;">&mdash;</span>') + '</td>';
+
+		// Dominical / Festivo (horas + monto)
+		var hDom = e.h_dominicales + e.h_dom_noct;
+		var vDom = e.recargo_dominical || 0;
+		cuerpo += '<td class="ger-num">'
+			+ (hDom > 0 ? '<strong>' + unaDecimal(hDom) + ' h</strong>'
+				+ (vDom > 0 ? '<div style="font-size:11px;color:#102F6F;font-weight:600;">$' + milesNC(vDom) + '</div>' : '')
+				: '<span style="color:#94A3B8;">&mdash;</span>') + '</td>';
+
+		// Horas extra (horas + monto)
+		var hExt = e.h_extra || 0;
+		var vExt = e.recargo_extra || 0;
+		cuerpo += '<td class="ger-num">'
+			+ (hExt > 0 ? '<strong>' + unaDecimal(hExt) + ' h</strong>'
+				+ (vExt > 0 ? '<div style="font-size:11px;color:#102F6F;font-weight:600;">$' + milesNC(vExt) + '</div>' : '')
+				: '<span style="color:#94A3B8;">&mdash;</span>') + '</td>';
+
 		cuerpo += '<td class="ger-num">$' + milesNC(e.basico) + '</td>';
-		cuerpo += '<td class="ger-num">' + (e.variable > 0 ? '$' + milesNC(e.variable) : '')
+		cuerpo += '<td class="ger-num">' + (e.variable > 0 ? '<strong>$' + milesNC(e.variable) + '</strong>' : '$0')
 			+ (e.auxilio > 0 ? '<div style="font-size:11px;color:#6C7482;">+$'
 				+ milesNC(e.auxilio) + ' aux</div>' : '') + '</td>';
 		cuerpo += '<td class="ger-num">$' + milesNC(e.seg_social) + '</td>';
 		cuerpo += '<td class="ger-num">$' + milesNC(e.liquidacion) + '</td>';
-		cuerpo += '<td class="ger-num" style="font-weight:bold;">$' + milesNC(e.costo_corregido)
+		cuerpo += '<td class="ger-num" style="font-weight:bold; color:#102F6F;">$' + milesNC(e.costo_corregido)
 			+ (e.correccion !== 0 ? '<div style="font-size:11px;color:#8A6400;">'
 				+ (e.correccion > 0 ? '+' : '') + unaDecimal(e.correccion) + '% corregido</div>' : '')
 			+ '</td>';
-		cuerpo += '<td>';
-		if (yaReal) {
+
+		// Novedad / Estado
+		cuerpo += '<td style="white-space:nowrap;">';
+		if (e.novedad_tipo) {
+			var badgeClase = 'badge-directivo';
+			var icono = 'fa-check-circle';
+			var label = 'Justificado';
+			if (e.novedad_tipo === 'DIRECTIVO_INCLUIR') { label = 'Directivo'; icono = 'fa-user-tie'; badgeClase = 'badge-directivo'; }
+			else if (e.novedad_tipo === 'VACACIONES_EXCLUIR') { label = 'Vacaciones'; icono = 'fa-umbrella-beach'; badgeClase = 'badge-vacaciones'; }
+			else if (e.novedad_tipo === 'VACACIONES_PARCIAL') { label = 'Vac. (' + (e.novedad_dias || 3) + 'd)'; icono = 'fa-calendar-day'; badgeClase = 'badge-vacaciones'; }
+			else if (e.novedad_tipo === 'INCAPACIDAD_INCLUIR') { label = 'Incapacidad'; icono = 'fa-notes-medical'; badgeClase = 'badge-incapacidad'; }
+			else if (e.novedad_tipo === 'PERMISO_INCLUIR') { label = 'Permiso'; icono = 'fa-check'; badgeClase = 'badge-permiso'; }
+			else if (e.novedad_tipo === 'NO_LABORO_EXCLUIR') { label = 'No laboró'; icono = 'fa-user-slash'; badgeClase = 'badge-excluido'; }
+			cuerpo += '<span class="badge-nov ' + badgeClase + '" title="' + escNC(e.aviso) + '">'
+				+ '<i class="fas ' + icono + '"></i> ' + label + '</span> '
+				+ '<button class="btn btn-default btn-xs" style="padding:1px 5px;" onclick="abrirModalNovedad(' + e.idempleado + ')" title="Editar novedad">'
+				+ '<i class="fas fa-pencil-alt"></i></button>';
+		} else if (e.aviso) {
+			cuerpo += '<button class="btn btn-xs btn-warning btn-resolver-nov" onclick="abrirModalNovedad(' + e.idempleado + ')">'
+				+ '<i class="fas fa-exclamation-triangle"></i> Resolver</button>';
+		} else if (yaReal) {
 			cuerpo += '<span class="ger-origen ger-real">' + escNC(e.origen_cargado) + '</span>';
 		} else {
-			cuerpo += '<span class="ger-origen ger-estimado">Estimado</span>';
+			cuerpo += '<span class="badge-nov" style="background:#F1F5F9; color:#64748B;"><i class="fas fa-check"></i> Normal</span> '
+				+ '<button class="btn btn-default btn-xs" style="padding:1px 5px; opacity:0.6;" onclick="abrirModalNovedad(' + e.idempleado + ')" title="Marcar novedad">'
+				+ '<i class="fas fa-plus"></i></button>';
 		}
 		cuerpo += '</td></tr>';
 
 		if (e.aviso) {
-			cuerpo += '<tr class="ger-fila-sinbase"><td colspan="13" style="font-size:12px;">'
-				+ '<i class="fas fa-exclamation-triangle" style="color:#C21C1F;"></i> '
-				+ escNC(e.aviso) + '</td></tr>';
+			if (e.novedad_tipo) {
+				cuerpo += '<tr style="background:#F0FDF4;"><td colspan="13" style="font-size:11.5px; color:#166534; padding:3px 10px;">'
+					+ '<i class="fas fa-check-circle text-success"></i> ' + escNC(e.aviso)
+					+ (e.novedad_obs ? ' &mdash; <em>' + escNC(e.novedad_obs) + '</em>' : '') + '</td></tr>';
+			} else {
+				cuerpo += '<tr class="ger-fila-sinbase"><td colspan="13" style="font-size:11.5px; padding:3px 10px;">'
+					+ '<i class="fas fa-exclamation-triangle" style="color:#C21C1F;"></i> '
+					+ escNC(e.aviso) + '</td></tr>';
+			}
 		}
 	}
+
+	if (visibles === 0) {
+		cuerpo = '<tr><td colspan="13" class="ger-vacio" style="padding:24px; text-align:center;">'
+			+ 'No se encontraron empleados con el filtro seleccionado.</td></tr>';
+	}
 	$('#tablaEstimado tbody').html(cuerpo);
+}
+
+function abrirModalNovedad(idempleado) {
+	if (!datosEstimado || !datosEstimado.estimados) { return; }
+	var emp = null;
+	for (var i = 0; i < datosEstimado.estimados.length; i++) {
+		if (datosEstimado.estimados[i].idempleado === idempleado) {
+			emp = datosEstimado.estimados[i];
+			break;
+		}
+	}
+	if (!emp) { return; }
+	empleadoEnModal = emp;
+
+	$('#novEmpNombre').text(emp.nombre);
+	$('#novEmpCargo').text(emp.cargo);
+	$('#novEmpSalario').text('$' + milesNC(emp.salario));
+	$('#novEmpHoras').text(unaDecimal(emp.h_totales) + ' horas · ' + emp.turnos + ' turnos');
+	$('#novAvisoActual').html(emp.aviso
+		? '<i class="fas fa-info-circle"></i> ' + escNC(emp.aviso)
+		: '<span style="color:#166534;"><i class="fas fa-check-circle"></i> Sin alertas previas</span>');
+
+	var tipoElegido = emp.novedad_tipo || '';
+	if (!tipoElegido) {
+		var nombreL = emp.nombre.toLowerCase();
+		var cargoL = emp.cargo.toLowerCase();
+		if (nombreL.indexOf('vigoya') !== -1 || cargoL.indexOf('gerente') !== -1
+				|| cargoL.indexOf('director') !== -1 || cargoL.indexOf('coordinador') !== -1) {
+			tipoElegido = 'DIRECTIVO_INCLUIR';
+		} else if (emp.turnos === 0) {
+			tipoElegido = 'VACACIONES_EXCLUIR';
+		} else {
+			tipoElegido = 'INCAPACIDAD_INCLUIR';
+		}
+	}
+
+	$('input[name="optNovedad"]').prop('checked', false);
+	$('.opcion-novedad-card').removeClass('activa');
+	var $radio = $('input[name="optNovedad"][value="' + tipoElegido + '"]');
+	if ($radio.length) {
+		$radio.prop('checked', true);
+		$radio.closest('.opcion-novedad-card').addClass('activa');
+	}
+
+	$('#novDiasLaborados').val(emp.novedad_dias || 3);
+	$('#novPermanente').prop('checked', emp.novedad_permanente === true || emp.novedad_permanente === 1);
+	$('#novObservacion').val(emp.novedad_obs || '');
+
+	if (emp.novedad_tipo) {
+		$('#btnRestablecerNov').show();
+	} else {
+		$('#btnRestablecerNov').hide();
+	}
+
+	$('#modalNovedad').modal('show');
+}
+
+function guardarNovedad() {
+	if (!empleadoEnModal) { return; }
+	var $sel = $('input[name="optNovedad"]:checked');
+	if (!$sel.length) {
+		alert('Seleccione una opción de situación / decisión.');
+		return;
+	}
+	var tipo = $sel.val();
+	var accion = $sel.data('accion') || 'INCLUIR';
+	var dias = parseInt($('#novDiasLaborados').val(), 10) || 7;
+	var perm = $('#novPermanente').is(':checked') ? 1 : 0;
+	var obs = $.trim($('#novObservacion').val());
+
+	$('#btnGuardarNov').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Guardando...');
+	$.post('GerenciaNominaCalculo', {
+		que: 'novedad',
+		semana: semana(),
+		idempleado: empleadoEnModal.idempleado,
+		tipo_novedad: tipo,
+		accion: accion,
+		dias: dias,
+		permanente: perm,
+		observacion: obs
+	}, function (data) {
+		$('#btnGuardarNov').prop('disabled', false).html('<i class="fas fa-save"></i> Guardar decisión y recalcular');
+		if (!Gerencia.respondio(data)) { return; }
+		datosEstimado = data;
+		pintarEstimado();
+		$('#modalNovedad').modal('hide');
+		Gerencia.avisar('Novedad guardada correctamente para ' + empleadoEnModal.nombre + '.', true);
+	}, 'json').fail(function () {
+		$('#btnGuardarNov').prop('disabled', false).html('<i class="fas fa-save"></i> Guardar decisión y recalcular');
+		Gerencia.avisar('Error guardando la novedad.');
+	});
+}
+
+function restablecerNovedad() {
+	if (!empleadoEnModal) { return; }
+	if (!confirm('¿Desea quitar esta justificación y volver al cálculo biométrico original?')) {
+		return;
+	}
+	$('#btnRestablecerNov').prop('disabled', true).text('Restableciendo...');
+	$.post('GerenciaNominaCalculo', {
+		que: 'novedad',
+		semana: semana(),
+		idempleado: empleadoEnModal.idempleado,
+		tipo_novedad: 'RESTABLECER'
+	}, function (data) {
+		$('#btnRestablecerNov').prop('disabled', false).html('<i class="fas fa-trash-alt"></i> Quitar novedad');
+		if (!Gerencia.respondio(data)) { return; }
+		datosEstimado = data;
+		pintarEstimado();
+		$('#modalNovedad').modal('hide');
+		Gerencia.avisar('Novedad restablecida para ' + empleadoEnModal.nombre + '.', true);
+	}, 'json').fail(function () {
+		$('#btnRestablecerNov').prop('disabled', false).html('<i class="fas fa-trash-alt"></i> Quitar novedad');
+		Gerencia.avisar('Error al restablecer la novedad.');
+	});
 }
 
 function caja(nombre, valor, malo) {

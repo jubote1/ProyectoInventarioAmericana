@@ -109,6 +109,23 @@ public class GerenciaNominaCalculoDAO {
 		public int idTipoEmpleado;
 		/** Que origen tiene ya cargado esa semana, si tiene alguno. */
 		public String origenCargado = "";
+		public double recargoNocturno;
+		public double recargoDominical;
+		public double recargoExtra;
+		public String novedadTipo = "";
+		public String novedadAccion = "";
+		public String novedadObs = "";
+		public int novedadDias = 7;
+		public boolean novedadPermanente = false;
+	}
+
+	public static class NovedadReg {
+		public int idEmpleado;
+		public String tipoNovedad = "";
+		public String accion = "";
+		public int dias = 7;
+		public boolean permanente = false;
+		public String observacion = "";
 	}
 
 	public static class Desviacion {
@@ -257,11 +274,18 @@ public class GerenciaNominaCalculoDAO {
 					+ " factor_correccion, costo_corregido, aviso)"
 					+ " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
 
+			final HashMap<Integer, NovedadReg> novedades = novedadesVigentes(cn, semana);
+
 			int cuantos = 0;
 			for (final Estimado e : gente) {
 				final ArrayList<Turno> turnos = turnosDe(cnG, e.idEmpleado, rango[0], rango[1]);
 				final Horas h = clasificar(turnos, festivos, p);
 				calcularCosto(e, h, p, cargos);
+
+				final NovedadReg nov = novedades.get(Integer.valueOf(e.idEmpleado));
+				if (nov != null) {
+					aplicarNovedad(e, nov);
+				}
 
 				e.idTiendaPrincipal = tiendaPrincipal(h);
 				final Desviacion d = correcciones.get(Integer.valueOf(e.idTiendaPrincipal));
@@ -407,6 +431,9 @@ public class GerenciaNominaCalculoDAO {
 					+ p.de("EXTRA_DIURNA", 25) * (1 - propNoche);
 			recargoExtra = e.horasExtra * vh * tasa / 100.0;
 		}
+		e.recargoNocturno = redondear(recargoNocturno);
+		e.recargoDominical = redondear(recargoDominical);
+		e.recargoExtra = redondear(recargoExtra);
 		e.sueldoVariable = redondear(recargoNocturno + recargoDominical + recargoExtra);
 
 		//Auxilio de transporte: solo hasta el tope de salarios minimos, y no
@@ -704,8 +731,12 @@ public class GerenciaNominaCalculoDAO {
 					+ "   WHERE r.idempleado = e.idempleado AND r.semana = e.semana"
 					+ "   ORDER BY r.minutos DESC LIMIT 1), 0) AS idtienda,"
 					+ " (SELECT n.origen FROM gerencia_nomina_empleado_semana n"
-					+ "   WHERE n.idempleado = e.idempleado AND n.semana = e.semana) AS origen_cargado"
-					+ " FROM gerencia_nomina_estimado e WHERE e.semana = ?"
+					+ "   WHERE n.idempleado = e.idempleado AND n.semana = e.semana) AS origen_cargado,"
+					+ " nov.tipo_novedad, nov.accion, nov.dias, nov.observacion, nov.permanente"
+					+ " FROM gerencia_nomina_estimado e"
+					+ " LEFT JOIN gerencia_nomina_novedad nov"
+					+ "   ON nov.idempleado = e.idempleado AND (nov.semana = e.semana OR nov.permanente = 1)"
+					+ " WHERE e.semana = ?"
 					+ " ORDER BY e.costo_total DESC");
 			ps.setString(1, semana);
 			final ResultSet rs = ps.executeQuery();
@@ -731,6 +762,18 @@ public class GerenciaNominaCalculoDAO {
 				e.aviso = texto(rs.getString("aviso"));
 				e.idTiendaPrincipal = rs.getInt("idtienda");
 				e.origenCargado = texto(rs.getString("origen_cargado"));
+
+				final double vh = e.salarioBase > 0 ? e.salarioBase / 240.0 : 0;
+				e.recargoNocturno = redondear((e.horasNocturnas + e.horasDomNoct) * vh * 0.35);
+				e.recargoDominical = redondear((e.horasDominicales + e.horasDomNoct) * vh * 0.90);
+				e.recargoExtra = e.horasExtra > 0 ? redondear(e.horasExtra * vh * 0.35) : 0;
+
+				e.novedadTipo = texto(rs.getString("tipo_novedad"));
+				e.novedadAccion = texto(rs.getString("accion"));
+				e.novedadObs = texto(rs.getString("observacion"));
+				e.novedadDias = rs.getInt("dias") > 0 ? rs.getInt("dias") : 7;
+				e.novedadPermanente = rs.getInt("permanente") == 1;
+
 				lista.add(e);
 			}
 			rs.close();
@@ -742,6 +785,209 @@ public class GerenciaNominaCalculoDAO {
 			cerrar(cn);
 		}
 		return (lista);
+	}
+
+	public static HashMap<Integer, NovedadReg> novedadesVigentes(final Connection cn, final String semana) {
+		final HashMap<Integer, NovedadReg> map = new HashMap<Integer, NovedadReg>();
+		try {
+			final PreparedStatement ps = cn.prepareStatement(
+					"SELECT idempleado, tipo_novedad, accion, dias, permanente, observacion "
+					+ " FROM gerencia_nomina_novedad WHERE semana = ? OR permanente = 1");
+			ps.setString(1, semana);
+			final ResultSet rs = ps.executeQuery();
+			while (rs.next()) {
+				final NovedadReg n = new NovedadReg();
+				n.idEmpleado = rs.getInt("idempleado");
+				n.tipoNovedad = texto(rs.getString("tipo_novedad"));
+				n.accion = texto(rs.getString("accion"));
+				n.dias = rs.getInt("dias") > 0 ? rs.getInt("dias") : 7;
+				n.permanente = rs.getInt("permanente") == 1;
+				n.observacion = texto(rs.getString("observacion"));
+				map.put(Integer.valueOf(n.idEmpleado), n);
+			}
+			rs.close();
+			ps.close();
+		} catch (final Exception e) {
+			System.out.println("GerenciaNominaCalculoDAO.novedadesVigentes: " + e.toString());
+		}
+		return (map);
+	}
+
+	public static void aplicarNovedad(final Estimado e, final NovedadReg nov) {
+		e.novedadTipo = nov.tipoNovedad;
+		e.novedadAccion = nov.accion;
+		e.novedadDias = nov.dias;
+		e.novedadPermanente = nov.permanente;
+		e.novedadObs = nov.observacion;
+
+		if ("EXCLUIR".equalsIgnoreCase(nov.accion)) {
+			e.sueldoBasico = 0;
+			e.sueldoVariable = 0;
+			e.auxilioTransporte = 0;
+			e.seguridadSocial = 0;
+			e.liquidacion = 0;
+			e.costoTotal = 0;
+			e.costoCorregido = 0;
+			if ("VACACIONES_EXCLUIR".equals(nov.tipoNovedad)) {
+				e.aviso = "Vacaciones completas: excluido de nómina corriente (se paga por prestaciones)";
+			} else {
+				e.aviso = "Excluido de la nómina semanal (" + (nov.observacion.isEmpty() ? nov.tipoNovedad : nov.observacion) + ")";
+			}
+		} else if ("AJUSTAR".equalsIgnoreCase(nov.accion) || "VACACIONES_PARCIAL".equals(nov.tipoNovedad)) {
+			final int dLab = nov.dias > 0 && nov.dias <= 7 ? nov.dias : 3;
+			e.sueldoBasico = redondear(e.salarioBase * dLab / 30.0);
+			e.auxilioTransporte = (e.salarioBase <= 2 * 1300000) ? redondear(162000.0 * dLab / 30.0) : 0;
+			e.seguridadSocial = redondear((e.sueldoBasico + e.sueldoVariable) * 0.205);
+			e.liquidacion = redondear((e.sueldoBasico + e.sueldoVariable + e.auxilioTransporte) * 0.2183);
+			e.costoTotal = redondear(e.sueldoBasico + e.sueldoVariable + e.auxilioTransporte + e.seguridadSocial + e.liquidacion);
+			e.costoCorregido = e.costoTotal;
+			e.aviso = "Vacaciones parciales: liquidado sobre " + dLab + " días laborados";
+		} else {
+			// INCLUIR (Directivo, incapacidad, etc.)
+			if ("DIRECTIVO_INCLUIR".equals(nov.tipoNovedad)) {
+				e.aviso = "Directivo / Administrativo: nómina completa sin requerir biometría";
+			} else if ("INCAPACIDAD_INCLUIR".equals(nov.tipoNovedad)) {
+				e.aviso = "Incapacidad justificada: liquidado en nómina";
+			} else {
+				e.aviso = "Justificado: " + (nov.observacion.isEmpty() ? nov.tipoNovedad : nov.observacion);
+			}
+		}
+	}
+
+	public static String guardarNovedad(final String semana, final int idEmpleado,
+			final String tipoNovedad, final String accion, final int dias,
+			final boolean permanente, final String observacion, final String usuario) {
+		final ConexionBaseDatos con = new ConexionBaseDatos();
+		final Connection cn = con.obtenerConexionBDPrincipalLocal();
+		if (cn == null) {
+			return ("No hay conexión a la base de datos");
+		}
+		try {
+			if ("RESTABLECER".equalsIgnoreCase(tipoNovedad)) {
+				final PreparedStatement del = cn.prepareStatement(
+						"DELETE FROM gerencia_nomina_novedad WHERE idempleado = ? AND (semana = ? OR permanente = 1)");
+				del.setInt(1, idEmpleado);
+				del.setString(2, semana);
+				del.executeUpdate();
+				del.close();
+
+				// Restablecer valores originales en gerencia_nomina_estimado
+				final PreparedStatement psSel = cn.prepareStatement(
+						"SELECT salario_base, turnos, sueldo_variable, auxilio_transporte FROM gerencia_nomina_estimado WHERE idempleado = ? AND semana = ?");
+				psSel.setInt(1, idEmpleado);
+				psSel.setString(2, semana);
+				final ResultSet rs = psSel.executeQuery();
+				if (rs.next()) {
+					final double sal = rs.getDouble("salario_base");
+					final int turnos = rs.getInt("turnos");
+					final double bas = redondear(sal * SEMANA_DEL_MES);
+					final double var = rs.getDouble("sueldo_variable");
+					final double aux = rs.getDouble("auxilio_transporte");
+					final double seg = redondear((bas + var) * 0.205);
+					final double liq = redondear((bas + var + aux) * 0.2183);
+					final double tot = redondear(bas + var + aux + seg + liq);
+					final String av = turnos == 0 ? "Sin marcaciones en la semana: va el basico sin recargos. Revisar si fue vacaciones, incapacidad o falta de marcacion." : "";
+					rs.close();
+					psSel.close();
+
+					final PreparedStatement psUpd = cn.prepareStatement(
+							"UPDATE gerencia_nomina_estimado SET sueldo_basico = ?, seguridad_social = ?, "
+							+ " liquidacion = ?, costo_total = ?, costo_corregido = ?, aviso = ? WHERE idempleado = ? AND semana = ?");
+					psUpd.setDouble(1, bas);
+					psUpd.setDouble(2, seg);
+					psUpd.setDouble(3, liq);
+					psUpd.setDouble(4, tot);
+					psUpd.setDouble(5, tot);
+					psUpd.setString(6, av);
+					psUpd.setInt(7, idEmpleado);
+					psUpd.setString(8, semana);
+					psUpd.executeUpdate();
+					psUpd.close();
+				} else {
+					rs.close();
+					psSel.close();
+				}
+				return ("");
+			}
+
+			final PreparedStatement psNov = cn.prepareStatement(
+					"INSERT INTO gerencia_nomina_novedad (idempleado, semana, tipo_novedad, accion, dias, permanente, observacion, usuario) "
+					+ " VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
+					+ " ON DUPLICATE KEY UPDATE tipo_novedad = ?, accion = ?, dias = ?, permanente = ?, observacion = ?, usuario = ?");
+			psNov.setInt(1, idEmpleado);
+			psNov.setString(2, semana);
+			psNov.setString(3, tipoNovedad);
+			psNov.setString(4, accion);
+			psNov.setInt(5, dias);
+			psNov.setInt(6, permanente ? 1 : 0);
+			psNov.setString(7, observacion);
+			psNov.setString(8, usuario);
+			psNov.setString(9, tipoNovedad);
+			psNov.setString(10, accion);
+			psNov.setInt(11, dias);
+			psNov.setInt(12, permanente ? 1 : 0);
+			psNov.setString(13, observacion);
+			psNov.setString(14, usuario);
+			psNov.executeUpdate();
+			psNov.close();
+
+			final NovedadReg nov = new NovedadReg();
+			nov.idEmpleado = idEmpleado;
+			nov.tipoNovedad = tipoNovedad;
+			nov.accion = accion;
+			nov.dias = dias;
+			nov.permanente = permanente;
+			nov.observacion = observacion;
+
+			final PreparedStatement psSel = cn.prepareStatement(
+					"SELECT * FROM gerencia_nomina_estimado WHERE idempleado = ? AND semana = ?");
+			psSel.setInt(1, idEmpleado);
+			psSel.setString(2, semana);
+			final ResultSet rs = psSel.executeQuery();
+			if (rs.next()) {
+				final Estimado e = new Estimado();
+				e.idEmpleado = idEmpleado;
+				e.salarioBase = rs.getDouble("salario_base");
+				e.sueldoBasico = redondear(e.salarioBase * SEMANA_DEL_MES);
+				e.sueldoVariable = rs.getDouble("sueldo_variable");
+				e.auxilioTransporte = rs.getDouble("auxilio_transporte");
+				e.seguridadSocial = rs.getDouble("seguridad_social");
+				e.liquidacion = rs.getDouble("liquidacion");
+				e.costoTotal = rs.getDouble("costo_total");
+				e.costoCorregido = rs.getDouble("costo_corregido");
+				e.aviso = rs.getString("aviso");
+				rs.close();
+				psSel.close();
+
+				aplicarNovedad(e, nov);
+
+				final PreparedStatement psUpd = cn.prepareStatement(
+						"UPDATE gerencia_nomina_estimado SET sueldo_basico = ?, sueldo_variable = ?, "
+						+ " auxilio_transporte = ?, seguridad_social = ?, liquidacion = ?, costo_total = ?, "
+						+ " costo_corregido = ?, aviso = ? WHERE idempleado = ? AND semana = ?");
+				psUpd.setDouble(1, e.sueldoBasico);
+				psUpd.setDouble(2, e.sueldoVariable);
+				psUpd.setDouble(3, e.auxilioTransporte);
+				psUpd.setDouble(4, e.seguridadSocial);
+				psUpd.setDouble(5, e.liquidacion);
+				psUpd.setDouble(6, e.costoTotal);
+				psUpd.setDouble(7, e.costoCorregido);
+				psUpd.setString(8, e.aviso);
+				psUpd.setInt(9, idEmpleado);
+				psUpd.setString(10, semana);
+				psUpd.executeUpdate();
+				psUpd.close();
+			} else {
+				rs.close();
+				psSel.close();
+			}
+			return ("");
+		} catch (final Exception e) {
+			System.out.println("GerenciaNominaCalculoDAO.guardarNovedad: " + e.toString());
+			return (e.getMessage());
+		} finally {
+			cerrar(cn);
+		}
 	}
 
 	public static class Parametro {
