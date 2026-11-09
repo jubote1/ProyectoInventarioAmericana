@@ -15,6 +15,14 @@ public class ConexionBaseDatos {
 		ConexionBaseDatos cn = new ConexionBaseDatos();
 	}
 
+	public static String hostBD() {
+		String h = System.getProperty("bd.host");
+		if (h == null || h.trim().isEmpty()) {
+			h = System.getenv("BD_HOST");
+		}
+		return (h != null && !h.trim().isEmpty()) ? h.trim() : "localhost";
+	}
+
 	
 	
 	public Connection obtenerConexionBDGeneralLocal(){
@@ -34,7 +42,7 @@ public class ConexionBaseDatos {
 		try {
 
 			con = DriverManager.getConnection(
-		            "jdbc:mysql://localhost/general?"
+		            "jdbc:mysql://" + hostBD() + "/general?"
 		            + "user=root&password=4m32017&serverTimezone=UTC");
 			
 //			con = DriverManager.getConnection(
@@ -80,7 +88,7 @@ public class ConexionBaseDatos {
 			 * Se realiza la creación de la conexión a la base de datos
 			 */
 			con = DriverManager.getConnection(
-		            "jdbc:mysql://localhost/inventarioamericana?"
+		            "jdbc:mysql://" + hostBD() + "/inventarioamericana?"
 		            + "user=root&password=4m32017&serverTimezone=UTC");
 			
 //			con = DriverManager.getConnection(
@@ -120,7 +128,7 @@ public class ConexionBaseDatos {
 		try {
 
 			con = DriverManager.getConnection(
-		            "jdbc:mysql://localhost/general?"
+		            "jdbc:mysql://" + hostBD() + "/general?"
 		            + "user=root&password=4m32017&serverTimezone=UTC");
 			
 			//con = DriverManager.getConnection(
@@ -161,7 +169,7 @@ public class ConexionBaseDatos {
 
 			
 			con = DriverManager.getConnection(
-		            "jdbc:mysql://localhost/pizzaamericana?"
+		            "jdbc:mysql://" + hostBD() + "/pizzaamericana?"
 		            + "user=root&password=4m32017&serverTimezone=UTC");
 			
 //			con = DriverManager.getConnection(
@@ -275,7 +283,7 @@ public class ConexionBaseDatos {
 		try {
 
 			con = DriverManager.getConnection(
-		            "jdbc:mysql://localhost/datamart?"
+		            "jdbc:mysql://" + hostBD() + "/datamart?"
 		            + "user=root&password=4m32017&serverTimezone=UTC");
 
 		} catch (SQLException ex) {
