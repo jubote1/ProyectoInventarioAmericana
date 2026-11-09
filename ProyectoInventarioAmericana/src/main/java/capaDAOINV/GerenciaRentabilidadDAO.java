@@ -44,8 +44,31 @@ import conexionINV.ConexionBaseDatos;
  */
 public class GerenciaRentabilidadDAO {
 
-	/** Los conceptos de gasto_semanal que son comisiones y no gasto de tienda. */
-	private static final String COMISIONES = "16,17,18,20";
+	/**
+	 * Los conceptos de gasto_semanal que son comisiones y no gasto de tienda.
+	 *
+	 * EL 25 ES EL QR Y FALTABA
+	 *
+	 * Lo escribe ReporteConciliacionWompi en Servicios: valor_calculo trae la
+	 * venta por QR de la semana y valor_gasto la comision. El dato nunca dejo de
+	 * guardarse -esta completo hasta hoy-, pero esta lista no lo nombraba, asi
+	 * que el tablero mostraba las comisiones de Virtual, PAYU, Rappi y DiDi y se
+	 * comia la del QR. Son $1.590.016 en las tres semanas al 8-nov-2026.
+	 *
+	 * El reporte de costo por tienda del central SI lo contaba
+	 * (pizzaamericana.concepto_costo_gasto_semanal mapea el 25 a COMISION
+	 * VIRTUAL), de modo que los dos reportes daban distinto sobre los mismos
+	 * datos. Esto los deja de acuerdo.
+	 *
+	 * EL 24 NO ENTRA AQUI, Y NO ES OLVIDO
+	 *
+	 * "Pago Datafono" guarda en valor_gasto la VENTA con datafono, no la
+	 * comision; la comision es el porcentaje_gasto de su fila (5%). Meterlo
+	 * crudo le sumaria $197 millones de comision imaginaria a tres semanas. El
+	 * central lo resuelve con aplica_porcentaje = 'S'. Aqui hace falta el mismo
+	 * tratamiento antes de incluirlo.
+	 */
+	private static final String COMISIONES = "16,17,18,20,25";
 
 	/**
 	 * El concepto 1 es "Total domicilios": un CONTEO de pedidos, no pesos. Entra
