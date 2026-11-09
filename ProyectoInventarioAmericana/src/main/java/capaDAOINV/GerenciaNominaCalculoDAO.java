@@ -600,7 +600,7 @@ public class GerenciaNominaCalculoDAO {
 		//Auxilio de transporte: solo hasta el tope de salarios minimos, y no
 		//entra a la base de seguridad social ni a la de vacaciones.
 		final double tope = p.de("TOPE_AUX_SMLV", 2) * p.de("SMLV", 0);
-		e.auxilioTransporte = (tope > 0 && e.salarioBase <= tope)
+		e.auxilioTransporte = (tope > 0 && e.salarioBase > 0 && e.salarioBase <= tope)
 				? redondear(p.de("AUX_TRANSPORTE", 0) * SEMANA_DEL_MES) : 0;
 
 		final double baseSalarial = e.sueldoBasico + e.sueldoVariable;
@@ -1871,7 +1871,7 @@ public class GerenciaNominaCalculoDAO {
 					"SELECT e.id, e.nombre_largo, e.salario, e.idtipoempleado,"
 					+ " IFNULL(t.descripcion,'') AS cargo"
 					+ " FROM empleado e LEFT JOIN tipo_empleado t ON t.idtipoempleado = e.idtipoempleado"
-					+ " WHERE e.activo = 1 AND e.es_empleado = 1 ORDER BY e.nombre_largo");
+					+ " WHERE e.activo = 1 AND e.es_empleado = 1 AND e.salario > 0 ORDER BY e.nombre_largo");
 			final ResultSet rs = ps.executeQuery();
 			while (rs.next()) {
 				final int idTipo = rs.getInt("idtipoempleado");
@@ -1880,19 +1880,18 @@ public class GerenciaNominaCalculoDAO {
 				if (cfg != null && cfg[2] == 0) {
 					continue;
 				}
+				final double sal = rs.getDouble("salario");
+				//Usuarios tecnicos / no reales sin salario (Caja, BOT, Contact, etc.): descartados
+				if (sal <= 0) {
+					continue;
+				}
 				final Estimado e = new Estimado();
 				e.idEmpleado = rs.getInt("id");
 				e.nombre = texto(rs.getString("nombre_largo"));
 				e.cargo = texto(rs.getString("cargo"));
-				e.salarioBase = rs.getDouble("salario");
+				e.salarioBase = sal;
 				e.entraTienda = cfg == null || cfg[1] == 1;
 				e.idTipoEmpleado = idTipo;
-				//Sin salario no hay nada que calcular, pero el empleado tiene que
-				//aparecer en la lista con su aviso: si se omitiera, nadie se
-				//enteraria de que falta cargarle el salario.
-				if (e.salarioBase <= 0) {
-					e.aviso = "Sin salario cargado en el maestro de empleados: no se puede estimar.";
-				}
 				lista.add(e);
 			}
 			rs.close();
