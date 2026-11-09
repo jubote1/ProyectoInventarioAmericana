@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<title>Gu&iacute;a de Cierre de Gerencia y Rentabilidad</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<link href="css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+	<link href="css/all.min.css" rel="stylesheet" type="text/css" />
+	<link href="css/gerencia.css" rel="stylesheet" type="text/css" />
+	<script type="text/javascript" src="js/jquery-1.11.0.min.js"></script>
+	<script type="text/javascript" src="js/bootstrap.min.js"></script>
+	<style>
+		.guia-paso-card {
+			background: #ffffff;
+			border: 1px solid #e2e8f0;
+			border-radius: 8px;
+			padding: 20px;
+			margin-bottom: 22px;
+			box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+			transition: transform 0.15s ease, box-shadow 0.15s ease;
+		}
+		.guia-paso-card:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 4px 12px rgba(16,47,111,0.08);
+			border-color: #cbd5e1;
+		}
+		.guia-paso-num {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 38px;
+			height: 38px;
+			border-radius: 50%;
+			background: #102F6F;
+			color: #ffffff;
+			font-weight: bold;
+			font-size: 16px;
+			margin-right: 12px;
+			vertical-align: middle;
+		}
+		.guia-tag-screen {
+			background: #eef2ff;
+			color: #3730a3;
+			border: 1px solid #c7d2fe;
+			border-radius: 4px;
+			padding: 4px 10px;
+			font-size: 12px;
+			font-weight: 600;
+			display: inline-block;
+			margin-bottom: 10px;
+		}
+		.guia-tag-screen i { margin-right: 5px; }
+		.guia-checklist {
+			list-style: none;
+			padding-left: 0;
+			margin-top: 10px;
+			margin-bottom: 10px;
+		}
+		.guia-checklist li {
+			padding: 4px 0;
+			font-size: 13.5px;
+			color: #334155;
+		}
+		.guia-checklist li i {
+			color: #10b981;
+			margin-right: 8px;
+		}
+		.guia-box-callout {
+			background: #f8fafc;
+			border-left: 4px solid #102F6F;
+			padding: 12px 16px;
+			border-radius: 0 6px 6px 0;
+			margin: 14px 0;
+		}
+		.tabla-comparativa th {
+			background: #102F6F;
+			color: #ffffff;
+			font-size: 13px;
+		}
+		.tabla-comparativa td {
+			font-size: 13px;
+			vertical-align: top;
+		}
+	</style>
+</head>
+<body>
+
+	<div id="cargarMenu"></div>
+
+	<script type="text/javascript">
+		var server = window.location.protocol + '//' + window.location.host
+			+ window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+		var respuesta = '';
+		$.ajax({
+			url: server + 'ValidarUsuarioAplicacion',
+			dataType: 'text',
+			type: 'post',
+			async: false,
+			success: function (data) { respuesta = data; }
+		});
+		switch (respuesta) {
+			case 'OK':
+				$('#cargarMenu').load("Menu.html");
+				break;
+			case 'OKA':
+				$('#cargarMenu').load("MenuAdm.html");
+				break;
+			default:
+				location.href = server + "Index.html";
+				break;
+		}
+	</script>
+
+	<div class="container-fluid" style="max-width:1500px; padding-bottom:60px;">
+
+		<div class="row" style="margin-top:15px; margin-bottom:15px;">
+			<div class="col-md-9">
+				<h2 class="ger-h1" style="margin-top:0;">
+					<i class="fas fa-book-open" style="color:#102F6F;"></i> Manual de Proceso: Cierre de Gerencia y Tablero de Rentabilidad
+				</h2>
+				<p class="ger-sub">
+					Flujo de trabajo paso a paso para la auditor&iacute;a de n&oacute;mina, liquidaci&oacute;n de gastos y determinaci&oacute;n del EBITDA por tienda.
+				</p>
+			</div>
+			<div class="col-md-3 text-right">
+				<a href="CierreGerencia.html" class="btn btn-primary" style="margin-top:10px;">
+					<i class="fas fa-calculator"></i> Ir a Cierre de Gerencia
+				</a>
+				<a href="Rentabilidad.html" class="btn btn-default" style="margin-top:10px;">
+					<i class="fas fa-chart-line"></i> Ir a Rentabilidad
+				</a>
+			</div>
+		</div>
+
+		<!-- ================= 1. RELACION CONCEPTUAL ================= -->
+		<div class="ger-panel">
+			<h4 class="ger-titulo" style="font-size:17px;">
+				<i class="fas fa-project-diagram text-primary"></i> 1. Relaci&oacute;n entre Cierre de Gerencia y Tablero de Rentabilidad
+			</h4>
+			<p style="font-size:14px; line-height:1.6; color:#334155;">
+				Ambas pantallas forman un &uacute;nico sistema gerencial complementario: <strong>Cierre de Gerencia</strong> audita y valida los hechos de costo (personas, d&iacute;as, recargos y gastos), mientras que el <strong>Tablero de Rentabilidad</strong> cruza esos costos contra la venta y los consumos de comida del inventario para arrojar el <strong>EBITDA definitivo</strong> por punto de venta.
+			</p>
+
+			<div class="table-responsive" style="margin-top:14px;">
+				<table class="table table-bordered tabla-comparativa">
+					<thead>
+						<tr>
+							<th style="width:20%;">Criterio</th>
+							<th style="width:40%;"><i class="fas fa-file-invoice-dollar"></i> Cierre de Gerencia (CierreGerencia.html)</th>
+							<th style="width:40%;"><i class="fas fa-chart-bar"></i> Tablero de Rentabilidad (Rentabilidad.html)</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td><strong>Objetivo Principal</strong></td>
+							<td><strong>Auditor&iacute;a y Liquidaci&oacute;n de Costos</strong>: saber de d&oacute;nde sale cada peso, qui&eacute;n lo caus&oacute; y qu&eacute; reglas de ley o contrato aplican.</td>
+							<td><strong>Direcci&oacute;n y Margen EBITDA</strong>: evaluar la rentabilidad del negocio, ordenar tiendas de mejor a peor y tomar decisiones operativas.</td>
+						</tr>
+						<tr>
+							<td><strong>Universo que mide</strong></td>
+							<td>Pesta&ntilde;a por pesta&ntilde;a: &aacute;reas de estructura (&Aacute;rea Administrativa, Log&iacute;stica, Contact Center, Publicidad) y cada tienda de punto de venta.</td>
+							<td>Las 11 tiendas en columnas paralelas con su Escalera Financiera (Venta $\rightarrow$ Insumos $\rightarrow$ Comisiones $\rightarrow$ Operaci&oacute;n $\rightarrow$ Fijos $\rightarrow$ Estructura $\rightarrow$ EBITDA).</td>
+						</tr>
+						<tr>
+							<td><strong>Nivel de Detalle</strong></td>
+							<td><strong>Nombre propio</strong>: c&eacute;dula, cargo, salario b&aacute;sico, recargos biom&eacute;tricos, aprendices SENA, d&iacute;as prorrateados y lista de conceptos de gasto.</td>
+							<td><strong>L&iacute;neas agregadas financieras</strong>: porcentajes sobre venta con opci&oacute;n de <em>drill-down</em> para inspeccionar qu&eacute; insumo o qu&eacute; servicio caus&oacute; la desviaci&oacute;n.</td>
+						</tr>
+						<tr>
+							<td><strong>Rol en el Flujo</strong></td>
+							<td><strong>Es el Insumo y la Verificaci&oacute;n</strong>. Aqu&iacute; se asegura que no falte nadie, que Marina y Hermes tengan sus 3 d&iacute;as, que el SENA tenga SS al 15% y que los fijos est&eacute;n al d&iacute;a.</td>
+							<td><strong>Es el Resultado Ejecutivo</strong>. Lee la n&oacute;mina y estructura validadas en Cierre y las cruza contra la venta y consumos semanales del Datamart.</td>
+						</tr>
+						<tr>
+							<td><strong>Pesta&ntilde;a PORCENTAJE</strong></td>
+							<td colspan="2" style="background:#f8fafc;">
+								<strong>El puente entre ambos mundos</strong>: dentro de <code>CierreGerencia.html</code>, la pesta&ntilde;a <strong>Porcentaje</strong> muestra la matriz comparativa de tiendas id&eacute;ntica a la hoja 16 del Excel <code>GASTOS_FIJOS_TIENDAS</code>, con las 14 l&iacute;neas de distribuci&oacute;n y el margen EBITDA por punto de venta.
+							</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+
+		<!-- ================= 2. FLUJO DE CIERRE PASO A PASO ================= -->
+		<h3 class="ger-h1" style="font-size:20px; margin-top:30px; margin-bottom:15px;">
+			<i class="fas fa-list-ol" style="color:#102F6F;"></i> 2. Los 6 Pasos para Realizar el Cierre Mensual
+		</h3>
+
+		<div class="row">
+			<!-- PASO 1 -->
+			<div class="col-md-6">
+				<div class="guia-paso-card">
+					<div>
+						<span class="guia-paso-num">1</span>
+						<span class="guia-tag-screen"><i class="fas fa-calendar-alt"></i> Pantalla: CalendarioSemanas.html</span>
+					</div>
+					<h4 style="color:#102F6F; font-weight:bold; margin-top:8px;">Validar el Calendario de Semanas</h4>
+					<p style="font-size:13px; color:#475569;">
+						En Pizza Americana el mes no se mide por almanaque civil, sino por las <strong>semanas comerciales completas (de lunes a domingo)</strong> asignadas a ese mes.
+					</p>
+					<ul class="guia-checklist">
+						<li><i class="fas fa-check-circle"></i> Verificar que el a&ntilde;o y mes a consultar tengan sus semanas generadas (ej. Octubre 2026: semanas 40 a 44, del 28 de septiembre al 01 de noviembre).</li>
+						<li><i class="fas fa-check-circle"></i> El n&uacute;mero de semanas del mes (4 &oacute; 5) ser&aacute; el divisor de prorrateo para los gastos mensuales.</li>
+					</ul>
+					<a href="CalendarioSemanas.html" class="btn btn-sm btn-default"><i class="fas fa-external-link-alt"></i> Abrir Calendario de Semanas</a>
+				</div>
+			</div>
+
+			<!-- PASO 2 -->
+			<div class="col-md-6">
+				<div class="guia-paso-card">
+					<div>
+						<span class="guia-paso-num">2</span>
+						<span class="guia-tag-screen"><i class="fas fa-store"></i> Pantalla: GastosTienda.html</span>
+					</div>
+					<h4 style="color:#102F6F; font-weight:bold; margin-top:8px;">Revisar Gastos Fijos y Servicios de Tienda</h4>
+					<p style="font-size:13px; color:#475569;">
+						Auditar los contratos fijos (arriendos, alarmas, seguros, fumigaci&oacute;n, revisor&iacute;a) y registrar los recibos reales de servicios p&uacute;blicos del mes.
+					</p>
+					<ul class="guia-checklist">
+						<li><i class="fas fa-check-circle"></i> Revisar la etiqueta de vigencia (<code>desde AAAA-MM</code>): si hubo incremento de arriendo, abrir la nueva vigencia sin sobreescribir el hist&oacute;rico.</li>
+						<li><i class="fas fa-check-circle"></i> En la secci&oacute;n de <em>Servicios P&uacute;blicos</em>, ingresar el valor de las facturas del mes (energ&iacute;a, agua, gas, tel&eacute;fono) de cada punto.</li>
+					</ul>
+					<a href="GastosTienda.html" class="btn btn-sm btn-default"><i class="fas fa-external-link-alt"></i> Abrir Gastos por Tienda</a>
+				</div>
+			</div>
+
+			<!-- PASO 3 -->
+			<div class="col-md-6">
+				<div class="guia-paso-card">
+					<div>
+						<span class="guia-paso-num">3</span>
+						<span class="guia-tag-screen"><i class="fas fa-sitemap"></i> Pantalla: EstructuraGerencia.html</span>
+					</div>
+					<h4 style="color:#102F6F; font-weight:bold; margin-top:8px;">Auditar las 4 Bolsas de Estructura</h4>
+					<p style="font-size:13px; color:#475569;">
+						Validar los costos de oficina y centros compartidos que se distribuirán entre las tiendas por participaci&oacute;n de ventas.
+					</p>
+					<ul class="guia-checklist">
+						<li><i class="fas fa-check-circle"></i> <strong>Administrativa:</strong> N&oacute;mina corporativa + gastos de sede (gerencia, contabilidad, gesti&oacute;n humana, aprendices SENA).</li>
+						<li><i class="fas fa-check-circle"></i> <strong>Log&iacute;stica y Producci&oacute;n:</strong> Planta de alimentos, transportes y despachos.</li>
+						<li><i class="fas fa-check-circle"></i> <strong>Contact Center:</strong> N&oacute;mina de asesores y coordinadores telef&oacute;nicos.</li>
+						<li><i class="fas fa-check-circle"></i> <strong>Publicidad y Mercadeo:</strong> Agencia, dise&ntilde;o, pautas y campa&ntilde;as.</li>
+					</ul>
+					<a href="EstructuraGerencia.html" class="btn btn-sm btn-default"><i class="fas fa-external-link-alt"></i> Abrir Estructura y N&oacute;mina</a>
+				</div>
+			</div>
+
+			<!-- PASO 4 -->
+			<div class="col-md-6">
+				<div class="guia-paso-card">
+					<div>
+						<span class="guia-paso-num">4</span>
+						<span class="guia-tag-screen"><i class="fas fa-calculator"></i> Pantalla: NominaCalculo.html</span>
+					</div>
+					<h4 style="color:#102F6F; font-weight:bold; margin-top:8px;">Calcular N&oacute;mina y Biometr&iacute;a Semanal</h4>
+					<p style="font-size:13px; color:#475569;">
+						Procesar las marcaciones de huella del personal para liquidar autom&aacute;ticamente los recargos legales de cada semana.
+					</p>
+					<ul class="guia-checklist">
+						<li><i class="fas fa-check-circle"></i> Para cada domingo de cierre de semana del mes, presionar <strong>"Calcular la semana"</strong>.</li>
+						<li><i class="fas fa-check-circle"></i> El motor clasifica turnos, horas nocturnas (desde las 19:00 Ley 2466), dominicales y festivos.</li>
+						<li><i class="fas fa-check-circle"></i> Presionar <strong>"Pasar el estimado al tablero"</strong> para dejar los recargos firmes en la n&oacute;mina.</li>
+					</ul>
+					<a href="NominaCalculo.html" class="btn btn-sm btn-default"><i class="fas fa-external-link-alt"></i> Abrir C&aacute;lculo de N&oacute;mina</a>
+				</div>
+			</div>
+
+			<!-- PASO 5 -->
+			<div class="col-md-6">
+				<div class="guia-paso-card">
+					<div>
+						<span class="guia-paso-num">5</span>
+						<span class="guia-tag-screen"><i class="fas fa-check-double"></i> Pantalla: CierreGerencia.html</span>
+					</div>
+					<h4 style="color:#102F6F; font-weight:bold; margin-top:8px;">Validar el Cierre de Gerencia</h4>
+					<p style="font-size:13px; color:#475569;">
+						Revisar persona por persona en las pesta&ntilde;as de &Aacute;reas y Tiendas para garantizar que la n&oacute;mina y gastos est&eacute;n 100% cuadrados.
+					</p>
+					<ul class="guia-checklist">
+						<li><i class="fas fa-check-circle"></i> <strong>Aprendices SENA:</strong> Verificar badge azul <code>SENA (SS 15%)</code> y liquidaci&oacute;n en 0%.</li>
+						<li><i class="fas fa-check-circle"></i> <strong>Ingresos del mes:</strong> Validar badge naranja con d&iacute;as prorrateados (ej. Marina y Hermes: 3 d&iacute;as comerciales del 28 al 30 de octubre = $220.000).</li>
+						<li><i class="fas fa-check-circle"></i> <strong>Pesta&ntilde;a Porcentaje:</strong> Inspeccionar la matriz consolidada de las 11 tiendas y exportar el informe a Excel.</li>
+					</ul>
+					<a href="CierreGerencia.html" class="btn btn-sm btn-default"><i class="fas fa-external-link-alt"></i> Abrir Cierre de Gerencia</a>
+				</div>
+			</div>
+
+			<!-- PASO 6 -->
+			<div class="col-md-6">
+				<div class="guia-paso-card">
+					<div>
+						<span class="guia-paso-num">6</span>
+						<span class="guia-tag-screen"><i class="fas fa-chart-line"></i> Pantalla: Rentabilidad.html</span>
+					</div>
+					<h4 style="color:#102F6F; font-weight:bold; margin-top:8px;">Analizar Rentabilidad y Margen EBITDA</h4>
+					<p style="font-size:13px; color:#475569;">
+						Consultar el estado de resultados consolidado por punto de venta para evaluar desempe&ntilde;o financiero y tomar acciones.
+					</p>
+					<ul class="guia-checklist">
+						<li><i class="fas fa-check-circle"></i> Verificar el Margen Bruto de cada tienda (Venta - Insumos consumidos en inventarios).</li>
+						<li><i class="fas fa-check-circle"></i> Evaluar el Margen de Contribución y el EBITDA neto (resultado final tras cuotas de estructura).</li>
+						<li><i class="fas fa-check-circle"></i> Hacer clic en cualquier concepto (Insumos, Comisiones, Nómina) para ver el desglose anal&iacute;tico exacto.</li>
+					</ul>
+					<a href="Rentabilidad.html" class="btn btn-sm btn-default"><i class="fas fa-external-link-alt"></i> Abrir Tablero de Rentabilidad</a>
+				</div>
+			</div>
+		</div>
+
+		<!-- ================= 3. REGLAS DE NEGOCIO CLAVE ================= -->
+		<div class="ger-panel" style="margin-top:10px;">
+			<h4 class="ger-titulo" style="font-size:16px;">
+				<i class="fas fa-info-circle text-info"></i> 3. Reglas de Negocio Incorporadas en el Sistema
+			</h4>
+			<div class="row" style="font-size:13.5px; color:#334155;">
+				<div class="col-md-4">
+					<div class="guia-box-callout">
+						<strong style="color:#102F6F;">Aprendices SENA</strong>
+						<p style="margin-top:5px; margin-bottom:0;">
+							Est&aacute;n asignados a la n&oacute;mina Administrativa con cargo <em>Aprendiz SENA</em> (check <code>es_sena = 1</code>). Cotizan seguridad social al <strong>15%</strong> (solo salud) y <strong>0%</strong> de prestaciones/liquidaci&oacute;n.
+						</p>
+					</div>
+				</div>
+				<div class="col-md-4">
+					<div class="guia-box-callout">
+						<strong style="color:#102F6F;">Mes Comercial de 30 D&iacute;as</strong>
+						<p style="margin-top:5px; margin-bottom:0;">
+							Para personas que ingresan a mitad de mes (ej. fecha de ingreso 28 de octubre), el sistema liquida los d&iacute;as comerciales proporcionales: $30 - 28 + 1 = 3$ d&iacute;as. Su salario b&aacute;sico se calcula como: $\text{Básico} \times 3 / 30$.
+						</p>
+					</div>
+				</div>
+				<div class="col-md-4">
+					<div class="guia-box-callout">
+						<strong style="color:#102F6F;">Prorrateo de Estructura</strong>
+						<p style="margin-top:5px; margin-bottom:0;">
+							Las 4 bolsas de estructura corporativa se distribuyen entre las tiendas seg&uacute;n la participaci&oacute;n en ventas de cada punto sobre la venta total del periodo: $\text{Cuota} = \text{Bolsa} \times (\text{Venta Tienda} / \text{Venta Total})$.
+						</p>
+					</div>
+				</div>
+			</div>
+		</div>
+
+	</div>
+
+</body>
+</html>
