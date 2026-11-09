@@ -725,24 +725,27 @@ public class GerenciaNominaCalculoDAO {
 			return (lista);
 		}
 		try {
+			final HashMap<Integer, NovedadReg> novMap = novedadesVigentes(cn, semana);
 			final PreparedStatement ps = cn.prepareStatement(
 					"SELECT e.*, IFNULL((SELECT r.idtienda"
 					+ "    FROM gerencia_nomina_empleado_tienda_semana r"
 					+ "   WHERE r.idempleado = e.idempleado AND r.semana = e.semana"
 					+ "   ORDER BY r.minutos DESC LIMIT 1), 0) AS idtienda,"
 					+ " (SELECT n.origen FROM gerencia_nomina_empleado_semana n"
-					+ "   WHERE n.idempleado = e.idempleado AND n.semana = e.semana) AS origen_cargado,"
-					+ " nov.tipo_novedad, nov.accion, nov.dias, nov.observacion, nov.permanente"
+					+ "   WHERE n.idempleado = e.idempleado AND n.semana = e.semana) AS origen_cargado"
 					+ " FROM gerencia_nomina_estimado e"
-					+ " LEFT JOIN gerencia_nomina_novedad nov"
-					+ "   ON nov.idempleado = e.idempleado AND (nov.semana = e.semana OR nov.permanente = 1)"
 					+ " WHERE e.semana = ?"
 					+ " ORDER BY e.costo_total DESC");
 			ps.setString(1, semana);
 			final ResultSet rs = ps.executeQuery();
+			final HashSet<Integer> idsVistos = new HashSet<Integer>();
 			while (rs.next()) {
+				final int idEmp = rs.getInt("idempleado");
+				if (!idsVistos.add(Integer.valueOf(idEmp))) {
+					continue; // Prevencion absoluta contra duplicados
+				}
 				final Estimado e = new Estimado();
-				e.idEmpleado = rs.getInt("idempleado");
+				e.idEmpleado = idEmp;
 				e.salarioBase = rs.getDouble("salario_base");
 				e.horasOrdinarias = rs.getDouble("horas_ordinarias");
 				e.horasNocturnas = rs.getDouble("horas_nocturnas");
@@ -768,11 +771,14 @@ public class GerenciaNominaCalculoDAO {
 				e.recargoDominical = redondear((e.horasDominicales + e.horasDomNoct) * vh * 0.90);
 				e.recargoExtra = e.horasExtra > 0 ? redondear(e.horasExtra * vh * 0.35) : 0;
 
-				e.novedadTipo = texto(rs.getString("tipo_novedad"));
-				e.novedadAccion = texto(rs.getString("accion"));
-				e.novedadObs = texto(rs.getString("observacion"));
-				e.novedadDias = rs.getInt("dias") > 0 ? rs.getInt("dias") : 7;
-				e.novedadPermanente = rs.getInt("permanente") == 1;
+				final NovedadReg nov = novMap.get(Integer.valueOf(e.idEmpleado));
+				if (nov != null) {
+					e.novedadTipo = nov.tipoNovedad;
+					e.novedadAccion = nov.accion;
+					e.novedadObs = nov.observacion;
+					e.novedadDias = nov.dias;
+					e.novedadPermanente = nov.permanente;
+				}
 
 				lista.add(e);
 			}
@@ -791,9 +797,11 @@ public class GerenciaNominaCalculoDAO {
 		final HashMap<Integer, NovedadReg> map = new HashMap<Integer, NovedadReg>();
 		try {
 			final PreparedStatement ps = cn.prepareStatement(
-					"SELECT idempleado, tipo_novedad, accion, dias, permanente, observacion "
-					+ " FROM gerencia_nomina_novedad WHERE semana = ? OR permanente = 1");
+					"SELECT idempleado, tipo_novedad, accion, dias, permanente, observacion, semana "
+					+ " FROM gerencia_nomina_novedad WHERE semana = ? OR permanente = 1"
+					+ " ORDER BY (semana = ?) ASC, fecha_registro ASC");
 			ps.setString(1, semana);
+			ps.setString(2, semana);
 			final ResultSet rs = ps.executeQuery();
 			while (rs.next()) {
 				final NovedadReg n = new NovedadReg();
@@ -930,6 +938,16 @@ public class GerenciaNominaCalculoDAO {
 			psNov.setString(14, usuario);
 			psNov.executeUpdate();
 			psNov.close();
+
+			if (permanente) {
+				// Evitar duplicados permanentes en la tabla para el mismo empleado
+				final PreparedStatement delOld = cn.prepareStatement(
+						"DELETE FROM gerencia_nomina_novedad WHERE idempleado = ? AND permanente = 1 AND semana <> ?");
+				delOld.setInt(1, idEmpleado);
+				delOld.setString(2, semana);
+				delOld.executeUpdate();
+				delOld.close();
+			}
 
 			final NovedadReg nov = new NovedadReg();
 			nov.idEmpleado = idEmpleado;

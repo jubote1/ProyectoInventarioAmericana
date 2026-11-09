@@ -145,7 +145,15 @@ function pasar() {
 
 function pintarEstimado() {
 	var d = datosEstimado;
-	var lista = d.estimados || [];
+	var rawLista = d.estimados || [];
+	var vistos = {};
+	var lista = [];
+	for (var v = 0; v < rawLista.length; v++) {
+		var idEmp = rawLista[v].idempleado;
+		if (vistos[idEmp]) { continue; }
+		vistos[idEmp] = true;
+		lista.push(rawLista[v]);
+	}
 
 	// Contadores para filtros
 	var cntTodos = lista.length;
