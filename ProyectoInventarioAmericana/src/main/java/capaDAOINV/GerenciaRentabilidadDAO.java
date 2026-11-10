@@ -276,12 +276,49 @@ public class GerenciaRentabilidadDAO {
 				c[6] = rs.getDouble("servicios") / divisor; hay[6] = !rs.wasNull();
 				c[7] = rs.getDouble("mensajeria");    hay[7] = true;
 
-				if (!hay[0]) { faltaInsumo = true; }
-				if (!hay[4]) { faltaNomina = true; }
-				if (!hay[6]) { faltaServicio = true; }
+				String firmaNomina = texto(rs.getString("firma_nomina"));
+				String origenServicio = texto(rs.getString("origen_servicios"));
 
-				final String firmaNomina = texto(rs.getString("firma_nomina"));
-				final String origenServicio = texto(rs.getString("origen_servicios"));
+				// Auto-resolucion inteligente de Nomina:
+				// Prioridad 1: Si es consulta semanal (sola != null), revisar si hay liquidacion semanal en gerencia_nomina_empleado_tienda_semana
+				if (sola != null) {
+					final double nomSemanal = obtenerNominaSemanalTienda(cn, t.idTienda, sola.hasta);
+					if (nomSemanal > 0) {
+						c[4] = nomSemanal;
+						hay[4] = true;
+						if (firmaNomina.isEmpty()) {
+							firmaNomina = "REAL";
+						}
+					}
+				}
+
+				// Prioridad 2: Si no hubo nomina semanal ni nomina mensual cargada (o c[4] <= 0), estimar con historico
+				if (!hay[4] || c[4] <= 0) {
+					final double nomHist = estimarNominaTienda(cn, t.idTienda, anio, mes);
+					if (nomHist > 0) {
+						c[4] = nomHist / divisor;
+						hay[4] = true;
+						firmaNomina = "SIMULACION";
+						e.simulado = true;
+					}
+				}
+
+				// Auto-resolucion inteligente de Servicios Publicos:
+				// Si el mes aun no tiene facturas cargadas, estimar con el historico reciente
+				if (!hay[6] || c[6] <= 0) {
+					final double serHist = estimarServiciosTienda(cn, t.idTienda, anio, mes);
+					if (serHist > 0) {
+						c[6] = serHist / divisor;
+						hay[6] = true;
+						origenServicio = "ESTIMADO";
+						e.simulado = true;
+					}
+				}
+
+				if (!hay[0]) { faltaInsumo = true; }
+				if (!hay[4] || c[4] <= 0) { faltaNomina = true; }
+				if (!hay[6] || c[6] <= 0) { faltaServicio = true; }
+
 				if ("SIMULACION".equals(firmaNomina)) {
 					e.simulado = true;
 				}
@@ -467,10 +504,35 @@ final ResultSet rs = ps.executeQuery();
 				if (venta <= 0) {
 					continue;
 				}
-				final double resultado = venta - rs.getDouble("insumos") - rs.getDouble("comisiones")
-						- rs.getDouble("operacion") - rs.getDouble("mensajeria") - rs.getDouble("nomina")
-						- rs.getDouble("fijos") - rs.getDouble("servicios");
-				filas.add(new double[] { rs.getInt("numero"), rs.getInt("mes"), venta,
+				final double insumos = rs.getDouble("insumos");
+				final double comisiones = rs.getDouble("comisiones");
+				final double operacion = rs.getDouble("operacion");
+				final double mensajeria = rs.getDouble("mensajeria");
+				final double fijos = rs.getDouble("fijos");
+				double nomina = rs.getDouble("nomina");
+				double servicios = rs.getDouble("servicios");
+
+				final int mesFila = rs.getInt("mes");
+				final int semanasMes = rs.getInt("semanas_mes");
+				final double divSem = semanasMes > 0 ? semanasMes : 4.0;
+
+				if (nomina <= 0) {
+					final double nomHist = estimarNominaTienda(cn, idTienda, anio, mesFila);
+					if (nomHist > 0) {
+						nomina = nomHist / divSem;
+					}
+				}
+				if (servicios <= 0) {
+					final double serHist = estimarServiciosTienda(cn, idTienda, anio, mesFila);
+					if (serHist > 0) {
+						servicios = serHist / divSem;
+					}
+				}
+
+				final double resultado = venta - insumos - comisiones
+						- operacion - mensajeria - nomina
+						- fijos - servicios;
+				filas.add(new double[] { rs.getInt("numero"), mesFila, venta,
 						resultado, resultado * 100 / venta });
 			}
 			rs.close();
@@ -600,6 +662,116 @@ final ResultSet rs = ps.executeQuery();
 			}
 			rs.close();
 			ps.close();
+
+			// Si no hay detalle en este mes para servicios, nomina o estructura,
+			// mostrar el desglose del mes anterior simulado:
+			if (filas.isEmpty()) {
+				if ("SER".equals(linea)) {
+					final PreparedStatement psPrev = cn.prepareStatement(
+							"SELECT anio, mes FROM inventarioamericana.gerencia_gasto_servicio "
+							+ "WHERE idtienda = ? AND (anio < ? OR (anio = ? AND mes < ?)) "
+							+ "ORDER BY anio DESC, mes DESC LIMIT 1");
+					psPrev.setInt(1, idTienda);
+					psPrev.setInt(2, anio);
+					psPrev.setInt(3, anio);
+					psPrev.setInt(4, mes);
+					final ResultSet rsPrev = psPrev.executeQuery();
+					if (rsPrev.next()) {
+						final int aP = rsPrev.getInt("anio");
+						final int mP = rsPrev.getInt("mes");
+						final PreparedStatement psHist = cn.prepareStatement(
+								"SELECT c.nombre AS concepto, s.valor, CONCAT('Simulado de ', s.mes, '/', s.anio) AS nota "
+								+ "FROM inventarioamericana.gerencia_gasto_servicio s "
+								+ "JOIN inventarioamericana.gerencia_concepto_gasto c ON c.idconcepto = s.idconcepto "
+								+ "WHERE s.idtienda = ? AND s.anio = ? AND s.mes = ?");
+						psHist.setInt(1, idTienda);
+						psHist.setInt(2, aP);
+						psHist.setInt(3, mP);
+						final ResultSet rsHist = psHist.executeQuery();
+						while (rsHist.next()) {
+							final Detalle d = new Detalle();
+							d.concepto = texto(rsHist.getString("concepto"));
+							d.valor = rsHist.getDouble("valor");
+							d.nota = texto(rsHist.getString("nota"));
+							filas.add(d);
+						}
+						rsHist.close();
+						psHist.close();
+					}
+					rsPrev.close();
+					psPrev.close();
+				} else if ("NOM".equals(linea)) {
+					final PreparedStatement psPrev = cn.prepareStatement(
+							"SELECT anio, mes FROM inventarioamericana.gerencia_nomina_tienda "
+							+ "WHERE idtienda = ? AND (anio < ? OR (anio = ? AND mes < ?)) "
+							+ "ORDER BY anio DESC, mes DESC LIMIT 1");
+					psPrev.setInt(1, idTienda);
+					psPrev.setInt(2, anio);
+					psPrev.setInt(3, anio);
+					psPrev.setInt(4, mes);
+					final ResultSet rsPrev = psPrev.executeQuery();
+					if (rsPrev.next()) {
+						final int aP = rsPrev.getInt("anio");
+						final int mP = rsPrev.getInt("mes");
+						final PreparedStatement psHist = cn.prepareStatement(
+								"SELECT sueldo_basico, sueldo_variable, seguridad_social, liquidacion, empleados "
+								+ "FROM inventarioamericana.gerencia_nomina_tienda "
+								+ "WHERE idtienda = ? AND anio = ? AND mes = ?");
+						psHist.setInt(1, idTienda);
+						psHist.setInt(2, aP);
+						psHist.setInt(3, mP);
+						final ResultSet rsHist = psHist.executeQuery();
+						if (rsHist.next()) {
+							final double bas = rsHist.getDouble("sueldo_basico");
+							final double var = rsHist.getDouble("sueldo_variable");
+							final double ss = rsHist.getDouble("seguridad_social");
+							final double liq = rsHist.getDouble("liquidacion");
+							final int emp = rsHist.getInt("empleados");
+							final String nSim = " (Simulado " + mP + "/" + aP + ")";
+
+							final Detalle d1 = new Detalle(); d1.concepto = "Sueldo basico"; d1.valor = bas; d1.nota = emp + " empleados" + nSim; filas.add(d1);
+							final Detalle d2 = new Detalle(); d2.concepto = "Sueldo variable"; d2.valor = var; d2.nota = "Simulado " + mP + "/" + aP; filas.add(d2);
+							final Detalle d3 = new Detalle(); d3.concepto = "Seguridad social"; d3.valor = ss; d3.nota = "Simulado " + mP + "/" + aP; filas.add(d3);
+							final Detalle d4 = new Detalle(); d4.concepto = "Liquidacion"; d4.valor = liq; d4.nota = "Simulado " + mP + "/" + aP; filas.add(d4);
+						}
+						rsHist.close();
+						psHist.close();
+					}
+					rsPrev.close();
+					psPrev.close();
+				} else if ("EST".equals(linea)) {
+					final PreparedStatement psPrev = cn.prepareStatement(
+							"SELECT anio, mes FROM inventarioamericana.gerencia_pool_estructura "
+							+ "WHERE anio < ? OR (anio = ? AND mes < ?) "
+							+ "ORDER BY anio DESC, mes DESC LIMIT 1");
+					psPrev.setInt(1, anio);
+					psPrev.setInt(2, anio);
+					psPrev.setInt(3, mes);
+					final ResultSet rsPrev = psPrev.executeQuery();
+					if (rsPrev.next()) {
+						final int aP = rsPrev.getInt("anio");
+						final int mP = rsPrev.getInt("mes");
+						final PreparedStatement psHist = cn.prepareStatement(
+								"SELECT tipo AS concepto, valor, CONCAT('Simulado de ', mes, '/', anio) AS nota "
+								+ "FROM inventarioamericana.gerencia_pool_estructura "
+								+ "WHERE anio = ? AND mes = ? ORDER BY valor DESC");
+						psHist.setInt(1, aP);
+						psHist.setInt(2, mP);
+						final ResultSet rsHist = psHist.executeQuery();
+						while (rsHist.next()) {
+							final Detalle d = new Detalle();
+							d.concepto = texto(rsHist.getString("concepto"));
+							d.valor = rsHist.getDouble("valor");
+							d.nota = texto(rsHist.getString("nota"));
+							filas.add(d);
+						}
+						rsHist.close();
+						psHist.close();
+					}
+					rsPrev.close();
+					psPrev.close();
+				}
+			}
 		} catch (final Exception e) {
 			System.out.println("GerenciaRentabilidadDAO.detalle: " + e.toString());
 		} finally {
@@ -709,11 +881,116 @@ final ResultSet rs = ps.executeQuery();
 			}
 			rs.close();
 			ps.close();
+
+			// Si el mes tiene bolsas registradas, retornarlas
+			if (r[1] > 0 && r[0] > 0) {
+				return (r);
+			}
+
+			// Fallback historico: buscar el mes mas reciente anterior con estructura
+			final PreparedStatement psPrev = cn.prepareStatement(
+					"SELECT anio, mes FROM inventarioamericana.gerencia_pool_estructura "
+					+ "WHERE anio < ? OR (anio = ? AND mes < ?) "
+					+ "ORDER BY anio DESC, mes DESC LIMIT 1");
+			psPrev.setInt(1, anio);
+			psPrev.setInt(2, anio);
+			psPrev.setInt(3, mes);
+			final ResultSet rsPrev = psPrev.executeQuery();
+			if (rsPrev.next()) {
+				final int aP = rsPrev.getInt("anio");
+				final int mP = rsPrev.getInt("mes");
+				final PreparedStatement psHist = cn.prepareStatement(
+						"SELECT IFNULL(SUM(valor),0) AS valor, COUNT(*) AS cuantas "
+						+ "FROM inventarioamericana.gerencia_pool_estructura WHERE anio = ? AND mes = ?");
+				psHist.setInt(1, aP);
+				psHist.setInt(2, mP);
+				final ResultSet rsHist = psHist.executeQuery();
+				if (rsHist.next()) {
+					final double valHist = rsHist.getDouble("valor");
+					final int cntHist = rsHist.getInt("cuantas");
+					if (cntHist > 0 && valHist > 0) {
+						r = new double[] { valHist, cntHist, cntHist };
+					}
+				}
+				rsHist.close();
+				psHist.close();
+			}
+			rsPrev.close();
+			psPrev.close();
+
 			return (r);
 		} catch (final Exception e) {
 			System.out.println("GerenciaRentabilidadDAO.poolDe: " + e.toString());
 			return (new double[] { 0, 0, 0 });
 		}
+	}
+
+	private static double estimarServiciosTienda(final Connection cn, final int idTienda, final int anio, final int mes) {
+		double valor = 0;
+		try {
+			final PreparedStatement ps = cn.prepareStatement(
+					"SELECT SUM(valor) AS total FROM inventarioamericana.gerencia_gasto_servicio "
+					+ "WHERE idtienda = ? AND (anio < ? OR (anio = ? AND mes < ?)) "
+					+ "GROUP BY anio, mes ORDER BY anio DESC, mes DESC LIMIT 1");
+			ps.setInt(1, idTienda);
+			ps.setInt(2, anio);
+			ps.setInt(3, anio);
+			ps.setInt(4, mes);
+			final ResultSet rs = ps.executeQuery();
+			if (rs.next()) {
+				valor = rs.getDouble("total");
+			}
+			rs.close();
+			ps.close();
+		} catch (final Exception e) {
+			System.out.println("GerenciaRentabilidadDAO.estimarServiciosTienda: " + e.toString());
+		}
+		return valor;
+	}
+
+	private static double estimarNominaTienda(final Connection cn, final int idTienda, final int anio, final int mes) {
+		double valor = 0;
+		try {
+			final PreparedStatement ps = cn.prepareStatement(
+					"SELECT SUM(sueldo_basico + sueldo_variable + seguridad_social + liquidacion) AS total "
+					+ "FROM inventarioamericana.gerencia_nomina_tienda "
+					+ "WHERE idtienda = ? AND (anio < ? OR (anio = ? AND mes < ?)) "
+					+ "GROUP BY anio, mes ORDER BY anio DESC, mes DESC LIMIT 1");
+			ps.setInt(1, idTienda);
+			ps.setInt(2, anio);
+			ps.setInt(3, anio);
+			ps.setInt(4, mes);
+			final ResultSet rs = ps.executeQuery();
+			if (rs.next()) {
+				valor = rs.getDouble("total");
+			}
+			rs.close();
+			ps.close();
+		} catch (final Exception e) {
+			System.out.println("GerenciaRentabilidadDAO.estimarNominaTienda: " + e.toString());
+		}
+		return valor;
+	}
+
+	private static double obtenerNominaSemanalTienda(final Connection cn, final int idTienda, final String fechaFin) {
+		double valor = 0;
+		try {
+			final PreparedStatement ps = cn.prepareStatement(
+					"SELECT SUM(sueldo_basico + sueldo_variable + seguridad_social + liquidacion) AS total "
+					+ "FROM inventarioamericana.gerencia_nomina_empleado_tienda_semana "
+					+ "WHERE idtienda = ? AND semana = ?");
+			ps.setInt(1, idTienda);
+			ps.setString(2, fechaFin);
+			final ResultSet rs = ps.executeQuery();
+			if (rs.next()) {
+				valor = rs.getDouble("total");
+			}
+			rs.close();
+			ps.close();
+		} catch (final Exception e) {
+			System.out.println("GerenciaRentabilidadDAO.obtenerNominaSemanalTienda: " + e.toString());
+		}
+		return valor;
 	}
 
 	/**
