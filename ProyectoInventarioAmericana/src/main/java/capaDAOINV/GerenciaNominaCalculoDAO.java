@@ -115,6 +115,7 @@ public class GerenciaNominaCalculoDAO {
 		public double recargoDominical;
 		public double recargoExtra;
 		public boolean esSena = false;
+		public boolean esSenaElectiva = false;
 		public String novedadTipo = "";
 		public String novedadAccion = "";
 		public String novedadObs = "";
@@ -601,15 +602,32 @@ public class GerenciaNominaCalculoDAO {
 		//Auxilio de transporte: solo hasta el tope de salarios minimos, y no
 		//entra a la base de seguridad social ni a la de vacaciones.
 		final double tope = p.de("TOPE_AUX_SMLV", 2) * p.de("SMLV", 0);
-		e.auxilioTransporte = (tope > 0 && e.salarioBase > 0 && e.salarioBase <= tope && !e.esSena)
+		e.auxilioTransporte = (tope > 0 && e.salarioBase > 0 && e.salarioBase <= tope && !e.esSena && !e.esSenaElectiva)
 				? redondear(p.de("AUX_TRANSPORTE", 0) * SEMANA_DEL_MES) : 0;
 
 		final double baseSalarial = e.sueldoBasico + e.sueldoVariable;
 
 		//Seguridad social y parafiscales del empleador.
-		if (e.esSena) {
+		if (e.esSenaElectiva) {
+			// Aprendiz SENA (Etapa Lectiva):
+			// Apoyo sostenimiento 75% del salario base mensual prorrateado.
+			// Seguridad social: 15% fija sobre el salario base mensual prorrateado.
+			// Sin prestaciones sociales (cesantías, prima ni vacaciones = $0) ni auxilio de transporte.
+			e.sueldoBasico = redondear((e.salarioBase * 0.75) * SEMANA_DEL_MES);
+			e.auxilioTransporte = 0;
+			e.seguridadSocial = redondear((e.salarioBase * SEMANA_DEL_MES) * 0.15);
+			e.liquidacion = 0;
+			e.costoTotal = redondear(e.sueldoBasico + e.sueldoVariable + e.seguridadSocial);
+			e.aviso = "Aprendiz SENA (Etapa Lectiva): Apoyo sostenimiento 75%, SS 15%, sin liquidación ni auxilio.";
+		} else if (e.esSena) {
+			// Aprendiz SENA (Etapa Práctica):
+			// Apoyo sostenimiento 100%, SS 15%, sin liquidación.
+			e.sueldoBasico = redondear(e.sueldoBasico);
+			e.auxilioTransporte = 0;
 			e.seguridadSocial = redondear(baseSalarial * 0.15);
 			e.liquidacion = 0;
+			e.costoTotal = redondear(e.sueldoBasico + e.sueldoVariable + e.seguridadSocial);
+			e.aviso = "Aprendiz SENA (Etapa Práctica): Apoyo sostenimiento 100%, SS 15%, sin liquidación.";
 		} else {
 			final double[] cargo = cargos.get(Integer.valueOf(e.idTipoEmpleado));
 			final double arl = cargo != null ? cargo[0] : 0.522;
@@ -631,15 +649,22 @@ public class GerenciaNominaCalculoDAO {
 					baseConAuxilio * (p.de("CESANTIAS", 8.33) + p.de("INTERES_CESANTIAS", 1)
 							+ p.de("PRIMA", 8.33)) / 100.0
 					+ baseSalarial * p.de("VACACIONES", 4.17) / 100.0);
+			e.sueldoBasico = redondear(e.sueldoBasico);
+			e.costoTotal = redondear(e.sueldoBasico + e.sueldoVariable + e.auxilioTransporte
+					+ e.seguridadSocial + e.liquidacion);
 		}
-
-		e.sueldoBasico = redondear(e.sueldoBasico);
-		e.costoTotal = redondear(e.sueldoBasico + e.sueldoVariable + e.auxilioTransporte
-				+ e.seguridadSocial + e.liquidacion);
 
 		//Los avisos. Un estimado con algo raro tiene que decirlo, porque quien
 		//mira la lista no va a revisar a ciento cuarenta y ocho personas.
-		if (h.turnos == 0) {
+		if (e.esSenaElectiva) {
+			e.aviso = "Aprendiz SENA (Etapa Lectiva): Apoyo sostenimiento 75%, SS 15%, sin liquidación ni auxilio.";
+		} else if (e.esSena) {
+			if (h.turnos == 0) {
+				e.aviso = "Aprendiz SENA (Etapa Práctica): Sin marcaciones, apoyo sostenimiento 100%, SS 15%.";
+			} else {
+				e.aviso = "Aprendiz SENA (Etapa Práctica): Apoyo sostenimiento 100%, SS 15%, sin liquidación.";
+			}
+		} else if (h.turnos == 0) {
 			e.aviso = "Sin marcaciones en la semana: va el basico sin recargos. "
 					+ "Revisar si fue vacaciones, incapacidad o falta de marcacion.";
 		} else if (h.total() < jornada * 0.5) {
@@ -1021,13 +1046,33 @@ public class GerenciaNominaCalculoDAO {
 		} else if ("AJUSTAR".equalsIgnoreCase(nov.accion) || "VACACIONES_PARCIAL".equals(nov.tipoNovedad)) {
 			final double dLab = nov.dias > 0 && nov.dias <= 7 ? nov.dias : 3;
 			e.sueldoBasico = redondear(e.salarioBase * dLab / 30.0);
-			e.auxilioTransporte = (e.salarioBase > 0 && e.salarioBase <= 2 * 1300000 && !e.esSena) ? redondear(162000.0 * dLab / 30.0) : 0;
-			e.seguridadSocial = redondear((e.sueldoBasico + e.sueldoVariable) * (e.esSena ? 0.15 : 0.205));
-			e.liquidacion = e.esSena ? 0 : redondear((e.sueldoBasico + e.sueldoVariable + e.auxilioTransporte) * 0.2183);
+			e.auxilioTransporte = (e.salarioBase > 0 && e.salarioBase <= 2 * 1300000 && !e.esSena && !e.esSenaElectiva) ? redondear(162000.0 * dLab / 30.0) : 0;
+			e.seguridadSocial = redondear((e.sueldoBasico + e.sueldoVariable) * ((e.esSena || e.esSenaElectiva) ? 0.15 : 0.205));
+			e.liquidacion = (e.esSena || e.esSenaElectiva) ? 0 : redondear((e.sueldoBasico + e.sueldoVariable + e.auxilioTransporte) * 0.2183);
 			e.costoTotal = redondear(e.sueldoBasico + e.sueldoVariable + e.auxilioTransporte + e.seguridadSocial + e.liquidacion);
 			e.costoCorregido = e.costoTotal;
 			final String dStr = nov.dias == (int) nov.dias ? String.valueOf((int) nov.dias) : String.format(java.util.Locale.US, "%.2f", nov.dias);
 			e.aviso = "Vacaciones parciales: liquidado sobre " + dStr + " días laborados";
+		} else if ("SENA_LECTIVA".equals(nov.tipoNovedad)) {
+			e.esSena = true;
+			e.esSenaElectiva = true;
+			e.sueldoBasico = redondear((e.salarioBase * 0.75) * SEMANA_DEL_MES);
+			e.auxilioTransporte = 0;
+			e.seguridadSocial = redondear((e.salarioBase * SEMANA_DEL_MES) * 0.15);
+			e.liquidacion = 0;
+			e.costoTotal = redondear(e.sueldoBasico + e.sueldoVariable + e.seguridadSocial);
+			e.costoCorregido = e.costoTotal;
+			e.aviso = "Aprendiz SENA (Etapa Lectiva): Apoyo sostenimiento 75%, SS 15%, sin liquidación ni auxilio.";
+		} else if ("SENA_PRACTICA".equals(nov.tipoNovedad)) {
+			e.esSena = true;
+			e.esSenaElectiva = false;
+			e.sueldoBasico = redondear(e.salarioBase * SEMANA_DEL_MES);
+			e.auxilioTransporte = 0;
+			e.seguridadSocial = redondear((e.sueldoBasico + e.sueldoVariable) * 0.15);
+			e.liquidacion = 0;
+			e.costoTotal = redondear(e.sueldoBasico + e.sueldoVariable + e.seguridadSocial);
+			e.costoCorregido = e.costoTotal;
+			e.aviso = "Aprendiz SENA (Etapa Práctica): Apoyo sostenimiento 100%, SS 15%, sin liquidación.";
 		} else {
 			// INCLUIR (Directivo, incapacidad, etc.)
 			if ("DIRECTIVO_INCLUIR".equals(nov.tipoNovedad)) {
@@ -1875,7 +1920,7 @@ public class GerenciaNominaCalculoDAO {
 		final ArrayList<Estimado> lista = new ArrayList<Estimado>();
 		try {
 			final PreparedStatement ps = cnGeneral.prepareStatement(
-					"SELECT e.id, e.nombre_largo, e.salario, e.idtipoempleado, IFNULL(e.es_sena, 0) AS es_sena,"
+					"SELECT e.id, e.nombre_largo, e.salario, e.idtipoempleado, IFNULL(e.es_sena, 0) AS es_sena, IFNULL(e.es_sena_electiva, 0) AS es_sena_electiva,"
 					+ " IFNULL(t.descripcion,'') AS cargo"
 					+ " FROM empleado e LEFT JOIN tipo_empleado t ON t.idtipoempleado = e.idtipoempleado"
 					+ " WHERE e.activo = 1 AND e.es_empleado = 1 AND e.salario > 0 ORDER BY e.nombre_largo");
@@ -1898,6 +1943,7 @@ public class GerenciaNominaCalculoDAO {
 				e.cargo = texto(rs.getString("cargo"));
 				e.salarioBase = sal;
 				e.esSena = rs.getInt("es_sena") == 1;
+				e.esSenaElectiva = rs.getInt("es_sena_electiva") == 1;
 				e.entraTienda = cfg == null || cfg[1] == 1;
 				e.idTipoEmpleado = idTipo;
 				lista.add(e);
@@ -2040,22 +2086,25 @@ public class GerenciaNominaCalculoDAO {
 			return;
 		}
 		try {
-			final Map<Integer, String[]> datos = new HashMap<Integer, String[]>();
+			final Map<Integer, Object[]> datos = new HashMap<Integer, Object[]>();
 			final PreparedStatement ps = cn.prepareStatement(
-					"SELECT e.id, e.nombre_largo, IFNULL(t.descripcion,'') AS cargo"
+					"SELECT e.id, e.nombre_largo, IFNULL(t.descripcion,'') AS cargo, IFNULL(e.es_sena, 0) AS es_sena, IFNULL(e.es_sena_electiva, 0) AS es_sena_electiva"
 					+ " FROM empleado e LEFT JOIN tipo_empleado t ON t.idtipoempleado = e.idtipoempleado");
 			final ResultSet rs = ps.executeQuery();
 			while (rs.next()) {
 				datos.put(Integer.valueOf(rs.getInt("id")),
-						new String[] { texto(rs.getString("nombre_largo")), texto(rs.getString("cargo")) });
+						new Object[] { texto(rs.getString("nombre_largo")), texto(rs.getString("cargo")),
+								Boolean.valueOf(rs.getInt("es_sena") == 1), Boolean.valueOf(rs.getInt("es_sena_electiva") == 1) });
 			}
 			rs.close();
 			ps.close();
 			for (final Estimado e : lista) {
-				final String[] d = datos.get(Integer.valueOf(e.idEmpleado));
+				final Object[] d = datos.get(Integer.valueOf(e.idEmpleado));
 				if (d != null) {
-					e.nombre = d[0];
-					e.cargo = d[1];
+					e.nombre = (String) d[0];
+					e.cargo = (String) d[1];
+					e.esSena = ((Boolean) d[2]).booleanValue();
+					e.esSenaElectiva = ((Boolean) d[3]).booleanValue();
 				}
 			}
 		} catch (final Exception e) {

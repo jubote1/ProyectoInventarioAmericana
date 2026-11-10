@@ -392,6 +392,8 @@ function pintarEstimado() {
 			var icono = 'fa-check-circle';
 			var label = 'Justificado';
 			if (e.novedad_tipo === 'DIRECTIVO_INCLUIR') { label = 'Directivo'; icono = 'fa-user-tie'; badgeClase = 'badge-directivo'; }
+			else if (e.novedad_tipo === 'SENA_LECTIVA') { label = 'SENA (Lectiva)'; icono = 'fa-graduation-cap'; badgeClase = 'badge-directivo'; }
+			else if (e.novedad_tipo === 'SENA_PRACTICA') { label = 'SENA (Práctica)'; icono = 'fa-graduation-cap'; badgeClase = 'badge-directivo'; }
 			else if (e.novedad_tipo === 'VACACIONES_EXCLUIR') { label = 'Vacaciones'; icono = 'fa-umbrella-beach'; badgeClase = 'badge-vacaciones'; }
 			else if (e.novedad_tipo === 'VACACIONES_PARCIAL') { 
 				var dFmt = (e.novedad_dias != null ? (e.novedad_dias % 1 === 0 ? e.novedad_dias : Number(e.novedad_dias).toFixed(2)) : 3);
@@ -403,6 +405,16 @@ function pintarEstimado() {
 			cuerpo += '<span class="badge-nov ' + badgeClase + '" title="' + escNC(e.aviso) + '">'
 				+ '<i class="fas ' + icono + '"></i> ' + label + '</span> '
 				+ '<button class="btn btn-default btn-xs" style="padding:1px 5px;" onclick="abrirModalNovedad(' + e.idempleado + ')" title="Editar novedad">'
+				+ '<i class="fas fa-pencil-alt"></i></button>';
+		} else if (e.es_sena_electiva) {
+			cuerpo += '<span class="badge-nov badge-directivo" title="' + escNC(e.aviso) + '">'
+				+ '<i class="fas fa-graduation-cap"></i> SENA (Lectiva)</span> '
+				+ '<button class="btn btn-default btn-xs" style="padding:1px 5px; opacity:0.7;" onclick="abrirModalNovedad(' + e.idempleado + ')" title="Gestionar condición">'
+				+ '<i class="fas fa-pencil-alt"></i></button>';
+		} else if (e.es_sena) {
+			cuerpo += '<span class="badge-nov badge-directivo" title="' + escNC(e.aviso) + '">'
+				+ '<i class="fas fa-graduation-cap"></i> SENA (Práctica)</span> '
+				+ '<button class="btn btn-default btn-xs" style="padding:1px 5px; opacity:0.7;" onclick="abrirModalNovedad(' + e.idempleado + ')" title="Gestionar condición">'
 				+ '<i class="fas fa-pencil-alt"></i></button>';
 		} else if (e.aviso) {
 			cuerpo += '<button class="btn btn-xs btn-warning btn-resolver-nov" onclick="abrirModalNovedad(' + e.idempleado + ')">'
@@ -417,7 +429,7 @@ function pintarEstimado() {
 		cuerpo += '</td></tr>';
 
 		if (e.aviso) {
-			if (e.novedad_tipo) {
+			if (e.novedad_tipo || e.es_sena_electiva || e.es_sena) {
 				cuerpo += '<tr style="background:#F0FDF4;"><td colspan="' + colsTotal + '" style="font-size:11.5px; color:#166534; padding:3px 10px;">'
 					+ '<i class="fas fa-check-circle text-success"></i> ' + escNC(e.aviso)
 					+ (e.novedad_obs ? ' &mdash; <em>' + escNC(e.novedad_obs) + '</em>' : '') + '</td></tr>';
@@ -460,7 +472,11 @@ function abrirModalNovedad(idempleado) {
 	if (!tipoElegido) {
 		var nombreL = emp.nombre.toLowerCase();
 		var cargoL = emp.cargo.toLowerCase();
-		if (nombreL.indexOf('vigoya') !== -1 || cargoL.indexOf('gerente') !== -1
+		if (emp.es_sena_electiva) {
+			tipoElegido = 'SENA_LECTIVA';
+		} else if (emp.es_sena) {
+			tipoElegido = 'SENA_PRACTICA';
+		} else if (nombreL.indexOf('vigoya') !== -1 || cargoL.indexOf('gerente') !== -1
 				|| cargoL.indexOf('director') !== -1 || cargoL.indexOf('coordinador') !== -1) {
 			tipoElegido = 'DIRECTIVO_INCLUIR';
 		} else if (emp.turnos === 0) {
