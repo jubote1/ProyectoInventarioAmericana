@@ -92,6 +92,7 @@ public class ComposicionProducto extends HttpServlet {
 			o.put("tamano", p.tamano);
 			o.put("tipo", p.tipo);
 			o.put("insumos", p.insumos);
+			o.put("precio", Double.valueOf(p.precio));
 			lista.add(o);
 		}
 		raiz.put("respuesta", "OK");
@@ -115,6 +116,7 @@ public class ComposicionProducto extends HttpServlet {
 			o.put("idinsumo", l.idInsumo);
 			o.put("insumo", l.insumo);
 			o.put("unidad", l.unidad);
+			o.put("categoria", l.categoria);
 			o.put("cantidad", l.cantidad);
 			o.put("unitario", l.costoUnitario);
 			o.put("costo", l.costo);

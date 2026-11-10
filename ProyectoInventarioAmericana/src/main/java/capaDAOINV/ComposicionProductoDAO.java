@@ -57,6 +57,7 @@ public class ComposicionProductoDAO {
 		public String tamano = "";
 		public String tipo = "";
 		public int insumos;
+		public double precio;
 	}
 
 	/** Una linea de costeo: un insumo dentro de lo que se pidio costear. */
@@ -64,6 +65,7 @@ public class ComposicionProductoDAO {
 		public int idInsumo;
 		public String insumo = "";
 		public String unidad = "";
+		public String categoria = "";
 		public double cantidad;
 		public double costoUnitario;
 		public double costo;
@@ -97,8 +99,10 @@ public class ComposicionProductoDAO {
 			sql.append("SELECT c.idproducto, IFNULL(c.descripcion,'') AS descripcion,")
 				.append("       IFNULL(c.tamano,'') AS tamano, IFNULL(c.tipo_producto,'') AS tipo,")
 				.append("       (SELECT COUNT(*) FROM producto_insumo pi")
-				.append("         WHERE pi.idproducto = c.idproducto) AS insumos")
-				.append("  FROM producto_catalogo c");
+				.append("         WHERE pi.idproducto = c.idproducto) AS insumos,")
+				.append("       IFNULL(p.preciogeneral, 0) AS precio")
+				.append("  FROM producto_catalogo c")
+				.append("  LEFT JOIN pizzaamericana.producto p ON p.idproducto = c.idproducto");
 			//Solo los que descuentan algo: un producto sin composicion no se
 			//puede costear y en el selector solo estorba.
 			sql.append(" WHERE EXISTS (SELECT 1 FROM producto_insumo pi2 WHERE pi2.idproducto = c.idproducto)");
@@ -119,6 +123,7 @@ public class ComposicionProductoDAO {
 				p.tamano = texto(rs.getString("tamano"));
 				p.tipo = texto(rs.getString("tipo"));
 				p.insumos = rs.getInt("insumos");
+				p.precio = rs.getDouble("precio");
 				lista.add(p);
 			}
 			rs.close();
@@ -167,6 +172,7 @@ public class ComposicionProductoDAO {
 					"SELECT pi.iditem, IFNULL(i.idinsumo, 0) AS idinsumo,"
 					+ "      IFNULL(i.nombre_insumo, CONCAT('Item ', pi.iditem, ' sin homologar')) AS insumo,"
 					+ "      IFNULL(i.unidad_medida, '') AS unidad,"
+					+ "      IFNULL(i.categoria, 'Otros') AS categoria,"
 					+ "      SUM(pi.cantidad) AS cantidad,"
 					+ "      IFNULL(i.costo_unidad / IF(i.embalaje_costo > 0, i.embalaje_costo, 1), 0) AS unitario,"
 					+ "      IFNULL(SUM(" + VALOR + "), 0) AS costo,"
@@ -179,7 +185,7 @@ public class ComposicionProductoDAO {
 					+ "               FROM insumo_homologacion_tienda) h ON h.insumotienda = pi.iditem"
 					+ "  LEFT JOIN insumo i ON i.idinsumo = h.idinsumo"
 					+ " WHERE pi.idproducto IN (" + limpios + ")"
-					+ " GROUP BY pi.iditem, i.idinsumo, i.nombre_insumo, i.unidad_medida,"
+					+ " GROUP BY pi.iditem, i.idinsumo, i.nombre_insumo, i.unidad_medida, i.categoria,"
 					+ "          i.costo_unidad, i.embalaje_costo"
 					+ " ORDER BY costo DESC";
 
@@ -190,6 +196,7 @@ public class ComposicionProductoDAO {
 				l.idInsumo = rs.getInt("idinsumo");
 				l.insumo = texto(rs.getString("insumo"));
 				l.unidad = texto(rs.getString("unidad"));
+				l.categoria = texto(rs.getString("categoria"));
 				l.cantidad = rs.getDouble("cantidad");
 				l.costoUnitario = rs.getDouble("unitario");
 				l.costo = rs.getDouble("costo");

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-	<title>Costeo y Composicion de Productos</title>
+	<title>Costeo de Productos & Ficha Técnica | Pizza Americana</title>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
 	<link href="css/bootstrap.min.css" rel="stylesheet" type="text/css" />
@@ -12,54 +12,425 @@
 	<script type="text/javascript" src="js/bootstrap.min.js"></script>
 	<script type="text/javascript" charset="utf8" src="js/jquery.dataTables.js"></script>
 	<style type="text/css">
-		/* Mismo lenguaje visual del monitoreo de varianzas y del maestro de
-		   insumos: tarjetas arriba, paneles blancos y el estado en color. */
-		body { background-color:#F4F6F8; }
+		/* Identidad visual Pizza Americana */
+		:root {
+			--pa-navy: #102F6F;
+			--pa-red: #E42528;
+			--pa-yellow: #FDC806;
+			--pa-green: #16704F;
+			--pa-gray-bg: #F4F6F9;
+			--pa-border: #DDE2EB;
+		}
 
-		.cp-tarjeta { border:1px solid #E2E6EC; border-radius:6px; padding:12px 14px;
-			margin-bottom:12px; background-color:#FFFFFF; }
-		.cp-rotulo { font-size:11px; color:#6C7482; text-transform:uppercase; letter-spacing:.04em; }
-		.cp-cifra { font-size:26px; font-weight:bold; color:#102F6F; line-height:1.15; }
-		.cp-pie { font-size:12px; color:#6C7482; }
-		.cp-total .cp-cifra { color:#16704F; }
-		.cp-ojo .cp-cifra { color:#C21C1F; }
+		body {
+			background-color: #F4F6F9;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+			color: #2D3748;
+		}
 
-		.cp-panel { border:1px solid #E2E6EC; border-radius:6px; padding:14px 16px;
-			background-color:#FFFFFF; margin-bottom:14px; }
-		.cp-titulo { font-size:17px; font-weight:bold; color:#102F6F; margin:0 0 4px; }
-		.cp-sub { font-size:12.5px; color:#6C7482; margin:0 0 12px; }
-		.cp-campo { margin-bottom:9px; }
-		.cp-campo label { font-size:11px; color:#6C7482; text-transform:uppercase;
-			letter-spacing:.04em; margin-bottom:2px; display:block; }
+		.cp-header {
+			background: linear-gradient(135deg, #102F6F 0%, #1A4499 100%);
+			color: #FFFFFF;
+			padding: 16px 20px;
+			border-radius: 8px;
+			margin-bottom: 18px;
+			box-shadow: 0 4px 12px rgba(16, 47, 111, 0.15);
+		}
+		.cp-header h3 { margin: 0 0 4px; font-weight: 700; font-size: 22px; }
+		.cp-header p { margin: 0; font-size: 13px; opacity: 0.9; }
 
-		/* Los productos escogidos van como fichas que se pueden quitar de a una:
-		   una lista con checkbox obliga a buscar otra vez el que sobra. */
-		.cp-escogidos { min-height:44px; border:1px solid #D7DCE3; border-radius:4px;
-			padding:7px 9px; background-color:#FFFFFF; }
-		.cp-ficha { display:inline-block; background-color:#EAF0FB; color:#102F6F;
-			border:1px solid #C9D6EE; border-radius:14px; padding:3px 10px; margin:2px 4px 2px 0;
-			font-size:12.5px; }
-		.cp-ficha .cp-quitar { color:#C21C1F; font-weight:bold; margin-left:7px; cursor:pointer; }
-		.cp-vacio { color:#6C7482; font-size:12.5px; }
+		/* Pestañas */
+		.nav-tabs {
+			border-bottom: 2px solid #DDE2EB;
+			margin-bottom: 18px;
+		}
+		.nav-tabs > li > a {
+			font-size: 14px;
+			font-weight: 600;
+			color: #5A6A85;
+			border-radius: 6px 6px 0 0;
+			padding: 10px 18px;
+		}
+		.nav-tabs > li.active > a,
+		.nav-tabs > li.active > a:focus,
+		.nav-tabs > li.active > a:hover {
+			color: #102F6F;
+			border: 2px solid #DDE2EB;
+			border-bottom-color: transparent;
+			background-color: #FFFFFF;
+			font-weight: 700;
+		}
 
-		#grid-costeo, #grid-diferencias { font-size:13px; }
-		.cp-num { text-align:right; white-space:nowrap; }
-		.cp-alerta { color:#C21C1F; font-weight:bold; }
-		.cp-etiqueta { font-weight:bold; padding:2px 7px; border-radius:3px; font-size:11px;
-			white-space:nowrap; }
-		.cp-t-falta { background-color:#FDE3E3; color:#C21C1F; }
-		.cp-t-sobra { background-color:#FDE9C6; color:#8A6400; }
-		.cp-t-distinta { background-color:#E1E9F7; color:#102F6F; }
+		/* Paneles contenedores */
+		.cp-box {
+			background: #FFFFFF;
+			border: 1px solid #E2E6EC;
+			border-radius: 8px;
+			padding: 18px 20px;
+			margin-bottom: 18px;
+			box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+		}
+		.cp-box-titulo {
+			font-size: 16px;
+			font-weight: 700;
+			color: #102F6F;
+			margin-bottom: 12px;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+		}
+		.cp-box-titulo i { margin-right: 8px; color: #E42528; }
 
-		.cp-aviso { border-radius:5px; padding:9px 12px; font-size:13px; margin-bottom:10px;
-			display:none; }
-		.cp-aviso-ok { background-color:#E4F1EB; color:#14714E; }
-		.cp-aviso-mal { background-color:#FDE3E3; color:#C21C1F; }
-		.cp-aviso-ojo { background-color:#FFF3D6; color:#8A6400; }
+		/* Selector de Tamaños (Paso 1) */
+		.size-cards-grid {
+			display: grid;
+			grid-template-columns: repeat(4, 1fr);
+			gap: 12px;
+			margin-bottom: 14px;
+		}
+		@media (max-width: 991px) {
+			.size-cards-grid { grid-template-columns: repeat(2, 1fr); }
+		}
+		.size-card {
+			background: #FFFFFF;
+			border: 2px solid #E2E6EC;
+			border-radius: 8px;
+			padding: 12px 14px;
+			cursor: pointer;
+			transition: all 0.2s ease-in-out;
+			position: relative;
+			text-align: center;
+		}
+		.size-card:hover {
+			border-color: #102F6F;
+			box-shadow: 0 4px 10px rgba(16, 47, 111, 0.12);
+			transform: translateY(-2px);
+		}
+		.size-card.active {
+			border-color: #102F6F;
+			background: #F0F4FC;
+			box-shadow: 0 4px 12px rgba(16, 47, 111, 0.2);
+		}
+		.size-card.active::after {
+			content: "\f058";
+			font-family: "Font Awesome 5 Free";
+			font-weight: 900;
+			position: absolute;
+			top: 8px;
+			right: 10px;
+			color: #102F6F;
+			font-size: 16px;
+		}
+		.size-card .size-code {
+			font-size: 24px;
+			font-weight: 800;
+			color: #102F6F;
+			line-height: 1;
+			margin-bottom: 4px;
+		}
+		.size-card .size-name {
+			font-size: 13px;
+			font-weight: 600;
+			color: #4A5568;
+		}
+		.size-card .size-info {
+			font-size: 11.5px;
+			color: #718096;
+			margin-top: 4px;
+		}
+		.size-card .size-price {
+			display: inline-block;
+			margin-top: 6px;
+			background: #EBF8F2;
+			color: #16704F;
+			font-weight: 700;
+			font-size: 12px;
+			padding: 2px 8px;
+			border-radius: 12px;
+		}
 
-		.nav-tabs { margin-bottom:14px; }
-		.cp-peligro { border:1px solid #F0C5C5; background-color:#FDF3F3; border-radius:6px;
-			padding:12px 14px; }
+		/* Buscador y Grid de Sabores (Paso 2) */
+		.flavor-search-box {
+			margin-bottom: 12px;
+		}
+		.flavor-grid {
+			max-height: 220px;
+			overflow-y: auto;
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+			gap: 8px;
+			padding: 4px;
+			border: 1px solid #EDF2F7;
+			border-radius: 6px;
+			background: #FAFAFB;
+		}
+		.flavor-pill {
+			background: #FFFFFF;
+			border: 1px solid #DCE3EE;
+			border-radius: 6px;
+			padding: 8px 10px;
+			font-size: 12.5px;
+			font-weight: 600;
+			color: #2D3748;
+			cursor: pointer;
+			text-align: left;
+			transition: all 0.15s ease;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+		}
+		.flavor-pill:hover {
+			border-color: #E42528;
+			background: #FFF5F5;
+			color: #E42528;
+		}
+		.flavor-pill.active {
+			border-color: #E42528;
+			background: #E42528;
+			color: #FFFFFF;
+			font-weight: 700;
+			box-shadow: 0 3px 8px rgba(228, 37, 40, 0.25);
+		}
+		.flavor-pill .flavor-tag {
+			font-size: 10px;
+			padding: 1px 5px;
+			border-radius: 10px;
+			background: #EDF2F7;
+			color: #4A5568;
+		}
+		.flavor-pill.active .flavor-tag {
+			background: rgba(255, 255, 255, 0.3);
+			color: #FFFFFF;
+		}
+
+		/* Adiciones Rápidas (Paso 3) */
+		.addition-chips {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 8px;
+			margin-top: 6px;
+		}
+		.addition-chip {
+			border: 1px solid #CBD5E0;
+			border-radius: 20px;
+			padding: 4px 12px;
+			font-size: 12px;
+			font-weight: 600;
+			cursor: pointer;
+			background: #FFFFFF;
+			color: #4A5568;
+			transition: all 0.15s ease;
+		}
+		.addition-chip:hover {
+			border-color: #102F6F;
+			color: #102F6F;
+		}
+		.addition-chip.active {
+			background: #102F6F;
+			border-color: #102F6F;
+			color: #FFFFFF;
+		}
+
+		/* Visual Pizza Box */
+		.pizza-stage {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			padding: 15px;
+			background: radial-gradient(circle, #FFFFFF 60%, #F5F7FA 100%);
+			border: 1px solid #E2E8F0;
+			border-radius: 8px;
+			text-align: center;
+		}
+		.pizza-disc {
+			position: relative;
+			border-radius: 50%;
+			box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+			transition: all 0.3s ease;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			margin: 10px auto;
+		}
+		.crust-xl { width: 190px; height: 190px; border: 12px solid #C88A3E; background: #FFD152; }
+		.crust-gd { width: 170px; height: 170px; border: 11px solid #C88A3E; background: #FFD152; }
+		.crust-md { width: 150px; height: 150px; border: 10px solid #C88A3E; background: #FFD152; }
+		.crust-pz { width: 130px; height: 130px; border: 9px solid #C88A3E; background: #FFD152; }
+
+		.pizza-center-badge {
+			background: rgba(16, 47, 111, 0.88);
+			color: #FFFFFF;
+			padding: 4px 10px;
+			border-radius: 20px;
+			font-size: 11px;
+			font-weight: 700;
+			text-align: center;
+			box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+			z-index: 5;
+		}
+
+		/* Toppings visual decorativos en SVG */
+		.pizza-toppings-layer {
+			position: absolute;
+			top: 0; left: 0; right: 0; bottom: 0;
+			border-radius: 50%;
+			overflow: hidden;
+			pointer-events: none;
+		}
+
+		/* Barra de distribución de costos por categoría */
+		.category-bar-wrapper {
+			margin-top: 14px;
+		}
+		.category-bar {
+			display: flex;
+			height: 18px;
+			border-radius: 9px;
+			overflow: hidden;
+			box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+			margin-bottom: 8px;
+		}
+		.category-seg {
+			height: 100%;
+			transition: width 0.3s ease;
+		}
+		.seg-quesos { background-color: #F59E0B; }
+		.seg-carnicos { background-color: #EF4444; }
+		.seg-masas { background-color: #8B5CF6; }
+		.seg-nocarnicos { background-color: #10B981; }
+		.seg-salsas { background-color: #DC2626; }
+		.seg-empaque { background-color: #64748B; }
+		.seg-otros { background-color: #94A3B8; }
+
+		.category-legend {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 10px;
+			font-size: 11.5px;
+			color: #4A5568;
+		}
+		.cat-bullet {
+			display: inline-block;
+			width: 10px;
+			height: 10px;
+			border-radius: 50%;
+			margin-right: 4px;
+		}
+
+		/* Tarjetas KPIs Financieros */
+		.kpi-cards-grid {
+			display: grid;
+			grid-template-columns: repeat(4, 1fr);
+			gap: 12px;
+			margin-bottom: 14px;
+		}
+		@media (max-width: 991px) {
+			.kpi-cards-grid { grid-template-columns: repeat(2, 1fr); }
+		}
+		.kpi-card {
+			background: #FFFFFF;
+			border: 1px solid #E2E8F0;
+			border-radius: 8px;
+			padding: 12px 14px;
+			text-align: left;
+			box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+			border-left: 4px solid #CBD5E0;
+		}
+		.kpi-card.kpi-costo { border-left-color: #E42528; }
+		.kpi-card.kpi-pvp { border-left-color: #102F6F; }
+		.kpi-card.kpi-margen { border-left-color: #16704F; }
+		.kpi-card.kpi-foodcost { border-left-color: #F59E0B; }
+
+		.kpi-card .kpi-label {
+			font-size: 11px;
+			text-transform: uppercase;
+			letter-spacing: 0.05em;
+			color: #718096;
+			font-weight: 700;
+			margin-bottom: 2px;
+		}
+		.kpi-card .kpi-val {
+			font-size: 22px;
+			font-weight: 800;
+			color: #1A202C;
+			line-height: 1.2;
+		}
+		.kpi-card .kpi-sub {
+			font-size: 11.5px;
+			color: #718096;
+			margin-top: 4px;
+		}
+
+		/* Badges Food Cost */
+		.badge-fc {
+			display: inline-block;
+			padding: 2px 8px;
+			border-radius: 12px;
+			font-size: 11px;
+			font-weight: 700;
+		}
+		.badge-fc-optimo { background: #D1FAE5; color: #065F46; }
+		.badge-fc-alerta { background: #FEF3C7; color: #92400E; }
+		.badge-fc-peligro { background: #FEE2E2; color: #991B1B; }
+
+		/* Control de cantidad interactivo en tabla */
+		.qty-stepper {
+			display: inline-flex;
+			align-items: center;
+			border: 1px solid #CBD5E0;
+			border-radius: 4px;
+			overflow: hidden;
+			background: #FFFFFF;
+		}
+		.qty-stepper button {
+			border: none;
+			background: #EDF2F7;
+			color: #2D3748;
+			width: 26px;
+			height: 26px;
+			font-weight: bold;
+			cursor: pointer;
+			transition: background 0.15s;
+		}
+		.qty-stepper button:hover {
+			background: #CBD5E0;
+		}
+		.qty-stepper input {
+			border: none;
+			width: 60px;
+			height: 26px;
+			text-align: right;
+			padding: 0 4px;
+			font-size: 12.5px;
+			font-weight: 600;
+		}
+
+		.row-simulada {
+			background-color: #FFFBEB !important;
+		}
+		.badge-cat {
+			font-size: 10.5px;
+			font-weight: 600;
+			padding: 2px 6px;
+			border-radius: 4px;
+		}
+
+		/* Ficha técnica imprimible */
+		@media print {
+			body { background: #FFFFFF; font-size: 11pt; }
+			#cargarMenu, .cp-header, .nav-tabs, .btn, .flavor-search-box,
+			.flavor-grid, .size-cards-grid, .addition-chips, #tab-composicion, #tab-costear-libre,
+			.no-print { display: none !important; }
+			.cp-box { border: none; box-shadow: none; padding: 0; margin-bottom: 20px; }
+			.print-header { display: block !important; margin-bottom: 20px; border-bottom: 2px solid #102F6F; padding-bottom: 10px; }
+			.kpi-cards-grid { grid-template-columns: repeat(4, 1fr) !important; }
+			table { width: 100% !important; border-collapse: collapse; }
+			th, td { border: 1px solid #CBD5E0 !important; padding: 6px 8px !important; }
+			.print-sign { display: flex !important; justify-content: space-between; margin-top: 50px; }
+			.print-sign-box { width: 45%; border-top: 1px solid #000; text-align: center; padding-top: 5px; }
+		}
+		.print-header, .print-sign { display: none; }
 	</style>
 </head>
 <body>
@@ -90,192 +461,488 @@
 		}
 	</script>
 
-	<div class="container-fluid" style="max-width:1500px;">
+	<!-- Encabezado de Impresión para Ficha Técnica -->
+	<div class="print-header">
+		<div style="display:flex; justify-content:space-between; align-items:center;">
+			<div>
+				<h2 style="margin:0; color:#102F6F; font-weight:800;">PIZZA AMERICANA</h2>
+				<h4 style="margin:4px 0 0; color:#4A5568;">FICHA TÉCNICA ESTÁNDAR DE PRODUCCIÓN</h4>
+			</div>
+			<div style="text-align:right; font-size:12px; color:#718096;">
+				<div>Fecha: <b id="print-fecha"></b></div>
+				<div>Versión: 2.0 (Receta Central)</div>
+			</div>
+		</div>
+		<div style="margin-top:12px; padding:10px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:6px; display:flex; justify-content:space-between;">
+			<div>Producto: <b id="print-producto-nombre">-</b></div>
+			<div>Tamaño: <b id="print-producto-tamano">-</b></div>
+			<div>Porciones: <b id="print-producto-porciones">-</b></div>
+			<div>PVP Venta: <b id="print-producto-pvp">-</b></div>
+		</div>
+	</div>
 
-		<h3 class="cp-titulo" style="font-size:22px;margin:16px 0 4px;">Costeo y composicion de productos</h3>
-		<p class="cp-sub">
-			La composicion dice cuanto insumo descuenta cada producto. Es la misma que usa el POS para
-			bajar el inventario en cada venta, y es contra ella que se mide la varianza.
-		</p>
+	<div class="container-fluid" style="max-width:1550px; padding-top:15px;">
 
-		<ul class="nav nav-tabs">
-			<li class="active"><a href="#tab-costear" data-toggle="tab">Costear producto</a></li>
-			<li><a href="#tab-composicion" data-toggle="tab">Composicion por tienda</a></li>
+		<!-- Header Banner -->
+		<div class="cp-header no-print">
+			<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+				<div>
+					<h3><i class="fas fa-pizza-slice" style="color:var(--pa-yellow); margin-right:8px;"></i> Costeo de Productos & Ficha Técnica</h3>
+					<p>Diseño de recetas, costeo de insumos, simulación en vivo de Food Cost % y replicación a tiendas POS.</p>
+				</div>
+				<div style="margin-top:8px;">
+					<button class="btn btn-warning btn-sm" onclick="imprimirFichaTecnica()" style="font-weight:700; box-shadow:0 2px 6px rgba(0,0,0,0.2);">
+						<i class="fas fa-print"></i> Imprimir Ficha Técnica
+					</button>
+				</div>
+			</div>
+		</div>
+
+		<!-- Pestañas de Navegación -->
+		<ul class="nav nav-tabs no-print">
+			<li class="active"><a href="#tab-pizza-studio" data-toggle="tab"><i class="fas fa-magic" style="color:#E42528;"></i> Pizza Studio (Armador Visual)</a></li>
+			<li><a href="#tab-costear-libre" data-toggle="tab"><i class="fas fa-boxes" style="color:#102F6F;"></i> Costeador Libre (Catálogo Completo)</a></li>
+			<li><a href="#tab-composicion" data-toggle="tab"><i class="fas fa-store" style="color:#16704F;"></i> Composición por Tienda</a></li>
 		</ul>
 
 		<div class="tab-content">
 
 			<!-- ============================================================
-			     COSTEAR
+			     PESTAÑA 1: PIZZA STUDIO (ARMADOR VISUAL)
 			     ============================================================ -->
-			<div class="tab-pane active" id="tab-costear">
+			<div class="tab-pane active" id="tab-pizza-studio">
 
+				<!-- PASO 1: SELECCIÓN DE TAMAÑO -->
+				<div class="cp-box no-print">
+					<div class="cp-box-titulo">
+						<span><i class="fas fa-circle-notch"></i> 1. Seleccione el Tamaño (Masa Base + Caja)</span>
+						<span style="font-size:12px; font-weight:normal; color:#718096;">Haga clic en una base para cargar sus gramajes estándar</span>
+					</div>
+					<div class="size-cards-grid">
+						<div class="size-card active" onclick="seleccionarTamano('XL')" id="card-tamano-XL">
+							<div class="size-code">XL</div>
+							<div class="size-name">Extra Grande (40 cm)</div>
+							<div class="size-info">10 a 12 Porciones</div>
+							<div class="size-price" id="precio-base-XL">$ 58.000</div>
+						</div>
+						<div class="size-card" onclick="seleccionarTamano('GD')" id="card-tamano-GD">
+							<div class="size-code">GD</div>
+							<div class="size-name">Grande (35 cm)</div>
+							<div class="size-info">8 a 10 Porciones</div>
+							<div class="size-price" id="precio-base-GD">$ 49.000</div>
+						</div>
+						<div class="size-card" onclick="seleccionarTamano('MD')" id="card-tamano-MD">
+							<div class="size-code">MD</div>
+							<div class="size-name">Mediana (30 cm)</div>
+							<div class="size-info">6 a 8 Porciones</div>
+							<div class="size-price" id="precio-base-MD">$ 40.000</div>
+						</div>
+						<div class="size-card" onclick="seleccionarTamano('PZ')" id="card-tamano-PZ">
+							<div class="size-code">PZ</div>
+							<div class="size-name">Personal (22 cm)</div>
+							<div class="size-info">4 Porciones</div>
+							<div class="size-price" id="precio-base-PZ">$ 22.000</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- PASO 2 Y 3: SABOR Y ADICIONES -->
+				<div class="row no-print">
+					<!-- Selección de Sabor -->
+					<div class="col-md-8">
+						<div class="cp-box" style="min-height:330px;">
+							<div class="cp-box-titulo">
+								<span><i class="fas fa-pizza-slice"></i> 2. Seleccione el Sabor / Especialidad</span>
+								<span id="flavor-selected-label" style="font-size:12.5px; color:#E42528; font-weight:700;">Hawaiana XL</span>
+							</div>
+							<div class="flavor-search-box">
+								<div class="input-group">
+									<span class="input-group-addon"><i class="fas fa-search"></i></span>
+									<input type="text" id="filtro-sabores" class="form-control" placeholder="Buscar sabor (ej. Hawaiana, Pollo Champiñón, Carniz, Peperoni, BBQ)..." oninput="filtrarSabores()">
+								</div>
+							</div>
+							<div class="flavor-grid" id="grid-sabores">
+								<!-- Llenado dinámico por JS -->
+							</div>
+						</div>
+					</div>
+
+					<!-- Selección de Adiciones y Bordes -->
+					<div class="col-md-4">
+						<div class="cp-box" style="min-height:330px;">
+							<div class="cp-box-titulo">
+								<span><i class="fas fa-plus-circle"></i> 3. Adiciones & Bordes</span>
+								<span style="font-size:11.5px; color:#718096;">Opcionales</span>
+							</div>
+							<p style="font-size:12px; color:#718096; margin-bottom:8px;">
+								Active adiciones para sumarlas al costo del plato:
+							</p>
+							<div class="addition-chips" id="grid-adiciones">
+								<!-- Llenado dinámico por JS -->
+							</div>
+							<div style="margin-top:14px; border-top:1px solid #EDF2F7; padding-top:10px;">
+								<span style="font-size:11.5px; color:#718096; font-weight:600;">Productos en este ensamble:</span>
+								<div id="studio-items-badges" style="margin-top:6px;">
+									<span class="label label-primary" style="margin-right:4px;">Pizza XL</span>
+									<span class="label label-danger" style="margin-right:4px;">Hawaiana XL</span>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- DASHBOARD FINANCIERO Y VISUALIZADOR -->
 				<div class="row">
-					<div class="col-md-4"><div class="cp-tarjeta cp-total">
-						<div class="cp-rotulo">Costo total</div>
-						<div class="cp-cifra" id="res-total">$ 0</div>
-						<div class="cp-pie" id="res-total-pie">escoja los productos</div>
-					</div></div>
-					<div class="col-md-4"><div class="cp-tarjeta">
-						<div class="cp-rotulo">Insumos que gasta</div>
-						<div class="cp-cifra" id="res-insumos">0</div>
-						<div class="cp-pie">sumando lo que comparten</div>
-					</div></div>
-					<div class="col-md-4"><div class="cp-tarjeta cp-ojo">
-						<div class="cp-rotulo">Sin costear</div>
-						<div class="cp-cifra" id="res-problemas">0</div>
-						<div class="cp-pie">insumos sin costo o sin homologar</div>
-					</div></div>
+					<!-- Visualizador y Gráfica -->
+					<div class="col-md-5">
+						<div class="cp-box">
+							<div class="cp-box-titulo">
+								<span><i class="fas fa-eye"></i> Visualización de Ensamble</span>
+								<span class="badge" id="badge-total-gramos" style="background:#102F6F;">0 g Insumos</span>
+							</div>
+
+							<div class="pizza-stage">
+								<div id="pizza-visual-disc" class="pizza-disc crust-xl">
+									<!-- Capa de salsa -->
+									<div style="position:absolute; width:88%; height:88%; border-radius:50%; background:#DC2626;"></div>
+									<!-- Capa de queso -->
+									<div style="position:absolute; width:82%; height:82%; border-radius:50%; background:#FBBF24;"></div>
+									<!-- Decoración toppings en SVG -->
+									<svg id="pizza-svg-toppings" class="pizza-toppings-layer" viewBox="0 0 100 100"></svg>
+									<!-- Centro con nombre -->
+									<div class="pizza-center-badge" id="pizza-disc-title">
+										Pizza Hawaiana XL
+									</div>
+								</div>
+								<div style="font-size:12px; color:#718096; margin-top:8px;">
+									<b id="pizza-spec-text">Extra Grande • 40 cm • 10-12 Porciones</b>
+								</div>
+							</div>
+
+							<!-- Distribución por categoría -->
+							<div class="category-bar-wrapper">
+								<div style="display:flex; justify-content:space-between; font-size:11.5px; font-weight:700; color:#4A5568; margin-bottom:4px;">
+									<span>Distribución de Costo por Categoría</span>
+									<span id="categoria-top-label">Mayor impacto: Quesos</span>
+								</div>
+								<div class="category-bar" id="category-stacked-bar">
+									<!-- Rellenado dinámico -->
+								</div>
+								<div class="category-legend" id="category-legend-box">
+									<!-- Rellenado dinámico -->
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<!-- Métricas KPIs Financieros -->
+					<div class="col-md-7">
+						<div class="cp-box">
+							<div class="cp-box-titulo">
+								<span><i class="fas fa-chart-line"></i> Indicadores Financieros & Food Cost</span>
+								<span id="tag-simulacion-activa" style="display:none;" class="label label-warning">
+									<i class="fas fa-sliders-h"></i> Modo Simulación Activo
+								</span>
+							</div>
+
+							<div class="kpi-cards-grid">
+								<!-- Costo Total Insumos -->
+								<div class="kpi-card kpi-costo">
+									<div class="kpi-label">Costo Insumos</div>
+									<div class="kpi-val" id="kpi-costo-total">$ 0</div>
+									<div class="kpi-sub" id="kpi-costo-sub">0 insumos en receta</div>
+								</div>
+
+								<!-- PVP Venta al Público (Editable) -->
+								<div class="kpi-card kpi-pvp">
+									<div class="kpi-label">PVP Venta (Editable)</div>
+									<div style="display:flex; align-items:center;">
+										<span style="font-size:16px; font-weight:800; color:#102F6F; margin-right:4px;">$</span>
+										<input type="number" id="kpi-inp-pvp" class="form-control" style="font-size:17px; font-weight:800; height:32px; padding:2px 6px; color:#102F6F;" value="58000" oninput="recalcularRentabilidad()">
+									</div>
+									<div class="kpi-sub">Precio carta al cliente</div>
+								</div>
+
+								<!-- Margen Bruto -->
+								<div class="kpi-card kpi-margen">
+									<div class="kpi-label">Margen Bruto</div>
+									<div class="kpi-val" id="kpi-margen-pesos">$ 0</div>
+									<div class="kpi-sub" id="kpi-margen-pct">0% del precio</div>
+								</div>
+
+								<!-- Food Cost % -->
+								<div class="kpi-card kpi-foodcost">
+									<div class="kpi-label">Food Cost %</div>
+									<div class="kpi-val" id="kpi-foodcost-pct">0.0%</div>
+									<div class="kpi-sub">
+										<span class="badge-fc badge-fc-optimo" id="kpi-foodcost-badge">Óptimo (28-33%)</span>
+									</div>
+								</div>
+							</div>
+
+							<!-- Sugerencia y Resumen de Rentabilidad -->
+							<div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:6px; padding:10px 14px; margin-bottom:12px;">
+								<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+									<div>
+										<span style="font-size:12.5px; font-weight:700; color:#102F6F;">
+											<i class="fas fa-lightbulb" style="color:var(--pa-yellow);"></i> PVP Sugerido para Food Cost al 30%:
+										</span>
+										<span style="font-size:14px; font-weight:800; color:#16704F; margin-left:6px;" id="kpi-pvp-sugerido">$ 0</span>
+									</div>
+									<div style="font-size:12px; color:#718096;">
+										Semáforo: <b style="color:#065F46;">≤32% Óptimo</b> | <b style="color:#92400E;">33-37% Alerta</b> | <b style="color:#991B1B;">≥38% Alto</b>
+									</div>
+								</div>
+							</div>
+
+							<!-- Avisos de insumos sin costo -->
+							<div class="alert alert-warning" id="alerta-sin-costo" style="display:none; padding:8px 12px; font-size:12px; margin-bottom:10px;">
+								<i class="fas fa-exclamation-triangle"></i> <b>Atención:</b> Hay insumos sin costo registrado o sin homologar. El costo total está incompleto.
+							</div>
+						</div>
+					</div>
 				</div>
 
-				<div class="cp-panel">
-					<div class="cp-titulo">Arme el producto</div>
-					<div class="cp-sub">
-						Un plato se arma con varios productos del POS. Para costear una Hawaiana
-						extragrande escoja <b>Pizza XL</b> —que trae la masa y el queso— y encima
-						<b>Hawaiana XL</b> —que trae el jamon y la pina—. Si dos productos gastan el
-						mismo insumo, las cantidades se suman.
+				<!-- DESGLOSE DE INGREDIENTES Y SIMULADOR DE GRAMAJES -->
+				<div class="cp-box">
+					<div class="cp-box-titulo">
+						<span><i class="fas fa-sliders-h"></i> Ficha de Receta Estándar & Simulador de Gramajes</span>
+						<div>
+							<button class="btn btn-default btn-xs no-print" onclick="restablecerGramajesOriginales()" id="btn-restablecer-receta" style="font-weight:600;">
+								<i class="fas fa-undo"></i> Restablecer Receta Estándar
+							</button>
+						</div>
 					</div>
+					<p class="cp-sub no-print" style="margin-bottom:10px; font-size:12.5px; color:#718096;">
+						Modifique los gramajes en la columna <b>Cantidad Simulada</b> (o use los botones <b>- / +</b>) para simular inmediatamente el impacto en el costo total y margen.
+					</p>
+
+					<div class="table-responsive">
+						<table id="grid-studio-ingredientes" class="table table-bordered table-hover table-condensed" style="font-size:12.5px; width:100%;">
+							<thead style="background:#F1F5F9; color:#334155;">
+								<tr>
+									<th>Insumo</th>
+									<th>Categoría</th>
+									<th class="text-right">Receta Estándar</th>
+									<th class="text-center no-print" style="width:160px;">Cantidad Simulada</th>
+									<th>Unidad</th>
+									<th class="text-right">Costo Unit.</th>
+									<th class="text-right">Costo Total</th>
+									<th class="text-right">% Receta</th>
+									<th class="text-center no-print">Estado</th>
+								</tr>
+							</thead>
+							<tbody id="tbody-studio-ingredientes">
+								<!-- Llenado dinámico por JS -->
+							</tbody>
+							<tfoot style="background:#F8FAFC; font-weight:bold;">
+								<tr>
+									<td colspan="2" class="text-right">TOTALES:</td>
+									<td class="text-right" id="foot-std-gramos">0 g</td>
+									<td class="text-center no-print" id="foot-sim-gramos">0 g</td>
+									<td>-</td>
+									<td>-</td>
+									<td class="text-right" style="color:#102F6F; font-size:14px;" id="foot-total-costo">$ 0</td>
+									<td class="text-right">100.0%</td>
+									<td class="text-center no-print">-</td>
+								</tr>
+							</tfoot>
+						</table>
+					</div>
+
+					<!-- Firmas de aprobación para impresión -->
+					<div class="print-sign">
+						<div class="print-sign-box">
+							<b>Elaborado por:</b><br>
+							Jefe de Producción / Cocina Central
+						</div>
+						<div class="print-sign-box">
+							<b>Aprobado por:</b><br>
+							Dirección de Operaciones & Gerencia
+						</div>
+					</div>
+				</div>
+
+			</div>
+
+			<!-- ============================================================
+			     PESTAÑA 2: COSTEADOR LIBRE (CATÁLOGO COMPLETO POS)
+			     ============================================================ -->
+			<div class="tab-pane" id="tab-costear-libre">
+				<div class="cp-box">
+					<div class="cp-box-titulo">
+						<span><i class="fas fa-boxes"></i> Costear Cualquier Producto o Combo del Sistema</span>
+					</div>
+					<p style="font-size:13px; color:#718096;">
+						Seleccione cualquier producto del maestro POS (combos, lasagnas, acompañamientos, bebidas o platos personalizados) para consultar su costo acumulado.
+					</p>
+
 					<div class="row">
-						<div class="col-md-7 cp-campo">
-							<label for="selectProducto">Producto</label>
-							<select id="selectProducto" class="form-control"></select>
+						<div class="col-md-7">
+							<label style="font-size:12px; color:#4A5568;">Producto del Catálogo</label>
+							<select id="selectProductoLibre" class="form-control"></select>
 						</div>
-						<div class="col-md-2 cp-campo">
-							<label>&nbsp;</label>
-							<input type="button" class="btn btn-primary" style="width:100%;"
-								value="Adicionar" onclick="adicionarProducto()">
+						<div class="col-md-2" style="margin-top:23px;">
+							<button class="btn btn-primary" style="width:100%; font-weight:700;" onclick="adicionarProductoLibre()">
+								<i class="fas fa-plus"></i> Adicionar
+							</button>
 						</div>
-						<div class="col-md-3 cp-campo">
-							<label>&nbsp;</label>
-							<input type="button" class="btn btn-default" style="width:100%;"
-								value="Limpiar" onclick="limpiarEscogidos()">
-						</div>
-					</div>
-					<div class="cp-campo">
-						<label>Productos escogidos</label>
-						<div class="cp-escogidos" id="escogidos">
-							<span class="cp-vacio">Todavia no ha escogido nada.</span>
+						<div class="col-md-3" style="margin-top:23px;">
+							<button class="btn btn-default" style="width:100%;" onclick="limpiarProductosLibres()">
+								<i class="fas fa-trash"></i> Limpiar Selección
+							</button>
 						</div>
 					</div>
-					<div class="cp-aviso" id="cp-aviso-costeo"></div>
-				</div>
 
-				<div class="cp-panel">
-					<div class="cp-titulo">Costo por insumo</div>
-					<div class="cp-sub" id="costeo-sub">De mayor a menor.</div>
-					<table id="grid-costeo" class="table table-condensed table-hover" cellspacing="0" width="100%">
-						<thead>
-							<tr>
-								<th>Insumo</th>
-								<th class="cp-num">Cantidad</th>
-								<th>Unidad</th>
-								<th class="cp-num">Costo unitario</th>
-								<th class="cp-num">Costo</th>
-								<th class="cp-num">% del total</th>
-							</tr>
-						</thead>
-						<tbody></tbody>
-					</table>
+					<div style="margin-top:14px;">
+						<label style="font-size:12px; color:#4A5568;">Productos Seleccionados:</label>
+						<div id="escogidos-libres" style="min-height:44px; border:1px solid #DDE2EB; border-radius:6px; padding:8px; background:#FAFAFB;">
+							<span style="color:#A0AEC0; font-size:12.5px;">Ningún producto seleccionado.</span>
+						</div>
+					</div>
+
+					<!-- Resultados del Costeador Libre -->
+					<div class="row" style="margin-top:18px;">
+						<div class="col-md-4">
+							<div class="kpi-card kpi-costo">
+								<div class="kpi-label">Costo Total</div>
+								<div class="kpi-val" id="res-libre-total">$ 0</div>
+								<div class="kpi-sub" id="res-libre-pie">0 producto(s)</div>
+							</div>
+						</div>
+						<div class="col-md-4">
+							<div class="kpi-card kpi-margen">
+								<div class="kpi-label">Insumos Consolidados</div>
+								<div class="kpi-val" id="res-libre-insumos">0</div>
+								<div class="kpi-sub">Sumando insumos compartidos</div>
+							</div>
+						</div>
+						<div class="col-md-4">
+							<div class="kpi-card kpi-foodcost">
+								<div class="kpi-label">Insumos con Problemas</div>
+								<div class="kpi-val" id="res-libre-problemas">0</div>
+								<div class="kpi-sub">Sin costo o sin homologar</div>
+							</div>
+						</div>
+					</div>
+
+					<div style="margin-top:16px;">
+						<table id="grid-costeo-libre" class="table table-bordered table-hover table-condensed" style="font-size:13px; width:100%;">
+							<thead style="background:#F1F5F9;">
+								<tr>
+									<th>Insumo</th>
+									<th>Categoría</th>
+									<th class="text-right">Cantidad</th>
+									<th>Unidad</th>
+									<th class="text-right">Costo Unitario</th>
+									<th class="text-right">Costo Total</th>
+									<th class="text-right">% del Total</th>
+								</tr>
+							</thead>
+							<tbody></tbody>
+						</table>
+					</div>
 				</div>
 			</div>
 
 			<!-- ============================================================
-			     COMPOSICION
+			     PESTAÑA 3: COMPOSICIÓN POR TIENDA
 			     ============================================================ -->
 			<div class="tab-pane" id="tab-composicion">
 
-				<div class="cp-panel">
-					<div class="cp-titulo">El maestro</div>
-					<div class="cp-sub">
-						Esta es la composicion de referencia, aqui en el central. Las tiendas tienen
-						cada una la suya y a ellas se les replica desde aqui.
+				<!-- El Maestro -->
+				<div class="cp-box">
+					<div class="cp-box-titulo">
+						<span><i class="fas fa-database"></i> Maestro Central de Composición</span>
 					</div>
+					<p style="font-size:13px; color:#718096;">
+						Esta es la composición de referencia del servidor central. Las tiendas POS tienen cada una su copia local y desde aquí se pueden homologar y replicar.
+					</p>
 					<div class="row">
-						<div class="col-md-3 cp-campo">
-							<label>Filas en el maestro</label>
-							<div class="cp-cifra" id="res-maestro" style="font-size:22px;">0</div>
+						<div class="col-md-3">
+							<label style="font-size:11px; text-transform:uppercase; color:#718096;">Filas en el Maestro Central</label>
+							<div style="font-size:24px; font-weight:800; color:#102F6F;" id="res-maestro">0</div>
 						</div>
-						<div class="col-md-4 cp-campo">
-							<label for="selectTiendaTraer">Traer desde la tienda</label>
+						<div class="col-md-5">
+							<label style="font-size:11px; text-transform:uppercase; color:#718096;">Traer composición desde una tienda</label>
 							<select id="selectTiendaTraer" class="form-control"></select>
 						</div>
-						<div class="col-md-3 cp-campo">
-							<label>&nbsp;</label>
-							<input type="button" class="btn btn-default" style="width:100%;"
-								value="Traer al maestro" onclick="traerDeTienda()">
+						<div class="col-md-4" style="margin-top:22px;">
+							<button class="btn btn-default" style="width:100%; font-weight:600;" onclick="traerDeTienda()">
+								<i class="fas fa-file-import"></i> Traer y Actualizar Maestro
+							</button>
 						</div>
 					</div>
-					<div class="cp-pie">
-						Traer pisa el maestro con lo que tenga esa tienda. No toca ninguna tienda.
-					</div>
-					<div class="cp-aviso" id="cp-aviso-maestro"></div>
+					<div id="cp-aviso-maestro" style="margin-top:10px; display:none;" class="alert"></div>
 				</div>
 
-				<div class="cp-panel">
-					<div class="cp-titulo">Comparar una tienda con el maestro</div>
-					<div class="cp-sub">Solo lee. Muestra que le falta, que le sobra y que tiene distinto.</div>
+				<!-- Comparación -->
+				<div class="cp-box">
+					<div class="cp-box-titulo">
+						<span><i class="fas fa-balance-scale"></i> Comparar Tienda con el Maestro</span>
+						<span id="resumen-diferencias" style="font-size:12.5px; font-weight:600; color:#102F6F;"></span>
+					</div>
+					<p style="font-size:13px; color:#718096;">
+						Verifica si la tienda tiene ingredientes faltantes, sobrantes o con gramajes distintos al estándar central. (Solo lectura).
+					</p>
 					<div class="row">
-						<div class="col-md-4 cp-campo">
-							<label for="selectTiendaComparar">Tienda</label>
+						<div class="col-md-5">
+							<label style="font-size:11px; text-transform:uppercase; color:#718096;">Seleccione Tienda para Comparar</label>
 							<select id="selectTiendaComparar" class="form-control"></select>
 						</div>
-						<div class="col-md-3 cp-campo">
-							<label>&nbsp;</label>
-							<input type="button" class="btn btn-primary" style="width:100%;"
-								id="btnComparar" value="Comparar" onclick="compararTienda()">
-						</div>
-						<div class="col-md-5 cp-campo">
-							<label>&nbsp;</label>
-							<div class="cp-pie" id="resumen-diferencias">&nbsp;</div>
+						<div class="col-md-3" style="margin-top:22px;">
+							<button class="btn btn-primary" id="btnComparar" style="width:100%; font-weight:700;" onclick="compararTienda()">
+								<i class="fas fa-search"></i> Comparar
+							</button>
 						</div>
 					</div>
-					<table id="grid-diferencias" class="table table-condensed table-hover" cellspacing="0" width="100%">
-						<thead>
-							<tr>
-								<th>Producto</th>
-								<th>Insumo</th>
-								<th>Que pasa</th>
-								<th class="cp-num">En el maestro</th>
-								<th class="cp-num">En la tienda</th>
-							</tr>
-						</thead>
-						<tbody></tbody>
-					</table>
+					<div style="margin-top:16px;">
+						<table id="grid-diferencias" class="table table-bordered table-hover table-condensed" style="font-size:12.5px; width:100%;">
+							<thead style="background:#F1F5F9;">
+								<tr>
+									<th>Producto</th>
+									<th>Insumo</th>
+									<th>Diagnóstico</th>
+									<th class="text-right">Cantidad Maestro</th>
+									<th class="text-right">Cantidad Tienda</th>
+								</tr>
+							</thead>
+							<tbody></tbody>
+						</table>
+					</div>
 				</div>
 
-				<div class="cp-panel">
-					<div class="cp-titulo">Replicar a una tienda</div>
-					<div class="cp-peligro">
-						<div style="font-size:13px;color:#C21C1F;">
-							<b>Esto reemplaza la composicion completa de la tienda.</b> Se borra la que
-							tiene y se escribe la del maestro. Es lo que decide cuanto inventario
-							descuenta cada venta, asi que cambia el consumo teorico y con el la varianza
-							de esa tienda de aqui en adelante.
+				<!-- Replicación -->
+				<div class="cp-box" style="border:1px solid #FCA5A5; background:#FFFBFB;">
+					<div class="cp-box-titulo" style="color:#C21C1F;">
+						<span><i class="fas fa-exclamation-triangle" style="color:#C21C1F;"></i> Replicar Receta a Tienda</span>
+					</div>
+					<div style="font-size:13px; color:#B91C1C; margin-bottom:12px;">
+						<b>Atención:</b> Esta acción sobreescribe la composición de la tienda seleccionada con la del maestro.
+						A partir de la réplica, los consumos teóricos y las varianzas de esa tienda se medirán con los nuevos gramajes.
+					</div>
+					<div class="row">
+						<div class="col-md-4">
+							<label style="font-size:11px; text-transform:uppercase; color:#718096;">Tienda Destino</label>
+							<select id="selectTiendaReplicar" class="form-control"></select>
 						</div>
-						<div class="cp-pie" style="margin-top:6px;">
-							Compare primero. Todo queda registrado a nombre de quien lo haga.
+						<div class="col-md-4">
+							<label style="font-size:11px; text-transform:uppercase; color:#718096;">Escriba "REPLICAR" para confirmar</label>
+							<input type="text" id="confirmaReplica" class="form-control" placeholder="REPLICAR">
 						</div>
-						<div class="row" style="margin-top:10px;">
-							<div class="col-md-4 cp-campo">
-								<label for="selectTiendaReplicar">Tienda destino</label>
-								<select id="selectTiendaReplicar" class="form-control"></select>
-							</div>
-							<div class="col-md-4 cp-campo">
-								<label for="confirmaReplica">Escriba REPLICAR para habilitar</label>
-								<input type="text" id="confirmaReplica" class="form-control" placeholder="REPLICAR">
-							</div>
-							<div class="col-md-4 cp-campo">
-								<label>&nbsp;</label>
-								<input type="button" class="btn btn-danger" style="width:100%;"
-									id="btnReplicar" value="Replicar" disabled onclick="replicarATienda()">
-							</div>
+						<div class="col-md-4" style="margin-top:22px;">
+							<button class="btn btn-danger" id="btnReplicar" style="width:100%; font-weight:700;" disabled onclick="replicarATienda()">
+								<i class="fas fa-sync-alt"></i> Replicar al POS de Tienda
+							</button>
 						</div>
 					</div>
-					<div class="cp-aviso" id="cp-aviso-replica" style="margin-top:10px;"></div>
+					<div id="cp-aviso-replica" style="margin-top:12px; display:none;" class="alert"></div>
 				</div>
+
 			</div>
+
 		</div>
+
 	</div>
 
 </body>
