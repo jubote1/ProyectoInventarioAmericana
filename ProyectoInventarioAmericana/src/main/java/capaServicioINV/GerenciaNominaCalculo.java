@@ -136,7 +136,7 @@ public class GerenciaNominaCalculo extends HttpServlet {
 				final int idEmpleado = Integer.parseInt(GerenciaSesion.texto(request, "idempleado"));
 				final String tipoNovedad = GerenciaSesion.texto(request, "tipo_novedad");
 				final String accion = GerenciaSesion.texto(request, "accion");
-				final int dias = (int) GerenciaSesion.valor(request, "dias");
+				final double dias = GerenciaSesion.valor(request, "dias");
 				final boolean permanente = "1".equals(request.getParameter("permanente"))
 						|| "true".equalsIgnoreCase(request.getParameter("permanente"));
 				final String observacion = GerenciaSesion.texto(request, "observacion");

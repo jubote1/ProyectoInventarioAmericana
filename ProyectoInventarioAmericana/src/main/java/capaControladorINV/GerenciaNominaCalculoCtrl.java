@@ -196,7 +196,7 @@ public class GerenciaNominaCalculoCtrl {
 	}
 
 	public String guardarNovedad(final String semana, final int idEmpleado,
-			final String tipoNovedad, final String accion, final int dias,
+			final String tipoNovedad, final String accion, final double dias,
 			final boolean permanente, final String observacion, final String usuario) {
 		final String err = GerenciaNominaCalculoDAO.guardarNovedad(semana, idEmpleado, tipoNovedad, accion, dias, permanente, observacion, usuario);
 		if (err != null && !err.isEmpty()) {

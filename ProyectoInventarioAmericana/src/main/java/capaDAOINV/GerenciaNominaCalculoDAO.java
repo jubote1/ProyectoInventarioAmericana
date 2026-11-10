@@ -114,10 +114,11 @@ public class GerenciaNominaCalculoDAO {
 		public double recargoNocturno;
 		public double recargoDominical;
 		public double recargoExtra;
+		public boolean esSena = false;
 		public String novedadTipo = "";
 		public String novedadAccion = "";
 		public String novedadObs = "";
-		public int novedadDias = 7;
+		public double novedadDias = 7;
 		public boolean novedadPermanente = false;
 		// Valores reales liquidados (cargados de SIIGO o manual)
 		public double realBasico;
@@ -146,7 +147,7 @@ public class GerenciaNominaCalculoDAO {
 		public int idEmpleado;
 		public String tipoNovedad = "";
 		public String accion = "";
-		public int dias = 7;
+		public double dias = 7;
 		public boolean permanente = false;
 		public String observacion = "";
 	}
@@ -600,32 +601,37 @@ public class GerenciaNominaCalculoDAO {
 		//Auxilio de transporte: solo hasta el tope de salarios minimos, y no
 		//entra a la base de seguridad social ni a la de vacaciones.
 		final double tope = p.de("TOPE_AUX_SMLV", 2) * p.de("SMLV", 0);
-		e.auxilioTransporte = (tope > 0 && e.salarioBase > 0 && e.salarioBase <= tope)
+		e.auxilioTransporte = (tope > 0 && e.salarioBase > 0 && e.salarioBase <= tope && !e.esSena)
 				? redondear(p.de("AUX_TRANSPORTE", 0) * SEMANA_DEL_MES) : 0;
 
 		final double baseSalarial = e.sueldoBasico + e.sueldoVariable;
 
 		//Seguridad social y parafiscales del empleador.
-		final double[] cargo = cargos.get(Integer.valueOf(e.idTipoEmpleado));
-		final double arl = cargo != null ? cargo[0] : 0.522;
-		double porcentaje = p.de("PENSION_EMPLEADOR", 12) + p.de("CAJA_COMPENSACION", 4) + arl;
-		//La exoneracion del art. 114-1 quita salud, SENA e ICBF a quien gane
-		//menos del tope. Son trece puntos y medio: si esta mal puesta, el
-		//estimado se va en esa proporcion para TODA la compania.
-		final boolean exonera = p.de("EXONERACION_114_1", 0) == 1
-				&& e.salarioBase < p.de("TOPE_EXONERACION_SMLV", 10) * p.de("SMLV", 0);
-		if (!exonera) {
-			porcentaje += p.de("SALUD_EMPLEADOR", 8.5) + p.de("SENA", 2) + p.de("ICBF", 3);
-		}
-		e.seguridadSocial = redondear(baseSalarial * porcentaje / 100.0);
+		if (e.esSena) {
+			e.seguridadSocial = redondear(baseSalarial * 0.15);
+			e.liquidacion = 0;
+		} else {
+			final double[] cargo = cargos.get(Integer.valueOf(e.idTipoEmpleado));
+			final double arl = cargo != null ? cargo[0] : 0.522;
+			double porcentaje = p.de("PENSION_EMPLEADOR", 12) + p.de("CAJA_COMPENSACION", 4) + arl;
+			//La exoneracion del art. 114-1 quita salud, SENA e ICBF a quien gane
+			//menos del tope. Son trece puntos y medio: si esta mal puesta, el
+			//estimado se va en esa proporcion para TODA la compania.
+			final boolean exonera = p.de("EXONERACION_114_1", 0) == 1
+					&& e.salarioBase < p.de("TOPE_EXONERACION_SMLV", 10) * p.de("SMLV", 0);
+			if (!exonera) {
+				porcentaje += p.de("SALUD_EMPLEADOR", 8.5) + p.de("SENA", 2) + p.de("ICBF", 3);
+			}
+			e.seguridadSocial = redondear(baseSalarial * porcentaje / 100.0);
 
-		//Provisiones. El auxilio de transporte SI cuenta para cesantias y prima,
-		//y NO para vacaciones.
-		final double baseConAuxilio = baseSalarial + e.auxilioTransporte;
-		e.liquidacion = redondear(
-				baseConAuxilio * (p.de("CESANTIAS", 8.33) + p.de("INTERES_CESANTIAS", 1)
-						+ p.de("PRIMA", 8.33)) / 100.0
-				+ baseSalarial * p.de("VACACIONES", 4.17) / 100.0);
+			//Provisiones. El auxilio de transporte SI cuenta para cesantias y prima,
+			//y NO para vacaciones.
+			final double baseConAuxilio = baseSalarial + e.auxilioTransporte;
+			e.liquidacion = redondear(
+					baseConAuxilio * (p.de("CESANTIAS", 8.33) + p.de("INTERES_CESANTIAS", 1)
+							+ p.de("PRIMA", 8.33)) / 100.0
+					+ baseSalarial * p.de("VACACIONES", 4.17) / 100.0);
+		}
 
 		e.sueldoBasico = redondear(e.sueldoBasico);
 		e.costoTotal = redondear(e.sueldoBasico + e.sueldoVariable + e.auxilioTransporte
@@ -979,7 +985,7 @@ public class GerenciaNominaCalculoDAO {
 				n.idEmpleado = rs.getInt("idempleado");
 				n.tipoNovedad = texto(rs.getString("tipo_novedad"));
 				n.accion = texto(rs.getString("accion"));
-				n.dias = rs.getInt("dias") > 0 ? rs.getInt("dias") : 7;
+				n.dias = rs.getDouble("dias") > 0 ? rs.getDouble("dias") : 7;
 				n.permanente = rs.getInt("permanente") == 1;
 				n.observacion = texto(rs.getString("observacion"));
 				map.put(Integer.valueOf(n.idEmpleado), n);
@@ -1013,14 +1019,15 @@ public class GerenciaNominaCalculoDAO {
 				e.aviso = "Excluido de la nómina semanal (" + (nov.observacion.isEmpty() ? nov.tipoNovedad : nov.observacion) + ")";
 			}
 		} else if ("AJUSTAR".equalsIgnoreCase(nov.accion) || "VACACIONES_PARCIAL".equals(nov.tipoNovedad)) {
-			final int dLab = nov.dias > 0 && nov.dias <= 7 ? nov.dias : 3;
+			final double dLab = nov.dias > 0 && nov.dias <= 7 ? nov.dias : 3;
 			e.sueldoBasico = redondear(e.salarioBase * dLab / 30.0);
-			e.auxilioTransporte = (e.salarioBase <= 2 * 1300000) ? redondear(162000.0 * dLab / 30.0) : 0;
-			e.seguridadSocial = redondear((e.sueldoBasico + e.sueldoVariable) * 0.205);
-			e.liquidacion = redondear((e.sueldoBasico + e.sueldoVariable + e.auxilioTransporte) * 0.2183);
+			e.auxilioTransporte = (e.salarioBase > 0 && e.salarioBase <= 2 * 1300000 && !e.esSena) ? redondear(162000.0 * dLab / 30.0) : 0;
+			e.seguridadSocial = redondear((e.sueldoBasico + e.sueldoVariable) * (e.esSena ? 0.15 : 0.205));
+			e.liquidacion = e.esSena ? 0 : redondear((e.sueldoBasico + e.sueldoVariable + e.auxilioTransporte) * 0.2183);
 			e.costoTotal = redondear(e.sueldoBasico + e.sueldoVariable + e.auxilioTransporte + e.seguridadSocial + e.liquidacion);
 			e.costoCorregido = e.costoTotal;
-			e.aviso = "Vacaciones parciales: liquidado sobre " + dLab + " días laborados";
+			final String dStr = nov.dias == (int) nov.dias ? String.valueOf((int) nov.dias) : String.format(java.util.Locale.US, "%.2f", nov.dias);
+			e.aviso = "Vacaciones parciales: liquidado sobre " + dStr + " días laborados";
 		} else {
 			// INCLUIR (Directivo, incapacidad, etc.)
 			if ("DIRECTIVO_INCLUIR".equals(nov.tipoNovedad)) {
@@ -1034,7 +1041,7 @@ public class GerenciaNominaCalculoDAO {
 	}
 
 	public static String guardarNovedad(final String semana, final int idEmpleado,
-			final String tipoNovedad, final String accion, final int dias,
+			final String tipoNovedad, final String accion, final double dias,
 			final boolean permanente, final String observacion, final String usuario) {
 		final ConexionBaseDatos con = new ConexionBaseDatos();
 		final Connection cn = con.obtenerConexionBDPrincipalLocal();
@@ -1097,13 +1104,13 @@ public class GerenciaNominaCalculoDAO {
 			psNov.setString(2, semana);
 			psNov.setString(3, tipoNovedad);
 			psNov.setString(4, accion);
-			psNov.setInt(5, dias);
+			psNov.setDouble(5, dias);
 			psNov.setInt(6, permanente ? 1 : 0);
 			psNov.setString(7, observacion);
 			psNov.setString(8, usuario);
 			psNov.setString(9, tipoNovedad);
 			psNov.setString(10, accion);
-			psNov.setInt(11, dias);
+			psNov.setDouble(11, dias);
 			psNov.setInt(12, permanente ? 1 : 0);
 			psNov.setString(13, observacion);
 			psNov.setString(14, usuario);
@@ -1868,7 +1875,7 @@ public class GerenciaNominaCalculoDAO {
 		final ArrayList<Estimado> lista = new ArrayList<Estimado>();
 		try {
 			final PreparedStatement ps = cnGeneral.prepareStatement(
-					"SELECT e.id, e.nombre_largo, e.salario, e.idtipoempleado,"
+					"SELECT e.id, e.nombre_largo, e.salario, e.idtipoempleado, IFNULL(e.es_sena, 0) AS es_sena,"
 					+ " IFNULL(t.descripcion,'') AS cargo"
 					+ " FROM empleado e LEFT JOIN tipo_empleado t ON t.idtipoempleado = e.idtipoempleado"
 					+ " WHERE e.activo = 1 AND e.es_empleado = 1 AND e.salario > 0 ORDER BY e.nombre_largo");
@@ -1890,6 +1897,7 @@ public class GerenciaNominaCalculoDAO {
 				e.nombre = texto(rs.getString("nombre_largo"));
 				e.cargo = texto(rs.getString("cargo"));
 				e.salarioBase = sal;
+				e.esSena = rs.getInt("es_sena") == 1;
 				e.entraTienda = cfg == null || cfg[1] == 1;
 				e.idTipoEmpleado = idTipo;
 				lista.add(e);

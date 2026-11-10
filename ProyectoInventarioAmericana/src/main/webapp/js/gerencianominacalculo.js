@@ -393,7 +393,10 @@ function pintarEstimado() {
 			var label = 'Justificado';
 			if (e.novedad_tipo === 'DIRECTIVO_INCLUIR') { label = 'Directivo'; icono = 'fa-user-tie'; badgeClase = 'badge-directivo'; }
 			else if (e.novedad_tipo === 'VACACIONES_EXCLUIR') { label = 'Vacaciones'; icono = 'fa-umbrella-beach'; badgeClase = 'badge-vacaciones'; }
-			else if (e.novedad_tipo === 'VACACIONES_PARCIAL') { label = 'Vac. (' + (e.novedad_dias || 3) + 'd)'; icono = 'fa-calendar-day'; badgeClase = 'badge-vacaciones'; }
+			else if (e.novedad_tipo === 'VACACIONES_PARCIAL') { 
+				var dFmt = (e.novedad_dias != null ? (e.novedad_dias % 1 === 0 ? e.novedad_dias : Number(e.novedad_dias).toFixed(2)) : 3);
+				label = 'Vac. (' + dFmt + 'd)'; icono = 'fa-calendar-day'; badgeClase = 'badge-vacaciones'; 
+			}
 			else if (e.novedad_tipo === 'INCAPACIDAD_INCLUIR') { label = 'Incapacidad'; icono = 'fa-notes-medical'; badgeClase = 'badge-incapacidad'; }
 			else if (e.novedad_tipo === 'PERMISO_INCLUIR') { label = 'Permiso'; icono = 'fa-check'; badgeClase = 'badge-permiso'; }
 			else if (e.novedad_tipo === 'NO_LABORO_EXCLUIR') { label = 'No laboró'; icono = 'fa-user-slash'; badgeClase = 'badge-excluido'; }
@@ -497,7 +500,7 @@ function guardarNovedad() {
 	}
 	var tipo = $sel.val();
 	var accion = $sel.data('accion') || 'INCLUIR';
-	var dias = parseInt($('#novDiasLaborados').val(), 10) || 7;
+	var dias = parseFloat($('#novDiasLaborados').val()) || 7;
 	var perm = $('#novPermanente').is(':checked') ? 1 : 0;
 	var obs = $.trim($('#novObservacion').val());
 
