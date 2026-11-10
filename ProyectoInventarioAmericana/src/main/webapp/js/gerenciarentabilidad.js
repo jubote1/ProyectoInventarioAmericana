@@ -28,7 +28,7 @@ var MESES_R = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio
 var SUBTOTALES = { VENTA: 1, BRUTO: 1, CONTR: 1, TIENDA: 1, NETO: 1 };
 
 /** Las lineas que tienen detalle. VENTA y los subtotales no. */
-var CON_DETALLE = { INS: 1, COM: 1, OPE: 1, NOM: 1, FIJ: 1, SER: 1, EST: 1, VAR: 1 };
+var CON_DETALLE = { INS: 1, COM: 1, OPE: 1, MEN: 1, NOM: 1, FIJ: 1, SER: 1, EST: 1, VAR: 1 };
 
 var tablero = null;
 

@@ -13,14 +13,15 @@ import conexionINV.ConexionBaseDatos;
  * NO CALCULA NADA NUEVO. JUNTA LO QUE YA ESTA
  *
  * Venta e insumos salen del datamart, que los escribe el proceso semanal; las
- * comisiones y los gastos de operacion salen de gasto_semanal; la nomina, los
- * fijos, los servicios y la estructura salen de las tablas de Gerencia. Lo
+ * comisiones y los gastos de operacion salen de gasto_semanal; la mensajeria
+ * externa sale de gasto_empleado_temporal; la nomina, los fijos, los
+ * servicios y la estructura salen de las tablas de Gerencia. Lo
  * unico que hace esta clase es ponerlos en el mismo orden en que se leen y
  * sacar el porcentaje sobre la venta.
  *
  * EL MES ES LA UNIDAD EXACTA, LA SEMANA ES UN PRORRATEO
  *
- * Venta, insumos, comisiones y gastos de operacion son SEMANALES. Nomina,
+ * Venta, insumos, comisiones, gastos de operacion y mensajeria externa son SEMANALES. Nomina,
  * fijos, servicios y estructura son MENSUALES. El calendario de semanas es el
  * puente: un mes son las semanas que el calendario le asigno.
  *
@@ -179,6 +180,7 @@ public class GerenciaRentabilidadDAO {
 				"SELECT t.idtienda, t.nombre,"
 				+ " IFNULL(v.venta,0) AS venta, IFNULL(v.meta,0) AS meta,"
 				+ " i.insumos, q.saldo AS saldo_inventario, c.comisiones, o.operacion,"
+				+ " m.mensajeria,"
 				+ " n.nomina, n.firma AS firma_nomina,"
 				+ " f.fijos, s.servicios, s.origen AS origen_servicios"
 				+ " FROM pizzaamericana.tienda t"
@@ -210,6 +212,10 @@ public class GerenciaRentabilidadDAO {
 				+ "                ON gc.idgasto_conf = g.idgasto_conf AND gc.rentabilidad_calcula = 1"
 				+ "             WHERE g.fecha IN " + fechas + " AND g.idgasto_conf <> " + CONCEPTO_CONTEO
 				+ "             GROUP BY g.idtienda) o ON o.idtienda = t.idtienda"
+				+ " LEFT JOIN (SELECT idtienda, SUM(valor) mensajeria"
+				+ "              FROM inventarioamericana.gasto_empleado_temporal"
+				+ "             WHERE fecha IN " + fechas
+				+ "             GROUP BY idtienda) m ON m.idtienda = t.idtienda"
 				+ " LEFT JOIN (SELECT idtienda,"
 				+ "                   SUM(sueldo_basico+sueldo_variable+seguridad_social+liquidacion) nomina,"
 				+ "                   MAX(usuario) firma"
@@ -259,8 +265,8 @@ public class GerenciaRentabilidadDAO {
 				t.meta = rs.getDouble("meta");
 				ventaTotal += t.venta;
 
-				final double[] c = new double[7];
-				final boolean[] hay = new boolean[7];
+				final double[] c = new double[8];
+				final boolean[] hay = new boolean[8];
 				c[0] = rs.getDouble("insumos");       hay[0] = !rs.wasNull();
 				c[1] = rs.getDouble("saldo_inventario");
 				c[2] = rs.getDouble("comisiones");    hay[2] = !rs.wasNull();
@@ -268,6 +274,7 @@ public class GerenciaRentabilidadDAO {
 				c[4] = rs.getDouble("nomina") / divisor;  hay[4] = !rs.wasNull();
 				c[5] = rs.getDouble("fijos") / divisor;   hay[5] = !rs.wasNull();
 				c[6] = rs.getDouble("servicios") / divisor; hay[6] = !rs.wasNull();
+				c[7] = rs.getDouble("mensajeria");    hay[7] = true;
 
 				if (!hay[0]) { faltaInsumo = true; }
 				if (!hay[4]) { faltaNomina = true; }
@@ -283,7 +290,8 @@ public class GerenciaRentabilidadDAO {
 				costos.add(c);
 				marcas.add(new String[] { firmaNomina, origenServicio,
 						hay[0] ? "S" : "N", hay[2] ? "S" : "N", hay[3] ? "S" : "N",
-						hay[4] ? "S" : "N", hay[5] ? "S" : "N", hay[6] ? "S" : "N" });
+						hay[4] ? "S" : "N", hay[5] ? "S" : "N", hay[6] ? "S" : "N",
+						hay[7] ? "S" : "N" });
 			}
 			rs.close();
 			ps.close();
@@ -320,9 +328,10 @@ public class GerenciaRentabilidadDAO {
 				t.lineas.add(linea("BRUTO", "Margen bruto", bruto, t.venta, true, true, ""));
 				t.lineas.add(linea("COM", "Comisiones", c[2], t.venta, "S".equals(m[3]), false, ""));
 				t.lineas.add(linea("OPE", "Gastos de operacion", c[3], t.venta, "S".equals(m[4]), false, ""));
+				t.lineas.add(linea("MEN", "Mensajeria externa", c[7], t.venta, "S".equals(m[8]), false, ""));
 				t.lineas.add(linea("NOM", "Nomina de tienda", c[4], t.venta, "S".equals(m[5]), false,
 						"SIMULACION".equals(m[0]) ? "SIMULACION" : ""));
-				final double contribucion = bruto - c[2] - c[3] - c[4];
+				final double contribucion = bruto - c[2] - c[3] - c[7] - c[4];
 				t.lineas.add(linea("CONTR", "Margen de contribucion", contribucion, t.venta, true, true, ""));
 				t.lineas.add(linea("FIJ", "Gastos fijos", c[5], t.venta, "S".equals(m[6]), false, ""));
 				t.lineas.add(linea("SER", "Servicios publicos", c[6], t.venta, "S".equals(m[7]), false, m[1]));
@@ -418,6 +427,7 @@ public class GerenciaRentabilidadDAO {
 				+ " / s.semanas_mes AS fijos,"
 				+ " IFNULL(v.valor,0) venta, IFNULL(i.costo,0) insumos,"
 				+ " IFNULL(c.com,0) comisiones, IFNULL(o.ope,0) operacion,"
+				+ " IFNULL(m.men,0) mensajeria,"
 				+ " IFNULL(n.nom,0)/s.semanas_mes nomina,"
 				+ " IFNULL(sv.ser,0)/s.semanas_mes servicios"
 				+ " FROM (SELECT x.*, (SELECT COUNT(*) FROM inventarioamericana.gerencia_semana y"
@@ -435,6 +445,8 @@ public class GerenciaRentabilidadDAO {
 				+ "                ON gc.idgasto_conf = g.idgasto_conf AND gc.rentabilidad_calcula = 1"
 				+ "             WHERE g.idtienda = " + idTienda + " AND g.idgasto_conf <> " + CONCEPTO_CONTEO
 				+ "             GROUP BY g.fecha) o ON o.fecha = s.fecha_fin"
+				+ " LEFT JOIN (SELECT fecha, SUM(valor) men FROM inventarioamericana.gasto_empleado_temporal"
+				+ "             WHERE idtienda = " + idTienda + " GROUP BY fecha) m ON m.fecha = s.fecha_fin"
 				+ " LEFT JOIN (SELECT anio, mes,"
 				+ "                   SUM(sueldo_basico+sueldo_variable+seguridad_social+liquidacion) nom"
 				+ "              FROM inventarioamericana.gerencia_nomina_tienda WHERE idtienda = " + idTienda
@@ -456,7 +468,7 @@ final ResultSet rs = ps.executeQuery();
 					continue;
 				}
 				final double resultado = venta - rs.getDouble("insumos") - rs.getDouble("comisiones")
-						- rs.getDouble("operacion") - rs.getDouble("nomina")
+						- rs.getDouble("operacion") - rs.getDouble("mensajeria") - rs.getDouble("nomina")
 						- rs.getDouble("fijos") - rs.getDouble("servicios");
 				filas.add(new double[] { rs.getInt("numero"), rs.getInt("mes"), venta,
 						resultado, resultado * 100 / venta });
@@ -530,6 +542,13 @@ final ResultSet rs = ps.executeQuery();
 					+ " JOIN inventarioamericana.gasto_configuracion gc ON gc.idgasto_conf = g.idgasto_conf"
 					+ " WHERE g.idtienda = ? AND g.fecha IN " + fechas + cuales
 					+ " GROUP BY gc.nombre_gasto HAVING valor <> 0 ORDER BY valor DESC";
+			} else if ("MEN".equals(linea)) {
+				sql = "SELECT CONCAT('Semana ', s.numero, ' (al ', g.fecha, ')') AS concepto, g.valor,"
+					+ "       '' AS nota"
+					+ "  FROM inventarioamericana.gasto_empleado_temporal g"
+					+ "  JOIN inventarioamericana.gerencia_semana s ON s.fecha_fin = g.fecha"
+					+ " WHERE g.idtienda = ? AND g.fecha IN " + fechas
+					+ " ORDER BY g.fecha";
 			} else if ("FIJ".equals(linea)) {
 				sql = "SELECT c.nombre AS concepto, f.valor_mensual AS valor,"
 					+ " CONCAT('rige desde ', f.vigencia_desde) AS nota"
