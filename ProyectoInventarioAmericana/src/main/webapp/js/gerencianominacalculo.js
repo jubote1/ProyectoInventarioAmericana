@@ -261,9 +261,11 @@ function pintarEstimado() {
 		thHtml = '<tr>'
 			+ '<th>Empleado</th><th>Cargo</th><th class="ger-num">Salario</th>'
 			+ '<th class="ger-num">Horas</th>'
-			+ '<th class="ger-num" title="Horas y valor en la franja de 19:00 a 06:00 (Ley 2466)">Rec. Nocturno<span class="th-sub">horas &middot; valor $</span></th>'
-			+ '<th class="ger-num" title="Horas y valor en domingos y festivos">Dom / Fes<span class="th-sub">horas &middot; valor $</span></th>'
-			+ '<th class="ger-num" title="Horas extra semanales">Extra<span class="th-sub">horas &middot; valor $</span></th>'
+			+ '<th class="ger-num" title="Horas y valor en la franja nocturna de 19:00 a 06:00 (Ley 2466)">Rec. Nocturno<span class="th-sub">horas &middot; valor $</span></th>'
+			+ '<th class="ger-num" title="Horas y valor en domingos">Rec. Dominical<span class="th-sub">horas &middot; valor $</span></th>'
+			+ '<th class="ger-num" title="Horas y valor en días festivos oficiales">Rec. Festivo<span class="th-sub">horas &middot; valor $</span></th>'
+			+ '<th class="ger-num" title="Horas extra ordinarias semanales (diurnas y nocturnas)">Extra Ordinaria<span class="th-sub">horas &middot; valor $</span></th>'
+			+ '<th class="ger-num" title="Horas extra en domingos y festivos">Extra Fest / Dom<span class="th-sub">horas &middot; valor $</span></th>'
 			+ '<th class="ger-num">' + (esReal ? 'B&aacute;sico (Fijo)' : 'B&aacute;sico') + '</th>'
 			+ '<th class="ger-num" title="Variable de SIIGO o recargos de biometría">' + (esReal ? 'Variable Pagado' : 'Total Variable') + '</th>'
 			+ '<th class="ger-num">Seg. Social</th>'
@@ -273,7 +275,7 @@ function pintarEstimado() {
 	}
 	$('#tablaEstimado thead').html(thHtml);
 
-	var colsTotal = (modoVista === 'comparativo' ? 9 : 13);
+	var colsTotal = (modoVista === 'comparativo' ? 9 : 15);
 	if (lista.length === 0) {
 		$('#tablaEstimado tbody').html('<tr><td colspan="' + colsTotal + '" class="ger-vacio">'
 			+ 'Esta semana no esta calculada. Use el boton de arriba.</td></tr>');
@@ -307,7 +309,8 @@ function pintarEstimado() {
 				cuerpo += '<tr class="sub-header-repite">'
 					+ '<td>Empleado</td><td>Cargo</td><td class="ger-num">Salario</td>'
 					+ '<td class="ger-num">Horas</td><td class="ger-num">Rec. Nocturno</td>'
-					+ '<td class="ger-num">Dom / Fes</td><td class="ger-num">Extra</td>'
+					+ '<td class="ger-num">Rec. Dominical</td><td class="ger-num">Rec. Festivo</td>'
+					+ '<td class="ger-num">Extra Ordinaria</td><td class="ger-num">Extra Fest / Dom</td>'
 					+ '<td class="ger-num">B&aacute;sico</td><td class="ger-num">Total Variable</td>'
 					+ '<td class="ger-num">Seg. Social</td><td class="ger-num">Provisiones</td>'
 					+ '<td class="ger-num">Costo Total</td><td>Novedad / Estado</td></tr>';
@@ -349,28 +352,44 @@ function pintarEstimado() {
 			cuerpo += '<td class="ger-num"><strong>' + formatearHorasNC(e.h_totales) + '</strong>'
 				+ '<div style="font-size:10.5px;color:#6C7482;">' + e.turnos + ' turnos</div></td>';
 
-			// Recargo nocturno (horas + monto)
-			var hNoc = e.h_nocturnas + e.h_dom_noct;
+			// 1. Recargo nocturno (horas + monto)
+			var hNoc = (e.h_nocturnas || 0) + (e.h_dom_noct || 0) + (e.h_fest_noct || 0);
 			var vNoc = e.recargo_nocturno || 0;
 			cuerpo += '<td class="ger-num">'
 				+ (hNoc > 0 ? '<strong>' + formatearHorasNC(hNoc) + ' h</strong>'
 					+ (vNoc > 0 ? '<div style="font-size:11px;color:#102F6F;font-weight:600;">$' + milesNC(vNoc) + '</div>' : '')
 					: '<span style="color:#94A3B8;">&mdash;</span>') + '</td>';
 
-			// Dominical / Festivo (horas + monto)
-			var hDom = e.h_dominicales + e.h_dom_noct;
+			// 2. Recargo dominical (horas + monto)
+			var hDom = (e.h_dominicales || 0) + (e.h_dom_noct || 0);
 			var vDom = e.recargo_dominical || 0;
 			cuerpo += '<td class="ger-num">'
 				+ (hDom > 0 ? '<strong>' + formatearHorasNC(hDom) + ' h</strong>'
 					+ (vDom > 0 ? '<div style="font-size:11px;color:#102F6F;font-weight:600;">$' + milesNC(vDom) + '</div>' : '')
 					: '<span style="color:#94A3B8;">&mdash;</span>') + '</td>';
 
-			// Horas extra (horas + monto)
-			var hExt = e.h_extra || 0;
-			var vExt = e.recargo_extra || 0;
+			// 3. Recargo festivo (horas + monto)
+			var hFes = (e.h_festivas || 0) + (e.h_fest_noct || 0);
+			var vFes = e.recargo_festivo || 0;
 			cuerpo += '<td class="ger-num">'
-				+ (hExt > 0 ? '<strong>' + formatearHorasNC(hExt) + ' h</strong>'
-					+ (vExt > 0 ? '<div style="font-size:11px;color:#102F6F;font-weight:600;">$' + milesNC(vExt) + '</div>' : '')
+				+ (hFes > 0 ? '<strong>' + formatearHorasNC(hFes) + ' h</strong>'
+					+ (vFes > 0 ? '<div style="font-size:11px;color:#102F6F;font-weight:600;">$' + milesNC(vFes) + '</div>' : '')
+					: '<span style="color:#94A3B8;">&mdash;</span>') + '</td>';
+
+			// 4. Horas extra ordinarias (horas + monto)
+			var hExtOrd = e.h_extra || 0;
+			var vExtOrd = e.recargo_extra || 0;
+			cuerpo += '<td class="ger-num">'
+				+ (hExtOrd > 0 ? '<strong>' + formatearHorasNC(hExtOrd) + ' h</strong>'
+					+ (vExtOrd > 0 ? '<div style="font-size:11px;color:#102F6F;font-weight:600;">$' + milesNC(vExtOrd) + '</div>' : '')
+					: '<span style="color:#94A3B8;">&mdash;</span>') + '</td>';
+
+			// 5. Horas extra festivas / dominicales (horas + monto)
+			var hExtFest = e.h_extra_festiva || 0;
+			var vExtFest = e.recargo_extra_festiva || 0;
+			cuerpo += '<td class="ger-num">'
+				+ (hExtFest > 0 ? '<strong>' + formatearHorasNC(hExtFest) + ' h</strong>'
+					+ (vExtFest > 0 ? '<div style="font-size:11px;color:#102F6F;font-weight:600;">$' + milesNC(vExtFest) + '</div>' : '')
 					: '<span style="color:#94A3B8;">&mdash;</span>') + '</td>';
 
 			cuerpo += '<td class="ger-num">$' + milesNC(bas) + '</td>';

@@ -338,6 +338,123 @@
 					</div>
 				</div>
 			</div>
+
+			<!-- SUBSECCIÓN REGLAS LABORALES -->
+			<h5 style="color:#102F6F; font-weight:bold; margin-top:20px; font-size:15px;">
+				<i class="fas fa-user-clock"></i> 3.1 Reglas Laborales y Biometr&iacute;a de N&oacute;mina (NominaCalculo.html)
+			</h5>
+			<div class="table-responsive" style="margin-top:10px;">
+				<table class="table table-bordered tabla-comparativa">
+					<thead>
+						<tr>
+							<th style="width:25%;">Tipo de Personal / Cargo</th>
+							<th style="width:25%;">Recargos Nocturnos, Dom y Fes</th>
+							<th style="width:25%;">Horas Extras (Ord y Fest)</th>
+							<th style="width:25%;">Tratamiento en Liquidaci&oacute;n Semanal</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td><strong>Personal &Aacute;rea Administrativa y Directivos</strong><br><small style="color:#64748b;">(Director General, L&iacute;der Calidad, L&iacute;der I+D, etc.)</small></td>
+							<td><span class="badge" style="background:#fee2e2; color:#991b1b;">$0 (Sin recargos)</span></td>
+							<td><span class="badge" style="background:#fee2e2; color:#991b1b;">0 h ($0)</span></td>
+							<td>Salario mensual fijo ($7/30$ b&aacute;sico). Las marcaciones biom&eacute;tricas son informativas de asistencia; no devengan recargos ni horas extras. Variable = $0.</td>
+						</tr>
+						<tr>
+							<td><strong>L&iacute;deres de Zona</strong><br><small style="color:#64748b;">(Supervisores de Operaciones de Zona: Vivian, Dairon)</small></td>
+							<td><span class="badge" style="background:#fee2e2; color:#991b1b;">$0 (Sin recargos)</span></td>
+							<td><span class="badge" style="background:#fee2e2; color:#991b1b;">0 h ($0)</span></td>
+							<td>Personal de supervisi&oacute;n y confianza asignado al &aacute;rea Administrativa. Sin horas extras ni recargos. Variable = $0.</td>
+						</tr>
+						<tr>
+							<td><strong>Administradores de Punto de Venta</strong><br><small style="color:#64748b;">(idtipoempleado = 2)</small></td>
+							<td><span class="badge" style="background:#dcfce7; color:#166534;"><i class="fas fa-check"></i> S&iacute; devengan</span></td>
+							<td><span class="badge" style="background:#fee2e2; color:#991b1b;">0 h (Sin horas extras)</span></td>
+							<td>Devengan recargo nocturno (franja 19:00 - 06:00), recargo dominical y recargo festivo por sus turnos en tienda, pero <strong>nunca horas extras</strong>.</td>
+						</tr>
+						<tr>
+							<td><strong>Supernumerarios</strong><br><small style="color:#64748b;">(Columna supernumerario = 1 o cargo)</small></td>
+							<td><span class="badge" style="background:#dcfce7; color:#166534;"><i class="fas fa-check"></i> S&iacute; devengan</span></td>
+							<td><span class="badge" style="background:#fee2e2; color:#991b1b;">0 h (Sin horas extras)</span></td>
+							<td>Cubren turnos y descansos en distintos puntos de venta. Tienen derecho a recargos nocturnos, dominicales y festivos de sus turnos, pero <strong>no a horas extras</strong>.</td>
+						</tr>
+						<tr>
+							<td><strong>Personal Operativo de Tienda</strong><br><small style="color:#64748b;">(Pizzeros, Auxiliares de Cocina, Domiciliarios)</small></td>
+							<td><span class="badge" style="background:#dcfce7; color:#166534;"><i class="fas fa-check"></i> S&iacute; devengan</span></td>
+							<td><span class="badge" style="background:#dcfce7; color:#166534;"><i class="fas fa-check"></i> S&iacute; devengan</span></td>
+							<td>Devengan todos los recargos y horas extras cuando exceden la jornada laboral semanal de 42 horas, con desglose independiente de <strong>Extra Ordinaria</strong> vs <strong>Extra Fest / Dom</strong>.</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+
+			<!-- SUBSECCIÓN COLUMNAS DE BIOMETRÍA -->
+			<div class="row" style="margin-top:10px;">
+				<div class="col-md-6">
+					<div class="guia-box-callout">
+						<strong style="color:#102F6F;"><i class="fas fa-calendar-day"></i> Separaci&oacute;n de Domingos vs Festivos Oficiales</strong>
+						<p style="margin-top:5px; margin-bottom:0; font-size:13px;">
+							En la tabla de n&oacute;mina, los domingos y los d&iacute;as festivos van en columnas separadas:
+							<br>&bull; <strong>Rec. Dominical:</strong> Horas laboradas en domingos calendario y su valor en pesos (90% de recargo).
+							<br>&bull; <strong>Rec. Festivo:</strong> Horas laboradas en festivos oficiales de ley (consultados de la tabla <code>gerencia_festivo</code>) y su valor en pesos.
+						</p>
+					</div>
+				</div>
+				<div class="col-md-6">
+					<div class="guia-box-callout">
+						<strong style="color:#102F6F;"><i class="fas fa-business-time"></i> Separaci&oacute;n de Extras Ordinarias vs Extras Festivas</strong>
+						<p style="margin-top:5px; margin-bottom:0; font-size:13px;">
+							Las horas que superan la jornada m&aacute;xima semanal (42 horas) se desglosan en:
+							<br>&bull; <strong>Extra Ordinaria:</strong> Horas extras laboradas de lunes a s&aacute;bado ordinarios (recargo 25% diurna / 75% nocturna).
+							<br>&bull; <strong>Extra Fest / Dom:</strong> Horas extras laboradas en domingos o festivos (recargo festivo diurno 115% / nocturno 165%).
+						</p>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- ================= 4. GUÍA DE GASTOS FIJOS Y VIGENCIAS ================= -->
+		<div class="ger-panel" style="margin-top:15px;">
+			<h4 class="ger-titulo" style="font-size:16px;">
+				<i class="fas fa-file-invoice-dollar text-success"></i> 4. C&oacute;mo Cambiar un Solo Gasto Fijo y su Vigencia (GastosTienda.html)
+			</h4>
+			<p style="font-size:13.5px; color:#475569;">
+				Una duda frecuente es: <em>"&iquest;C&oacute;mo hago para cambiar el arriendo de una sola tienda sin que se cambien todos los dem&aacute;s conceptos ni se alteren los meses anteriores?"</em>
+			</p>
+			<div class="row" style="font-size:13px; color:#334155;">
+				<div class="col-md-3">
+					<div class="guia-box-callout">
+						<strong style="color:#102F6F;">1. El sistema solo guarda lo modificado</strong>
+						<p style="margin-top:5px; margin-bottom:0;">
+							La matriz solo detecta las celdas que usted edite. Al modificar una celda, esta cambia de color (borde rojo) y el botón se activa mostrando <strong>"1 celda(s) por guardar"</strong>. Todas las dem&aacute;s tiendas y conceptos quedan intactos.
+						</p>
+					</div>
+				</div>
+				<div class="col-md-3">
+					<div class="guia-box-callout">
+						<strong style="color:#102F6F;">2. Campo "Los cambios rigen desde"</strong>
+						<p style="margin-top:5px; margin-bottom:0;">
+							Indica a partir de qu&eacute; fecha entra en vigor el nuevo valor (ej: <code>2026-11-01</code>). Al guardar, el sistema <strong>cierra la vigencia anterior al d&iacute;a antes</strong> y crea la nueva vigencia a partir de esa fecha. Los meses hist&oacute;ricos nunca se sobreescriben.
+						</p>
+					</div>
+				</div>
+				<div class="col-md-3">
+					<div class="guia-box-callout">
+						<strong style="color:#102F6F;">3. Confirmaci&oacute;n de Seguridad</strong>
+						<p style="margin-top:5px; margin-bottom:0;">
+							Antes de guardar, el sistema le muestra un mensaje claro: <em>"Se van a abrir 1 vigencia(s) nueva(s) desde el 2026-11-01. Lo anterior no se borra: queda cerrado el d&iacute;a antes y se puede consultar"</em>.
+						</p>
+					</div>
+				</div>
+				<div class="col-md-3">
+					<div class="guia-box-callout">
+						<strong style="color:#102F6F;">4. Hist&oacute;rico por Doble Clic</strong>
+						<p style="margin-top:5px; margin-bottom:0;">
+							Cada celda muestra abajo su vigencia actual (ej: <code>2026-07</code>). Si hace <strong>doble clic</strong> sobre cualquier valor, se abre la tabla hist&oacute;rica con todos los cambios, fechas, importes y observaciones de ese concepto en esa tienda.
+						</p>
+					</div>
+				</div>
+			</div>
 		</div>
 
 	</div>

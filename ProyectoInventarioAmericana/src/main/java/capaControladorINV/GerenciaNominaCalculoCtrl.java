@@ -37,7 +37,10 @@ public class GerenciaNominaCalculoCtrl {
 			sb.append(",\"h_nocturnas\":").append(num(e.horasNocturnas));
 			sb.append(",\"h_dominicales\":").append(num(e.horasDominicales));
 			sb.append(",\"h_dom_noct\":").append(num(e.horasDomNoct));
+			sb.append(",\"h_festivas\":").append(num(e.horasFestivas));
+			sb.append(",\"h_fest_noct\":").append(num(e.horasFestNoct));
 			sb.append(",\"h_extra\":").append(num(e.horasExtra));
+			sb.append(",\"h_extra_festiva\":").append(num(e.horasExtraFestiva));
 			sb.append(",\"h_totales\":").append(num(e.horasTotales));
 			sb.append(",\"turnos\":").append(e.turnos);
 			sb.append(",\"basico\":").append(num(e.sueldoBasico));
@@ -56,7 +59,9 @@ public class GerenciaNominaCalculoCtrl {
 			sb.append(",\"real_costo\":").append(num(e.realCostoTotal));
 			sb.append(",\"recargo_nocturno\":").append(num(e.recargoNocturno));
 			sb.append(",\"recargo_dominical\":").append(num(e.recargoDominical));
+			sb.append(",\"recargo_festivo\":").append(num(e.recargoFestivo));
 			sb.append(",\"recargo_extra\":").append(num(e.recargoExtra));
+			sb.append(",\"recargo_extra_festiva\":").append(num(e.recargoExtraFestiva));
 			sb.append(",\"novedad_tipo\":\"").append(esc(e.novedadTipo)).append('"');
 			sb.append(",\"novedad_accion\":\"").append(esc(e.novedadAccion)).append('"');
 			sb.append(",\"novedad_obs\":\"").append(esc(e.novedadObs)).append('"');

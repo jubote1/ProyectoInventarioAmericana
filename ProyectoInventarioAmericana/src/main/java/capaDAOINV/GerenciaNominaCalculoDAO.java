@@ -94,7 +94,10 @@ public class GerenciaNominaCalculoDAO {
 		public double horasNocturnas;
 		public double horasDominicales;
 		public double horasDomNoct;
+		public double horasFestivas;
+		public double horasFestNoct;
 		public double horasExtra;
+		public double horasExtraFestiva;
 		public double horasTotales;
 		public int turnos;
 		public double sueldoBasico;
@@ -113,7 +116,11 @@ public class GerenciaNominaCalculoDAO {
 		public String origenCargado = "";
 		public double recargoNocturno;
 		public double recargoDominical;
+		public double recargoFestivo;
 		public double recargoExtra;
+		public double recargoExtraFestiva;
+		public boolean esSupernumerario = false;
+		public String area = "";
 		public boolean esSena = false;
 		public boolean esSenaElectiva = false;
 		public boolean esInactivo = false;
@@ -180,13 +187,15 @@ public class GerenciaNominaCalculoDAO {
 		double nocturnas;
 		double dominicales;
 		double domNoct;
+		double festivas;
+		double festNoct;
 		int turnos;
 		/** Cuantos de esos turnos llevan la salida asumida. */
 		int turnosEstimados;
 		final Map<Integer, Double> porTienda = new LinkedHashMap<Integer, Double>();
 
 		double total() {
-			return (ordinarias + nocturnas + dominicales + domNoct);
+			return (ordinarias + nocturnas + dominicales + domNoct + festivas + festNoct);
 		}
 	}
 
@@ -301,10 +310,12 @@ public class GerenciaNominaCalculoDAO {
 			final PreparedStatement ins = cn.prepareStatement(
 					"INSERT INTO gerencia_nomina_estimado (idempleado, semana, salario_base,"
 					+ " horas_ordinarias, horas_nocturnas, horas_dominicales, horas_dom_noct,"
-					+ " horas_extra, horas_totales, turnos, sueldo_basico, sueldo_variable,"
+					+ " horas_festivas, horas_fest_noct, horas_extra, horas_extra_festiva, horas_totales,"
+					+ " recargo_nocturno, recargo_dominical, recargo_festivo, recargo_extra, recargo_extra_festiva,"
+					+ " turnos, sueldo_basico, sueldo_variable,"
 					+ " auxilio_transporte, seguridad_social, liquidacion, costo_total,"
 					+ " factor_correccion, costo_corregido, aviso)"
-					+ " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+					+ " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
 
 			final HashMap<Integer, NovedadReg> novedades = novedadesVigentes(cn, semana);
 
@@ -313,7 +324,7 @@ public class GerenciaNominaCalculoDAO {
 				final ArrayList<Turno> turnos = turnosDe(cnG, e.idEmpleado, rango[0], rango[1]);
 				final boolean horasEnteras = esHorasEnteras(e.idEmpleado, e.idTipoEmpleado, areas, excepciones);
 				final Horas h = clasificar(turnos, festivos, p, horasEnteras);
-				calcularCosto(e, h, p, cargos);
+				calcularCosto(e, h, p, cargos, areas, excepciones);
 
 				final NovedadReg nov = novedades.get(Integer.valueOf(e.idEmpleado));
 				if (nov != null) {
@@ -338,8 +349,16 @@ public class GerenciaNominaCalculoDAO {
 				ins.setDouble(i++, e.horasNocturnas);
 				ins.setDouble(i++, e.horasDominicales);
 				ins.setDouble(i++, e.horasDomNoct);
+				ins.setDouble(i++, e.horasFestivas);
+				ins.setDouble(i++, e.horasFestNoct);
 				ins.setDouble(i++, e.horasExtra);
+				ins.setDouble(i++, e.horasExtraFestiva);
 				ins.setDouble(i++, e.horasTotales);
+				ins.setDouble(i++, e.recargoNocturno);
+				ins.setDouble(i++, e.recargoDominical);
+				ins.setDouble(i++, e.recargoFestivo);
+				ins.setDouble(i++, e.recargoExtra);
+				ins.setDouble(i++, e.recargoExtraFestiva);
 				ins.setInt(i++, e.turnos);
 				ins.setDouble(i++, e.sueldoBasico);
 				ins.setDouble(i++, e.sueldoVariable);
@@ -382,10 +401,13 @@ public class GerenciaNominaCalculoDAO {
 		double minutosNocturnos;
 		double minutosDominicales;
 		double minutosDomNoct;
+		double minutosFestivos;
+		double minutosFestNoct;
 		final Map<Integer, Double> minutosPorTienda = new LinkedHashMap<Integer, Double>();
 
 		double minutosTotales() {
-			return (minutosOrdinarios + minutosNocturnos + minutosDominicales + minutosDomNoct);
+			return (minutosOrdinarios + minutosNocturnos + minutosDominicales + minutosDomNoct
+					+ minutosFestivos + minutosFestNoct);
 		}
 	}
 
@@ -480,13 +502,14 @@ public class GerenciaNominaCalculoDAO {
 
 				final int hora = cursor.get(Calendar.HOUR_OF_DAY);
 				final boolean esNoche = hora >= nocIni || hora < nocFin;
-				//El domingo y el festivo se miran sobre el dia en que CAE la
-				//hora, no sobre el dia en que arranco el turno: un turno que
-				//cruza de sabado a domingo tiene horas de las dos clases.
-				final boolean esDomingo = cursor.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY
-						|| festivos.contains(fecha(cursor));
+				final boolean esFestivo = festivos.contains(fecha(cursor));
+				final boolean esDomingo = !esFestivo && cursor.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY;
 
-				if (esDomingo && esNoche) {
+				if (esFestivo && esNoche) {
+					dia.minutosFestNoct += minutos;
+				} else if (esFestivo) {
+					dia.minutosFestivos += minutos;
+				} else if (esDomingo && esNoche) {
 					dia.minutosDomNoct += minutos;
 				} else if (esDomingo) {
 					dia.minutosDominicales += minutos;
@@ -522,13 +545,16 @@ public class GerenciaNominaCalculoDAO {
 				// Repartir horasDia entre componentes proporcionales
 				final double[] compMin = new double[] {
 						dia.minutosOrdinarios, dia.minutosNocturnos,
-						dia.minutosDominicales, dia.minutosDomNoct };
+						dia.minutosDominicales, dia.minutosDomNoct,
+						dia.minutosFestivos, dia.minutosFestNoct };
 				final long[] compHoras = repartirHorasEnteras(compMin, horasDia);
 
 				h.ordinarias += compHoras[0];
 				h.nocturnas += compHoras[1];
 				h.dominicales += compHoras[2];
 				h.domNoct += compHoras[3];
+				h.festivas += compHoras[4];
+				h.festNoct += compHoras[5];
 
 				// Repartir horasDia entre tiendas del dia
 				final ArrayList<Integer> idsTienda = new ArrayList<Integer>(dia.minutosPorTienda.keySet());
@@ -553,6 +579,8 @@ public class GerenciaNominaCalculoDAO {
 				h.nocturnas += dia.minutosNocturnos / 60.0;
 				h.dominicales += dia.minutosDominicales / 60.0;
 				h.domNoct += dia.minutosDomNoct / 60.0;
+				h.festivas += dia.minutosFestivos / 60.0;
+				h.festNoct += dia.minutosFestNoct / 60.0;
 				for (final Map.Entry<Integer, Double> entry : dia.minutosPorTienda.entrySet()) {
 					final Integer idT = entry.getKey();
 					final Double prevT = h.porTienda.get(idT);
@@ -567,11 +595,14 @@ public class GerenciaNominaCalculoDAO {
 
 	/** De las horas clasificadas y el salario, al costo de la semana. */
 	private static void calcularCosto(final Estimado e, final Horas h, final Parametros p,
-			final Map<Integer, double[]> cargos) {
+			final Map<Integer, double[]> cargos, final Map<Integer, String> areas,
+			final Map<Integer, String> excepciones) {
 		e.horasOrdinarias = redondear(h.ordinarias);
 		e.horasNocturnas = redondear(h.nocturnas);
 		e.horasDominicales = redondear(h.dominicales);
 		e.horasDomNoct = redondear(h.domNoct);
+		e.horasFestivas = redondear(h.festivas);
+		e.horasFestNoct = redondear(h.festNoct);
 		e.horasTotales = redondear(h.total());
 		e.turnos = h.turnos;
 
@@ -579,30 +610,80 @@ public class GerenciaNominaCalculoDAO {
 		final double horasMes = p.de("HORAS_MES_LIQUIDACION", 240);
 		final double vh = horasMes > 0 ? e.salarioBase / horasMes : 0;
 
-		//El basico es del mes, no de las horas: a quien tiene salario mensual se
-		//le paga igual. Las horas solo mandan en los recargos.
+		// El basico es del mes, no de las horas: a quien tiene salario mensual se
+		// le paga igual. Las horas solo mandan en los recargos.
 		e.sueldoBasico = e.salarioBase * SEMANA_DEL_MES;
 
-		//Recargos. El nocturno va sobre toda hora nocturna, sea de domingo o no;
-		//el dominical sobre toda hora de domingo o festivo, sea de noche o no.
-		//Una hora de domingo en la noche lleva los dos, que es como es.
-		final double recargoNocturno = (h.nocturnas + h.domNoct) * vh * p.de("RECARGO_NOCTURNO", 35) / 100.0;
-		final double recargoDominical = (h.dominicales + h.domNoct) * vh * p.de("RECARGO_DOMINICAL", 90) / 100.0;
-
-		//Extras: lo que exceda la jornada de la semana. Ver la nota 1 de la
-		//clase sobre por que se cuenta por semana y no por dia.
-		double recargoExtra = 0;
-		if (h.total() > jornada && h.total() > 0) {
-			e.horasExtra = redondear(h.total() - jornada);
-			final double propNoche = (h.nocturnas + h.domNoct) / h.total();
-			final double tasa = p.de("EXTRA_NOCTURNA", 75) * propNoche
-					+ p.de("EXTRA_DIURNA", 25) * (1 - propNoche);
-			recargoExtra = e.horasExtra * vh * tasa / 100.0;
+		String area = excepciones != null ? excepciones.get(Integer.valueOf(e.idEmpleado)) : null;
+		if (area == null || area.isEmpty()) {
+			area = areas != null ? areas.get(Integer.valueOf(e.idTipoEmpleado)) : "";
 		}
+		e.area = area != null ? area : "";
+
+		final boolean esAdministrativo = "ADMINISTRATIVA".equalsIgnoreCase(e.area);
+		final String cargoLower = e.cargo != null ? e.cargo.toLowerCase() : "";
+		final boolean esAdminTienda = e.idTipoEmpleado == 2 || cargoLower.contains("administrador");
+		final boolean esSupernumerario = e.esSupernumerario || cargoLower.contains("supernumerario");
+		final boolean esLiderZona = e.idTipoEmpleado == 24 || e.idEmpleado == 21 || e.idEmpleado == 270;
+		final boolean sinHorasExtras = esAdministrativo || esAdminTienda || esSupernumerario || esLiderZona;
+
+		double recargoNocturno = 0;
+		double recargoDominical = 0;
+		double recargoFestivo = 0;
+		double horasExtraOrd = 0;
+		double horasExtraFest = 0;
+		double recargoExtraOrd = 0;
+		double recargoExtraFest = 0;
+
+		if (!esAdministrativo) {
+			// Recargo nocturno: franja 19:00 a 06:00 (ordinarias, dominicales y festivas)
+			recargoNocturno = (h.nocturnas + h.domNoct + h.festNoct) * vh * p.de("RECARGO_NOCTURNO", 35) / 100.0;
+			// Recargo dominical: domingos no festivos
+			recargoDominical = (h.dominicales + h.domNoct) * vh * p.de("RECARGO_DOMINICAL", 90) / 100.0;
+			// Recargo festivo: festivos oficiales
+			recargoFestivo = (h.festivas + h.festNoct) * vh * p.de("RECARGO_FESTIVO", p.de("RECARGO_DOMINICAL", 90)) / 100.0;
+
+			// Horas extras desglosadas (Ordinaria vs Festiva/Dominical)
+			if (!sinHorasExtras && h.total() > jornada && h.total() > 0) {
+				final double totalExtra = h.total() - jornada;
+				final double hOrdSem = h.ordinarias + h.nocturnas;
+				final double hDomFes = h.dominicales + h.domNoct + h.festivas + h.festNoct;
+
+				if (hOrdSem > jornada) {
+					horasExtraOrd = hOrdSem - jornada;
+					horasExtraFest = hDomFes;
+				} else {
+					horasExtraOrd = 0;
+					horasExtraFest = totalExtra;
+				}
+				horasExtraOrd = Math.min(horasExtraOrd, totalExtra);
+				horasExtraFest = Math.min(horasExtraFest, totalExtra - horasExtraOrd);
+
+				if (horasExtraOrd > 0) {
+					final double propNocOrd = hOrdSem > 0 ? (h.nocturnas / hOrdSem) : 0;
+					final double tasaOrd = p.de("EXTRA_NOCTURNA", 75) * propNocOrd
+							+ p.de("EXTRA_DIURNA", 25) * (1 - propNocOrd);
+					recargoExtraOrd = horasExtraOrd * vh * tasaOrd / 100.0;
+				}
+
+				if (horasExtraFest > 0) {
+					final double propNocFest = hDomFes > 0 ? ((h.domNoct + h.festNoct) / hDomFes) : 0;
+					final double tasaFestDiurna = p.de("EXTRA_FESTIVA_DIURNA", p.de("RECARGO_DOMINICAL", 90) + 25);
+					final double tasaFestNocturna = p.de("EXTRA_FESTIVA_NOCTURNA", p.de("RECARGO_DOMINICAL", 90) + 75);
+					final double tasaFest = tasaFestNocturna * propNocFest + tasaFestDiurna * (1 - propNocFest);
+					recargoExtraFest = horasExtraFest * vh * tasaFest / 100.0;
+				}
+			}
+		}
+
+		e.horasExtra = redondear(horasExtraOrd);
+		e.horasExtraFestiva = redondear(horasExtraFest);
 		e.recargoNocturno = redondear(recargoNocturno);
 		e.recargoDominical = redondear(recargoDominical);
-		e.recargoExtra = redondear(recargoExtra);
-		e.sueldoVariable = redondear(recargoNocturno + recargoDominical + recargoExtra);
+		e.recargoFestivo = redondear(recargoFestivo);
+		e.recargoExtra = redondear(recargoExtraOrd);
+		e.recargoExtraFestiva = redondear(recargoExtraFest);
+		e.sueldoVariable = redondear(e.recargoNocturno + e.recargoDominical + e.recargoFestivo + e.recargoExtra + e.recargoExtraFestiva);
 
 		//Auxilio de transporte: solo hasta el tope de salarios minimos, y no
 		//entra a la base de seguridad social ni a la de vacaciones.
@@ -967,7 +1048,10 @@ public class GerenciaNominaCalculoDAO {
 				e.horasNocturnas = rs.getDouble("horas_nocturnas");
 				e.horasDominicales = rs.getDouble("horas_dominicales");
 				e.horasDomNoct = rs.getDouble("horas_dom_noct");
+				e.horasFestivas = rs.getDouble("horas_festivas");
+				e.horasFestNoct = rs.getDouble("horas_fest_noct");
 				e.horasExtra = rs.getDouble("horas_extra");
+				e.horasExtraFestiva = rs.getDouble("horas_extra_festiva");
 				e.horasTotales = rs.getDouble("horas_totales");
 				e.turnos = rs.getInt("turnos");
 				e.sueldoBasico = rs.getDouble("sueldo_basico");
@@ -987,10 +1071,11 @@ public class GerenciaNominaCalculoDAO {
 				e.realLiquidacion = rs.getDouble("real_liquidacion");
 				e.realCostoTotal = redondear(e.realBasico + e.realVariable + e.realSegSocial + e.realLiquidacion);
 
-				final double vh = e.salarioBase > 0 ? e.salarioBase / 240.0 : 0;
-				e.recargoNocturno = redondear((e.horasNocturnas + e.horasDomNoct) * vh * 0.35);
-				e.recargoDominical = redondear((e.horasDominicales + e.horasDomNoct) * vh * 0.90);
-				e.recargoExtra = e.horasExtra > 0 ? redondear(e.horasExtra * vh * 0.35) : 0;
+				e.recargoNocturno = rs.getDouble("recargo_nocturno");
+				e.recargoDominical = rs.getDouble("recargo_dominical");
+				e.recargoFestivo = rs.getDouble("recargo_festivo");
+				e.recargoExtra = rs.getDouble("recargo_extra");
+				e.recargoExtraFestiva = rs.getDouble("recargo_extra_festiva");
 
 				final NovedadReg nov = novMap.get(Integer.valueOf(e.idEmpleado));
 				if (nov != null) {
@@ -1098,6 +1183,16 @@ public class GerenciaNominaCalculoDAO {
 		} else {
 			// INCLUIR (Directivo, incapacidad, etc.)
 			if ("DIRECTIVO_INCLUIR".equals(nov.tipoNovedad)) {
+				e.sueldoVariable = 0;
+				e.recargoNocturno = 0;
+				e.recargoDominical = 0;
+				e.recargoFestivo = 0;
+				e.horasExtra = 0;
+				e.horasExtraFestiva = 0;
+				e.recargoExtra = 0;
+				e.recargoExtraFestiva = 0;
+				e.costoTotal = redondear(e.sueldoBasico + e.auxilioTransporte + e.seguridadSocial + e.liquidacion);
+				e.costoCorregido = e.costoTotal;
 				e.aviso = "Directivo / Administrativo: nómina completa sin requerir biometría";
 			} else if ("INCAPACIDAD_INCLUIR".equals(nov.tipoNovedad)) {
 				e.aviso = "Incapacidad justificada: liquidado en nómina";
@@ -1943,7 +2038,7 @@ public class GerenciaNominaCalculoDAO {
 		try {
 			final PreparedStatement ps = cnGeneral.prepareStatement(
 					"SELECT e.id, e.nombre_largo, e.salario, e.idtipoempleado, IFNULL(e.es_sena, 0) AS es_sena, IFNULL(e.es_sena_electiva, 0) AS es_sena_electiva,"
-					+ " e.activo, e.es_empleado, IFNULL(t.descripcion,'') AS cargo"
+					+ " IFNULL(e.supernumerario, 0) AS supernumerario, e.activo, e.es_empleado, IFNULL(t.descripcion,'') AS cargo"
 					+ " FROM empleado e LEFT JOIN tipo_empleado t ON t.idtipoempleado = e.idtipoempleado"
 					+ " WHERE e.salario > 0 AND ("
 					+ "   (e.activo = 1 AND e.es_empleado = 1)"
@@ -1974,6 +2069,7 @@ public class GerenciaNominaCalculoDAO {
 				e.salarioBase = sal;
 				e.esSena = rs.getInt("es_sena") == 1;
 				e.esSenaElectiva = rs.getInt("es_sena_electiva") == 1;
+				e.esSupernumerario = rs.getInt("supernumerario") == 1;
 				e.esInactivo = rs.getInt("activo") == 0 || rs.getInt("es_empleado") == 0;
 				e.entraTienda = cfg == null || cfg[1] == 1;
 				e.idTipoEmpleado = idTipo;
