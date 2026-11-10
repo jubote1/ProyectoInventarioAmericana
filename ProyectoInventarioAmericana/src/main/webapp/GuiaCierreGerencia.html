@@ -184,76 +184,70 @@
 
 		<!-- ================= 2. FLUJO DE CIERRE PASO A PASO ================= -->
 		<h3 class="ger-h1" style="font-size:20px; margin-top:30px; margin-bottom:15px;">
-			<i class="fas fa-list-ol" style="color:#102F6F;"></i> 2. Los 6 Pasos para Realizar el Cierre Mensual
+			<i class="fas fa-list-ol" style="color:#102F6F;"></i> 2. Flujo de Trabajo en 4 Pasos
 		</h3>
 
+		<!-- Diagrama Gráfico de Secuencia -->
+		<div class="ger-panel" style="margin-bottom: 25px; background: #0f172a; color: #ffffff; border-radius: 8px; padding: 20px;">
+			<div class="d-flex justify-content-between align-items-center mb-3">
+				<h5 style="color: #60a5fa; font-weight: bold; margin: 0; font-size: 15px;">
+					<i class="fas fa-route mr-1"></i> Secuencia Operativa del Cierre Mensual
+				</h5>
+				<small style="color: #94a3b8;"><i class="fas fa-info-circle mr-1"></i> Siga este orden consecutivo para garantizar que los costos fluyan correctamente</small>
+			</div>
+			<div class="row text-center" style="margin: 0 -5px;">
+				<div class="col-md-3 col-sm-6" style="padding: 5px;">
+					<div style="background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 14px 10px;">
+						<span class="badge badge-primary" style="background:#2563eb; font-size:11px; padding:3px 8px; margin-bottom:6px;">Paso 1</span>
+						<div style="font-weight: bold; color: #f8fafc; font-size: 13.5px;">NominaCalculo</div>
+						<small style="color: #94a3b8; font-size: 11.5px;">Biometr&iacute;a Semanal</small>
+					</div>
+				</div>
+				<div class="col-md-3 col-sm-6" style="padding: 5px;">
+					<div style="background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 14px 10px;">
+						<span class="badge badge-primary" style="background:#2563eb; font-size:11px; padding:3px 8px; margin-bottom:6px;">Paso 2</span>
+						<div style="font-weight: bold; color: #f8fafc; font-size: 13.5px;">GastosTienda</div>
+						<small style="color: #94a3b8; font-size: 11.5px;">Servicios P&uacute;blicos y Fijos</small>
+					</div>
+				</div>
+				<div class="col-md-3 col-sm-6" style="padding: 5px;">
+					<div style="background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 14px 10px;">
+						<span class="badge badge-primary" style="background:#2563eb; font-size:11px; padding:3px 8px; margin-bottom:6px;">Paso 3</span>
+						<div style="font-weight: bold; color: #f8fafc; font-size: 13.5px;">EstructuraGerencia</div>
+						<small style="color: #94a3b8; font-size: 11.5px;">Las 4 Bolsas</small>
+					</div>
+				</div>
+				<div class="col-md-3 col-sm-6" style="padding: 5px;">
+					<div style="background: #1e293b; border: 1px solid #16a34a; border-radius: 6px; padding: 14px 10px;">
+						<span class="badge badge-success" style="background:#16a34a; font-size:11px; padding:3px 8px; margin-bottom:6px;">Paso 4</span>
+						<div style="font-weight: bold; color: #f8fafc; font-size: 13.5px;">Cierre / Rentabilidad</div>
+						<small style="color: #86efac; font-size: 11.5px;">Resultado Final EBITDA</small>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Prerrequisito: Calendario de Semanas -->
+		<div class="alert alert-info d-flex align-items-center" style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; padding:12px 18px; margin-bottom:20px; color:#0369a1;">
+			<i class="fas fa-calendar-alt fa-2x mr-3" style="color:#0284c7;"></i>
+			<div style="flex:1;">
+				<strong style="color:#0c4a6e;">Prerrequisito (Configuraci&oacute;n Inicial): Calendario de Semanas</strong>
+				<p style="margin:2px 0 0 0; font-size:13px; color:#0369a1;">
+					Antes de iniciar el mes, aseg&uacute;rese de que las semanas comerciales completas (lunes a domingo) est&eacute;n generadas en <a href="CalendarioSemanas.html" class="alert-link"><strong>Calendario de Semanas</strong></a>. El n&uacute;mero de semanas asignadas (4 &oacute; 5) ser&aacute; el divisor de prorrateo para los costos mensuales.
+				</p>
+			</div>
+			<a href="CalendarioSemanas.html" class="btn btn-sm btn-info text-white ml-3"><i class="fas fa-external-link-alt"></i> Ver Semanas</a>
+		</div>
+
 		<div class="row">
-			<!-- PASO 1 -->
+			<!-- PASO 1: NominaCalculo.html -->
 			<div class="col-md-6">
 				<div class="guia-paso-card">
 					<div>
 						<span class="guia-paso-num">1</span>
-						<span class="guia-tag-screen"><i class="fas fa-calendar-alt"></i> Pantalla: CalendarioSemanas.html</span>
-					</div>
-					<h4 style="color:#102F6F; font-weight:bold; margin-top:8px;">Validar el Calendario de Semanas</h4>
-					<p style="font-size:13px; color:#475569;">
-						En Pizza Americana el mes no se mide por almanaque civil, sino por las <strong>semanas comerciales completas (de lunes a domingo)</strong> asignadas a ese mes.
-					</p>
-					<ul class="guia-checklist">
-						<li><i class="fas fa-check-circle"></i> Verificar que el a&ntilde;o y mes a consultar tengan sus semanas generadas (ej. Octubre 2026: semanas 40 a 44, del 28 de septiembre al 01 de noviembre).</li>
-						<li><i class="fas fa-check-circle"></i> El n&uacute;mero de semanas del mes (4 &oacute; 5) ser&aacute; el divisor de prorrateo para los gastos mensuales.</li>
-					</ul>
-					<a href="CalendarioSemanas.html" class="btn btn-sm btn-default"><i class="fas fa-external-link-alt"></i> Abrir Calendario de Semanas</a>
-				</div>
-			</div>
-
-			<!-- PASO 2 -->
-			<div class="col-md-6">
-				<div class="guia-paso-card">
-					<div>
-						<span class="guia-paso-num">2</span>
-						<span class="guia-tag-screen"><i class="fas fa-store"></i> Pantalla: GastosTienda.html</span>
-					</div>
-					<h4 style="color:#102F6F; font-weight:bold; margin-top:8px;">Revisar Gastos Fijos y Servicios de Tienda</h4>
-					<p style="font-size:13px; color:#475569;">
-						Auditar los contratos fijos (arriendos, alarmas, seguros, fumigaci&oacute;n, revisor&iacute;a) y registrar los recibos reales de servicios p&uacute;blicos del mes.
-					</p>
-					<ul class="guia-checklist">
-						<li><i class="fas fa-check-circle"></i> Revisar la etiqueta de vigencia (<code>desde AAAA-MM</code>): si hubo incremento de arriendo, abrir la nueva vigencia sin sobreescribir el hist&oacute;rico.</li>
-						<li><i class="fas fa-check-circle"></i> En la secci&oacute;n de <em>Servicios P&uacute;blicos</em>, ingresar el valor de las facturas del mes (energ&iacute;a, agua, gas, tel&eacute;fono) de cada punto.</li>
-					</ul>
-					<a href="GastosTienda.html" class="btn btn-sm btn-default"><i class="fas fa-external-link-alt"></i> Abrir Gastos por Tienda</a>
-				</div>
-			</div>
-
-			<!-- PASO 3 -->
-			<div class="col-md-6">
-				<div class="guia-paso-card">
-					<div>
-						<span class="guia-paso-num">3</span>
-						<span class="guia-tag-screen"><i class="fas fa-sitemap"></i> Pantalla: EstructuraGerencia.html</span>
-					</div>
-					<h4 style="color:#102F6F; font-weight:bold; margin-top:8px;">Auditar las 4 Bolsas de Estructura y Distribuir</h4>
-					<p style="font-size:13px; color:#475569;">
-						Validar los costos de oficina y centros compartidos que se distribuirán entre las 11 tiendas por su porcentaje de participaci&oacute;n en las ventas del mes.
-					</p>
-					<ul class="guia-checklist">
-						<li><i class="fas fa-check-circle"></i> <strong>Carga Autom&aacute;tica:</strong> Utilizar el bot&oacute;n <code>Traer totales desde Cierre de Gerencia</code> para importar al instante los totales auditados de las 4 bolsas corporativas.</li>
-						<li><i class="fas fa-check-circle"></i> <strong>Reparto Din&aacute;mico:</strong> El sistema asigna a cada tienda su cuota parte exacta seg&uacute;n las ventas de las semanas comerciales del mes.</li>
-						<li><i class="fas fa-check-circle"></i> <strong>Guardar las Bolsas:</strong> Al guardar, la alerta rosada de Rentabilidad desaparece y se habilita el c&aacute;lculo del EBITDA Neto real.</li>
-					</ul>
-					<a href="EstructuraGerencia.html" class="btn btn-sm btn-default"><i class="fas fa-external-link-alt"></i> Abrir Estructura y N&oacute;mina</a>
-				</div>
-			</div>
-
-			<!-- PASO 4 -->
-			<div class="col-md-6">
-				<div class="guia-paso-card">
-					<div>
-						<span class="guia-paso-num">4</span>
 						<span class="guia-tag-screen"><i class="fas fa-calculator"></i> Pantalla: NominaCalculo.html</span>
 					</div>
-					<h4 style="color:#102F6F; font-weight:bold; margin-top:8px;">Calcular N&oacute;mina y Biometr&iacute;a Semanal</h4>
+					<h4 style="color:#102F6F; font-weight:bold; margin-top:8px;">Paso 1: Calcular N&oacute;mina y Biometr&iacute;a Semanal</h4>
 					<p style="font-size:13px; color:#475569;">
 						Procesar las marcaciones de huella del personal para liquidar autom&aacute;ticamente los recargos legales de cada semana.
 					</p>
@@ -262,51 +256,72 @@
 						<li><i class="fas fa-check-circle"></i> El motor clasifica turnos, horas nocturnas (desde las 19:00 Ley 2466), dominicales y festivos.</li>
 						<li><i class="fas fa-check-circle"></i> Presionar <strong>"Pasar el estimado al tablero"</strong> para dejar los recargos firmes en la n&oacute;mina.</li>
 					</ul>
-					<a href="NominaCalculo.html" class="btn btn-sm btn-default"><i class="fas fa-external-link-alt"></i> Abrir C&aacute;lculo de N&oacute;mina</a>
+					<a href="NominaCalculo.html" class="btn btn-sm btn-primary"><i class="fas fa-external-link-alt"></i> Abrir C&aacute;lculo de N&oacute;mina</a>
 				</div>
 			</div>
 
-			<!-- PASO 5 -->
+			<!-- PASO 2: GastosTienda.html -->
 			<div class="col-md-6">
 				<div class="guia-paso-card">
 					<div>
-						<span class="guia-paso-num">5</span>
-						<span class="guia-tag-screen"><i class="fas fa-check-double"></i> Pantalla: CierreGerencia.html</span>
+						<span class="guia-paso-num">2</span>
+						<span class="guia-tag-screen"><i class="fas fa-store"></i> Pantalla: GastosTienda.html</span>
 					</div>
-					<h4 style="color:#102F6F; font-weight:bold; margin-top:8px;">Validar el Cierre de Gerencia</h4>
+					<h4 style="color:#102F6F; font-weight:bold; margin-top:8px;">Paso 2: Revisar Gastos Fijos y Servicios de Tienda</h4>
 					<p style="font-size:13px; color:#475569;">
-						Revisar persona por persona en las pesta&ntilde;as de &Aacute;reas y Tiendas para garantizar que la n&oacute;mina y gastos est&eacute;n 100% cuadrados.
+						Auditar los contratos fijos (arriendos, alarmas, seguros, fumigaci&oacute;n, revisor&iacute;a) y registrar los recibos reales de servicios p&uacute;blicos del mes.
 					</p>
 					<ul class="guia-checklist">
-						<li><i class="fas fa-check-circle"></i> <strong>Aprendices SENA:</strong> Verificar badge azul <code>SENA (SS 15%)</code> y liquidaci&oacute;n en 0%.</li>
-						<li><i class="fas fa-check-circle"></i> <strong>Ingresos del mes:</strong> Validar badge naranja con d&iacute;as prorrateados (ej. Marina y Hermes: 3 d&iacute;as comerciales del 28 al 30 de octubre = $220.000).</li>
-						<li><i class="fas fa-check-circle"></i> <strong>Pesta&ntilde;a Porcentaje:</strong> Inspeccionar la matriz consolidada de las 11 tiendas y exportar el informe a Excel.</li>
+						<li><i class="fas fa-check-circle"></i> Revisar la etiqueta de vigencia (<code>desde AAAA-MM</code>): si hubo incremento de arriendo, abrir la nueva vigencia sin sobreescribir el hist&oacute;rico.</li>
+						<li><i class="fas fa-check-circle"></i> En la secci&oacute;n de <em>Servicios P&uacute;blicos</em>, ingresar el valor de las facturas del mes (energ&iacute;a, agua, gas, tel&eacute;fono) de cada punto.</li>
 					</ul>
-					<a href="CierreGerencia.html" class="btn btn-sm btn-default"><i class="fas fa-external-link-alt"></i> Abrir Cierre de Gerencia</a>
+					<a href="GastosTienda.html" class="btn btn-sm btn-primary"><i class="fas fa-external-link-alt"></i> Abrir Gastos por Tienda</a>
 				</div>
 			</div>
 
-			<!-- PASO 6 -->
+			<!-- PASO 3: EstructuraGerencia.html -->
 			<div class="col-md-6">
 				<div class="guia-paso-card">
 					<div>
-						<span class="guia-paso-num">6</span>
-						<span class="guia-tag-screen"><i class="fas fa-chart-line"></i> Pantalla: Rentabilidad.html</span>
+						<span class="guia-paso-num">3</span>
+						<span class="guia-tag-screen"><i class="fas fa-sitemap"></i> Pantalla: EstructuraGerencia.html</span>
 					</div>
-					<h4 style="color:#102F6F; font-weight:bold; margin-top:8px;">Analizar Rentabilidad y Margen EBITDA</h4>
+					<h4 style="color:#102F6F; font-weight:bold; margin-top:8px;">Paso 3: Auditar las 4 Bolsas de Estructura y Distribuir</h4>
 					<p style="font-size:13px; color:#475569;">
-						Consultar el estado de resultados consolidado por punto de venta para evaluar desempe&ntilde;o financiero y tomar acciones.
+						Validar los costos corporativos (Administrativa, Log&iacute;stica, Contact Center, Publicidad) que se distribuyen entre las tiendas seg&uacute;n su porcentaje de ventas del mes.
 					</p>
 					<ul class="guia-checklist">
-						<li><i class="fas fa-check-circle"></i> Verificar el Margen Bruto de cada tienda (Venta - Insumos consumidos en inventarios).</li>
-						<li><i class="fas fa-check-circle"></i> Evaluar el Margen de Contribución y el EBITDA neto (resultado final tras cuotas de estructura).</li>
-						<li><i class="fas fa-check-circle"></i> Hacer clic en cualquier concepto (Insumos, Comisiones, Nómina) para ver el desglose anal&iacute;tico exacto.</li>
+						<li><i class="fas fa-check-circle"></i> <strong>Carga Autom&aacute;tica:</strong> Utilizar el bot&oacute;n <code>Traer totales desde Cierre de Gerencia</code> para importar al instante los totales auditados de las 4 bolsas corporativas.</li>
+						<li><i class="fas fa-check-circle"></i> <strong>Reparto Din&aacute;mico:</strong> El sistema calcula la participaci&oacute;n en ventas de cada tienda y reparte cada bolsa con precisi&oacute;n al centavo.</li>
+						<li><i class="fas fa-check-circle"></i> <strong>Guardar las Bolsas:</strong> Al guardar, la alerta rosada de Rentabilidad desaparece y se habilita el c&aacute;lculo del EBITDA Neto real.</li>
 					</ul>
-					<a href="Rentabilidad.html" class="btn btn-sm btn-default"><i class="fas fa-external-link-alt"></i> Abrir Tablero de Rentabilidad</a>
+					<a href="EstructuraGerencia.html" class="btn btn-sm btn-primary"><i class="fas fa-external-link-alt"></i> Abrir Estructura y Bolsas</a>
+				</div>
+			</div>
+
+			<!-- PASO 4: CierreGerencia.html & Rentabilidad.html -->
+			<div class="col-md-6">
+				<div class="guia-paso-card">
+					<div>
+						<span class="guia-paso-num">4</span>
+						<span class="guia-tag-screen"><i class="fas fa-check-double"></i> Pantallas: CierreGerencia.html &amp; Rentabilidad.html</span>
+					</div>
+					<h4 style="color:#102F6F; font-weight:bold; margin-top:8px;">Paso 4: Validar Cierre y Analizar Rentabilidad EBITDA</h4>
+					<p style="font-size:13px; color:#475569;">
+						Auditar cada persona y concepto en Cierre de Gerencia y consultar el Estado de Resultados comparativo en el Tablero de Rentabilidad.
+					</p>
+					<ul class="guia-checklist">
+						<li><i class="fas fa-check-circle"></i> <strong>Cierre de Gerencia:</strong> Revisar aprendices SENA (15% SS, 0% liq), prorrateos de ingresos del mes y la pesta&ntilde;a <em>Porcentaje</em>.</li>
+						<li><i class="fas fa-check-circle"></i> <strong>Tablero de Rentabilidad:</strong> Analizar el Margen Bruto (Venta - Insumos), Margen de Contribuci&oacute;n y el <strong>EBITDA definitivo</strong> por tienda.</li>
+						<li><i class="fas fa-check-circle"></i> <strong>Exportaci&oacute;n:</strong> Descargar la matriz consolidada a Excel id&eacute;ntica a la hoja 16 de Gerencia.</li>
+					</ul>
+					<div class="d-flex" style="gap: 8px;">
+						<a href="CierreGerencia.html" class="btn btn-sm btn-primary"><i class="fas fa-check-circle"></i> Cierre de Gerencia</a>
+						<a href="Rentabilidad.html" class="btn btn-sm btn-success"><i class="fas fa-chart-line"></i> Tablero de Rentabilidad</a>
+					</div>
 				</div>
 			</div>
 		</div>
-
 		<!-- ================= 3. REGLAS DE NEGOCIO CLAVE ================= -->
 		<div class="ger-panel" style="margin-top:10px;">
 			<h4 class="ger-titulo" style="font-size:16px;">
