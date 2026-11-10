@@ -64,6 +64,8 @@ public class GerenciaNominaCalculoCtrl {
 			sb.append(",\"novedad_permanente\":").append(e.novedadPermanente);
 			sb.append(",\"es_sena\":").append(e.esSena);
 			sb.append(",\"es_sena_electiva\":").append(e.esSenaElectiva);
+			sb.append(",\"es_inactivo\":").append(e.esInactivo);
+			sb.append(",\"es_posible_despido\":").append(e.esPosibleDespido);
 			sb.append(",\"aviso\":\"").append(esc(e.aviso)).append("\"}");
 			total += e.costoTotal;
 			totalCorregido += e.costoCorregido;

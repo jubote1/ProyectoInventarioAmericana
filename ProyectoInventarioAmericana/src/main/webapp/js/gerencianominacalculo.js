@@ -402,9 +402,20 @@ function pintarEstimado() {
 			else if (e.novedad_tipo === 'INCAPACIDAD_INCLUIR') { label = 'Incapacidad'; icono = 'fa-notes-medical'; badgeClase = 'badge-incapacidad'; }
 			else if (e.novedad_tipo === 'PERMISO_INCLUIR') { label = 'Permiso'; icono = 'fa-check'; badgeClase = 'badge-permiso'; }
 			else if (e.novedad_tipo === 'NO_LABORO_EXCLUIR') { label = 'No laboró'; icono = 'fa-user-slash'; badgeClase = 'badge-excluido'; }
+			else if (e.novedad_tipo === 'POSIBLE_DESPIDO') { label = 'Posible despido'; icono = 'fa-user-clock'; badgeClase = 'badge-posible-despido'; }
 			cuerpo += '<span class="badge-nov ' + badgeClase + '" title="' + escNC(e.aviso) + '">'
 				+ '<i class="fas ' + icono + '"></i> ' + label + '</span> '
 				+ '<button class="btn btn-default btn-xs" style="padding:1px 5px;" onclick="abrirModalNovedad(' + e.idempleado + ')" title="Editar novedad">'
+				+ '<i class="fas fa-pencil-alt"></i></button>';
+		} else if (e.es_posible_despido) {
+			cuerpo += '<span class="badge-nov badge-posible-despido" title="' + escNC(e.aviso) + '">'
+				+ '<i class="fas fa-user-clock"></i> Posible despido</span> '
+				+ '<button class="btn btn-default btn-xs" style="padding:1px 5px; opacity:0.8;" onclick="abrirModalNovedad(' + e.idempleado + ')" title="Gestionar retiro">'
+				+ '<i class="fas fa-pencil-alt"></i></button>';
+		} else if (e.es_inactivo && e.costo === 0) {
+			cuerpo += '<span class="badge-nov badge-excluido" title="' + escNC(e.aviso) + '">'
+				+ '<i class="fas fa-user-slash"></i> Retirado</span> '
+				+ '<button class="btn btn-default btn-xs" style="padding:1px 5px; opacity:0.6;" onclick="abrirModalNovedad(' + e.idempleado + ')" title="Gestionar retiro">'
 				+ '<i class="fas fa-pencil-alt"></i></button>';
 		} else if (e.es_sena_electiva) {
 			cuerpo += '<span class="badge-nov badge-directivo" title="' + escNC(e.aviso) + '">'
@@ -429,9 +440,13 @@ function pintarEstimado() {
 		cuerpo += '</td></tr>';
 
 		if (e.aviso) {
-			if (e.novedad_tipo || e.es_sena_electiva || e.es_sena) {
-				cuerpo += '<tr style="background:#F0FDF4;"><td colspan="' + colsTotal + '" style="font-size:11.5px; color:#166534; padding:3px 10px;">'
-					+ '<i class="fas fa-check-circle text-success"></i> ' + escNC(e.aviso)
+			if (e.novedad_tipo || e.es_sena_electiva || e.es_sena || e.es_posible_despido || (e.es_inactivo && e.costo === 0)) {
+				var esWarn = (e.es_posible_despido || (e.es_inactivo && e.costo === 0));
+				var bgRow = esWarn ? '#FFFBEB' : '#F0FDF4';
+				var colTxt = esWarn ? '#B45309' : '#166534';
+				var icn = esWarn ? 'fa-info-circle text-warning' : 'fa-check-circle text-success';
+				cuerpo += '<tr style="background:' + bgRow + ';"><td colspan="' + colsTotal + '" style="font-size:11.5px; color:' + colTxt + '; padding:3px 10px;">'
+					+ '<i class="fas ' + icn + '"></i> ' + escNC(e.aviso)
 					+ (e.novedad_obs ? ' &mdash; <em>' + escNC(e.novedad_obs) + '</em>' : '') + '</td></tr>';
 			} else {
 				cuerpo += '<tr class="ger-fila-sinbase"><td colspan="' + colsTotal + '" style="font-size:11.5px; padding:3px 10px;">'
@@ -472,7 +487,11 @@ function abrirModalNovedad(idempleado) {
 	if (!tipoElegido) {
 		var nombreL = emp.nombre.toLowerCase();
 		var cargoL = emp.cargo.toLowerCase();
-		if (emp.es_sena_electiva) {
+		if (emp.es_posible_despido) {
+			tipoElegido = 'POSIBLE_DESPIDO';
+		} else if (emp.es_inactivo && emp.turnos === 0) {
+			tipoElegido = 'NO_LABORO_EXCLUIR';
+		} else if (emp.es_sena_electiva) {
 			tipoElegido = 'SENA_LECTIVA';
 		} else if (emp.es_sena) {
 			tipoElegido = 'SENA_PRACTICA';

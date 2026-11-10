@@ -116,6 +116,8 @@ public class GerenciaNominaCalculoDAO {
 		public double recargoExtra;
 		public boolean esSena = false;
 		public boolean esSenaElectiva = false;
+		public boolean esInactivo = false;
+		public boolean esPosibleDespido = false;
 		public String novedadTipo = "";
 		public String novedadAccion = "";
 		public String novedadObs = "";
@@ -282,7 +284,10 @@ public class GerenciaNominaCalculoDAO {
 			final Map<Integer, double[]> cargos = cargosConfigurados(cn);
 			final Map<Integer, String> areas = areasCargo(cn);
 			final Map<Integer, String> excepciones = excepcionesPersona(cn);
-			final ArrayList<Estimado> gente = empleadosParaCalcular(cnG, cargos);
+			final String[] rangoMes = rangoMesDeSemana(semana);
+			final String desdeMes = rangoMes != null ? rangoMes[0] : (rango[0] + " 00:00:00");
+			final String hastaMes = rangoMes != null ? rangoMes[1] : (rango[1] + " 23:59:59");
+			final ArrayList<Estimado> gente = empleadosParaCalcular(cnG, cargos, desdeMes, hastaMes);
 
 			//La correccion por desviacion historica, una vez por tienda.
 			final Map<Integer, Desviacion> correcciones = desviacionesVigentes(cn, p, semana);
@@ -654,9 +659,23 @@ public class GerenciaNominaCalculoDAO {
 					+ e.seguridadSocial + e.liquidacion);
 		}
 
-		//Los avisos. Un estimado con algo raro tiene que decirlo, porque quien
-		//mira la lista no va a revisar a ciento cuarenta y ocho personas.
-		if (e.esSenaElectiva) {
+		//Los avisos y control de inactivos/despidos
+		if (e.esInactivo) {
+			if (h.turnos > 0) {
+				e.esPosibleDespido = true;
+				e.aviso = "Posible retiro / despido: empleado inactivo en sistema con " + e.turnos + " turno(s) (" + redondear(h.total()) + " h) en la semana.";
+			} else {
+				// Inactivo sin turnos en esta semana: ya retirado o aún no ingresaba, no genera costo en esta semana
+				e.sueldoBasico = 0;
+				e.sueldoVariable = 0;
+				e.auxilioTransporte = 0;
+				e.seguridadSocial = 0;
+				e.liquidacion = 0;
+				e.costoTotal = 0;
+				e.costoCorregido = 0;
+				e.aviso = "Retirado / Desvinculado: empleado inactivo sin marcaciones en la semana ($0).";
+			}
+		} else if (e.esSenaElectiva) {
 			e.aviso = "Aprendiz SENA (Etapa Lectiva): Apoyo sostenimiento 75%, SS 15%, sin liquidación ni auxilio.";
 		} else if (e.esSena) {
 			if (h.turnos == 0) {
@@ -1073,6 +1092,9 @@ public class GerenciaNominaCalculoDAO {
 			e.costoTotal = redondear(e.sueldoBasico + e.sueldoVariable + e.seguridadSocial);
 			e.costoCorregido = e.costoTotal;
 			e.aviso = "Aprendiz SENA (Etapa Práctica): Apoyo sostenimiento 100%, SS 15%, sin liquidación.";
+		} else if ("POSIBLE_DESPIDO".equals(nov.tipoNovedad)) {
+			e.esPosibleDespido = true;
+			e.aviso = "Posible retiro / despido (confirmado): tenido en cuenta en nómina (" + (nov.observacion.isEmpty() ? "Laboró en período" : nov.observacion) + ")";
 		} else {
 			// INCLUIR (Directivo, incapacidad, etc.)
 			if ("DIRECTIVO_INCLUIR".equals(nov.tipoNovedad)) {
@@ -1914,16 +1936,24 @@ public class GerenciaNominaCalculoDAO {
 		turnos.add(t);
 	}
 
-	/** Los empleados activos con salario y cargo que se calcula. */
+	/** Los empleados activos con salario y cargo que se calcula, más inactivos con biometría en el período. */
 	private static ArrayList<Estimado> empleadosParaCalcular(final Connection cnGeneral,
-			final Map<Integer, double[]> cargos) {
+			final Map<Integer, double[]> cargos, final String desdeMes, final String hastaMes) {
 		final ArrayList<Estimado> lista = new ArrayList<Estimado>();
 		try {
 			final PreparedStatement ps = cnGeneral.prepareStatement(
 					"SELECT e.id, e.nombre_largo, e.salario, e.idtipoempleado, IFNULL(e.es_sena, 0) AS es_sena, IFNULL(e.es_sena_electiva, 0) AS es_sena_electiva,"
-					+ " IFNULL(t.descripcion,'') AS cargo"
+					+ " e.activo, e.es_empleado, IFNULL(t.descripcion,'') AS cargo"
 					+ " FROM empleado e LEFT JOIN tipo_empleado t ON t.idtipoempleado = e.idtipoempleado"
-					+ " WHERE e.activo = 1 AND e.es_empleado = 1 AND e.salario > 0 ORDER BY e.nombre_largo");
+					+ " WHERE e.salario > 0 AND ("
+					+ "   (e.activo = 1 AND e.es_empleado = 1)"
+					+ "   OR ("
+					+ "     (e.activo = 0 OR e.es_empleado = 0)"
+					+ "     AND EXISTS (SELECT 1 FROM empleado_evento ev WHERE ev.id = e.id AND ev.fecha >= ? AND ev.fecha <= ?)"
+					+ "   )"
+					+ " ) ORDER BY e.nombre_largo");
+			ps.setString(1, desdeMes);
+			ps.setString(2, hastaMes);
 			final ResultSet rs = ps.executeQuery();
 			while (rs.next()) {
 				final int idTipo = rs.getInt("idtipoempleado");
@@ -1944,6 +1974,7 @@ public class GerenciaNominaCalculoDAO {
 				e.salarioBase = sal;
 				e.esSena = rs.getInt("es_sena") == 1;
 				e.esSenaElectiva = rs.getInt("es_sena_electiva") == 1;
+				e.esInactivo = rs.getInt("activo") == 0 || rs.getInt("es_empleado") == 0;
 				e.entraTienda = cfg == null || cfg[1] == 1;
 				e.idTipoEmpleado = idTipo;
 				lista.add(e);
@@ -2088,13 +2119,15 @@ public class GerenciaNominaCalculoDAO {
 		try {
 			final Map<Integer, Object[]> datos = new HashMap<Integer, Object[]>();
 			final PreparedStatement ps = cn.prepareStatement(
-					"SELECT e.id, e.nombre_largo, IFNULL(t.descripcion,'') AS cargo, IFNULL(e.es_sena, 0) AS es_sena, IFNULL(e.es_sena_electiva, 0) AS es_sena_electiva"
+					"SELECT e.id, e.nombre_largo, IFNULL(t.descripcion,'') AS cargo, IFNULL(e.es_sena, 0) AS es_sena, IFNULL(e.es_sena_electiva, 0) AS es_sena_electiva,"
+					+ " e.activo, e.es_empleado"
 					+ " FROM empleado e LEFT JOIN tipo_empleado t ON t.idtipoempleado = e.idtipoempleado");
 			final ResultSet rs = ps.executeQuery();
 			while (rs.next()) {
 				datos.put(Integer.valueOf(rs.getInt("id")),
 						new Object[] { texto(rs.getString("nombre_largo")), texto(rs.getString("cargo")),
-								Boolean.valueOf(rs.getInt("es_sena") == 1), Boolean.valueOf(rs.getInt("es_sena_electiva") == 1) });
+								Boolean.valueOf(rs.getInt("es_sena") == 1), Boolean.valueOf(rs.getInt("es_sena_electiva") == 1),
+								Boolean.valueOf(rs.getInt("activo") == 0 || rs.getInt("es_empleado") == 0) });
 			}
 			rs.close();
 			ps.close();
@@ -2105,6 +2138,10 @@ public class GerenciaNominaCalculoDAO {
 					e.cargo = (String) d[1];
 					e.esSena = ((Boolean) d[2]).booleanValue();
 					e.esSenaElectiva = ((Boolean) d[3]).booleanValue();
+					e.esInactivo = ((Boolean) d[4]).booleanValue();
+					if (e.esInactivo && e.costoTotal > 0) {
+						e.esPosibleDespido = true;
+					}
 				}
 			}
 		} catch (final Exception e) {
@@ -2129,6 +2166,29 @@ public class GerenciaNominaCalculoDAO {
 			System.out.println("GerenciaNominaCalculoDAO.nombresDeTienda: " + e.toString());
 		}
 		return (mapa);
+	}
+
+	private static String[] rangoMesDeSemana(final String domingo) {
+		try {
+			final java.text.SimpleDateFormat formato = new java.text.SimpleDateFormat("yyyy-MM-dd");
+			final Calendar cal = Calendar.getInstance();
+			cal.setTime(formato.parse(domingo.trim()));
+			cal.add(Calendar.DAY_OF_YEAR, -3);
+			final int anio = cal.get(Calendar.YEAR);
+			final int mes = cal.get(Calendar.MONTH);
+			final Calendar cIni = Calendar.getInstance();
+			cIni.set(anio, mes, 1, 0, 0, 0);
+			cIni.set(Calendar.MILLISECOND, 0);
+			cIni.add(Calendar.DAY_OF_YEAR, -7);
+			final Calendar cFin = Calendar.getInstance();
+			cFin.set(anio, mes, cFin.getActualMaximum(Calendar.DAY_OF_MONTH), 23, 59, 59);
+			cFin.set(Calendar.MILLISECOND, 999);
+			cFin.add(Calendar.DAY_OF_YEAR, 7);
+			return (new String[] { formato.format(cIni.getTime()) + " 00:00:00",
+					formato.format(cFin.getTime()) + " 23:59:59" });
+		} catch (final Exception e) {
+			return (null);
+		}
 	}
 
 	/** Lunes a domingo, dado el domingo de cierre. */
