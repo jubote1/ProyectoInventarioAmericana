@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<title>Manual de Usuario - Despacho de Inventario a Tiendas (Nueva Versión) | Pizza Americana</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<link href="css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+	<link href="css/all.min.css" rel="stylesheet" type="text/css" />
+	<script type="text/javascript" src="js/jquery-1.11.0.min.js"></script>
+	<script type="text/javascript" src="js/bootstrap.min.js"></script>
+	<style>
+		:root {
+			--pa-navy: #102F6F;
+			--pa-navy-light: #1A4499;
+			--pa-red: #E42528;
+			--pa-yellow: #FDC806;
+			--pa-green: #16704F;
+			--pa-gray-bg: #F8FAFC;
+			--pa-border: #E2E8F0;
+		}
+
+		body {
+			background-color: var(--pa-gray-bg);
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+			color: #1E293B;
+			line-height: 1.6;
+		}
+
+		.manual-container {
+			max-width: 1100px;
+			margin: 20px auto 40px auto;
+			padding: 0 15px;
+		}
+
+		/* Header */
+		.manual-header {
+			background: linear-gradient(135deg, #102F6F 0%, #1A4499 100%);
+			color: #FFFFFF;
+			padding: 32px 36px;
+			border-radius: 12px;
+			box-shadow: 0 6px 20px rgba(16, 47, 111, 0.2);
+			margin-bottom: 25px;
+			position: relative;
+			overflow: hidden;
+		}
+		.manual-header::after {
+			content: "\f48b";
+			font-family: "Font Awesome 5 Free";
+			font-weight: 900;
+			position: absolute;
+			right: 20px;
+			bottom: -25px;
+			font-size: 140px;
+			color: rgba(255, 255, 255, 0.06);
+			pointer-events: none;
+		}
+		.manual-header h1 {
+			font-size: 26px;
+			font-weight: 800;
+			margin: 0 0 8px 0;
+			letter-spacing: -0.5px;
+		}
+		.manual-header p {
+			font-size: 14.5px;
+			opacity: 0.92;
+			margin: 0 0 16px 0;
+			max-width: 780px;
+		}
+		.manual-badge {
+			display: inline-block;
+			background: rgba(253, 200, 6, 0.2);
+			color: #FDC806;
+			border: 1px solid rgba(253, 200, 6, 0.4);
+			padding: 4px 12px;
+			border-radius: 20px;
+			font-size: 12px;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+		}
+
+		/* Actions Bar */
+		.manual-actions-bar {
+			background: #FFFFFF;
+			border: 1px solid var(--pa-border);
+			border-radius: 10px;
+			padding: 14px 20px;
+			margin-bottom: 25px;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+			flex-wrap: wrap;
+			gap: 10px;
+		}
+
+		/* Cards */
+		.manual-card {
+			background: #FFFFFF;
+			border: 1px solid var(--pa-border);
+			border-radius: 10px;
+			padding: 26px 30px;
+			margin-bottom: 24px;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+		}
+		.manual-card h2 {
+			font-size: 20px;
+			font-weight: 800;
+			color: var(--pa-navy);
+			margin-top: 0;
+			margin-bottom: 16px;
+			border-bottom: 2px solid #F1F5F9;
+			padding-bottom: 10px;
+			display: flex;
+			align-items: center;
+		}
+		.manual-card h2 i {
+			margin-right: 10px;
+			color: var(--pa-navy-light);
+		}
+
+		/* Steps */
+		.paso-box {
+			background: #F8FAFC;
+			border: 1px solid #E2E8F0;
+			border-left: 5px solid var(--pa-navy);
+			border-radius: 8px;
+			padding: 18px 22px;
+			margin-bottom: 20px;
+		}
+		.paso-box.paso-destacado {
+			border-left-color: var(--pa-green);
+			background: #F0FDF4;
+		}
+		.paso-box.paso-control {
+			border-left-color: #D97706;
+			background: #FFFBEB;
+		}
+		.paso-header {
+			display: flex;
+			align-items: center;
+			margin-bottom: 10px;
+		}
+		.paso-num {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 32px;
+			height: 32px;
+			border-radius: 50%;
+			background: var(--pa-navy);
+			color: #FFFFFF;
+			font-weight: 800;
+			font-size: 15px;
+			margin-right: 12px;
+			flex-shrink: 0;
+		}
+		.paso-box.paso-destacado .paso-num {
+			background: var(--pa-green);
+		}
+		.paso-box.paso-control .paso-num {
+			background: #D97706;
+		}
+		.paso-title {
+			font-size: 16.5px;
+			font-weight: 700;
+			color: #0F172A;
+			margin: 0;
+		}
+
+		/* Comparison table */
+		.comp-table {
+			width: 100%;
+			border-collapse: separate;
+			border-spacing: 0;
+			border-radius: 8px;
+			overflow: hidden;
+			border: 1px solid var(--pa-border);
+			margin: 15px 0;
+		}
+		.comp-table th {
+			background: #F1F5F9;
+			padding: 12px 14px;
+			font-weight: 700;
+			font-size: 12.5px;
+			text-transform: uppercase;
+			color: #475569;
+			border-bottom: 2px solid #CBD5E1;
+		}
+		.comp-table td {
+			padding: 12px 14px;
+			border-bottom: 1px solid #E2E8F0;
+			font-size: 13.5px;
+			vertical-align: top;
+		}
+		.comp-table tr:last-child td { border-bottom: none; }
+		.comp-table tr:hover td { background-color: #F8FAFC; }
+
+		/* Feature tags */
+		.pill-tag {
+			display: inline-block;
+			padding: 3px 10px;
+			border-radius: 14px;
+			font-size: 11.5px;
+			font-weight: 700;
+			margin-right: 6px;
+			margin-bottom: 4px;
+		}
+		.pill-green { background: #DCFCE7; color: #166534; border: 1px solid #86EFAC; }
+		.pill-blue { background: #DBEAFE; color: #1E40AF; border: 1px solid #93C5FD; }
+		.pill-yellow { background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A; }
+		.pill-red { background: #FEE2E2; color: #991B1B; border: 1px solid #FCA5A5; }
+
+		/* Callout Box */
+		.callout {
+			padding: 14px 18px;
+			border-radius: 8px;
+			margin: 16px 0;
+			font-size: 13.5px;
+		}
+		.callout-info {
+			background: #EFF6FF;
+			border-left: 4px solid #3B82F6;
+			color: #1E40AF;
+		}
+		.callout-success {
+			background: #ECFDF5;
+			border-left: 4px solid #10B981;
+			color: #065F46;
+		}
+		.callout-warning {
+			background: #FFFBEB;
+			border-left: 4px solid #F59E0B;
+			color: #92400E;
+		}
+
+		/* Print styling */
+		@media print {
+			body {
+				background: #FFFFFF !important;
+				color: #000000 !important;
+				font-size: 12pt;
+			}
+			#cargarMenu, .manual-actions-bar, .no-print {
+				display: none !important;
+			}
+			.manual-container {
+				max-width: 100% !important;
+				margin: 0 !important;
+				padding: 0 !important;
+			}
+			.manual-header {
+				background: #102F6F !important;
+				color: #FFFFFF !important;
+				-webkit-print-color-adjust: exact;
+				print-color-adjust: exact;
+				border-radius: 0;
+				padding: 20px;
+			}
+			.manual-card {
+				box-shadow: none !important;
+				border: 1px solid #CBD5E1 !important;
+				page-break-inside: avoid;
+				margin-bottom: 15px;
+				padding: 15px;
+			}
+			.paso-box {
+				page-break-inside: avoid;
+				border: 1px solid #CBD5E1 !important;
+				-webkit-print-color-adjust: exact;
+				print-color-adjust: exact;
+			}
+			.comp-table th {
+				background: #E2E8F0 !important;
+				-webkit-print-color-adjust: exact;
+				print-color-adjust: exact;
+			}
+		}
+	</style>
+</head>
+<body>
+
+	<!-- Contenedor del Menú del Sistema -->
+	<div id="cargarMenu" class="no-print"></div>
+
+	<script type="text/javascript">
+		var loc = window.location;
+		var pathName = loc.pathname.substring(0, loc.pathname.lastIndexOf('/') + 1);
+		var server = loc.href.substring(0, loc.href.length - ((loc.pathname + loc.search + loc.hash).length - pathName.length));
+		var respuesta = '';
+		$.ajax({
+			url: server + 'ValidarUsuarioAplicacion',
+			dataType: 'text',
+			type: 'post',
+			async: false,
+			success: function (data) { respuesta = data; }
+		});
+		switch (respuesta) {
+			case 'OK':
+				$('#cargarMenu').load("Menu.html");
+				break;
+			case 'OKA':
+				$('#cargarMenu').load("MenuAdm.html");
+				break;
+			default:
+				// Si se abre directo sin sesión activa, se permite leer el manual
+				break;
+		}
+	</script>
+
+	<div class="manual-container">
+
+		<!-- Encabezado Principal -->
+		<div class="manual-header">
+			<div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap;">
+				<div>
+					<span class="manual-badge"><i class="fas fa-sparkles mr-1"></i> Versión 2.0 Inteligente</span>
+					<h1><i class="fas fa-truck-loading" style="color:var(--pa-yellow); margin-right:10px;"></i> Manual de Usuario: Despacho de Inventario a Tiendas</h1>
+					<p>Guía operativa para el personal de Bodega Central, Logística y Administradores de Punto de Venta. Conoce cómo surtir pedidos optimizados con el motor de aprendizaje continuo de 4 semanas.</p>
+				</div>
+				<div class="text-right" style="font-size: 12.5px; opacity: 0.9;">
+					<strong>PIZZA AMERICANA</strong><br>
+					Centro de Distribución Bodega Central<br>
+					<em>Actualizado: Noviembre 2026</em>
+				</div>
+			</div>
+		</div>
+
+		<!-- Barra de Acciones Rápidas -->
+		<div class="manual-actions-bar no-print">
+			<div style="display: flex; align-items: center; gap: 10px;">
+				<span style="font-weight: 700; color: #475569; font-size: 13.5px;">
+					<i class="fas fa-info-circle text-primary mr-1"></i> Acceso Rápido:
+				</span>
+				<a href="DespacharInventarioNuevo.html" class="btn btn-sm btn-success" style="font-weight: 700;">
+					<i class="fas fa-external-link-alt mr-1"></i> Abrir Pantalla de Despacho Nuevo
+				</a>
+				<a href="CalcularInventario.html" class="btn btn-sm btn-default" style="font-weight: 600;">
+					<i class="fas fa-history mr-1"></i> Despacho Anterior (Clásico)
+				</a>
+			</div>
+			<div>
+				<button class="btn btn-sm btn-primary" onclick="window.print()" style="font-weight: 700;">
+					<i class="fas fa-print mr-1"></i> Imprimir / Guardar en PDF
+				</button>
+			</div>
+		</div>
+
+		<!-- 1. INTRODUCCIÓN Y COMPARATIVO -->
+		<div class="manual-card">
+			<h2><i class="fas fa-brain"></i> 1. ¿Por qué una Nueva Versión? El Motor de Aprendizaje</h2>
+			<p>
+				Durante mucho tiempo, los despachos hacia los puntos de venta dependían de una tabla de <em>inventario sugerido fijo</em>, parametrizada manualmente en el pasado. Este modelo rígido provocaba dos problemas críticos:
+			</p>
+			<ul>
+				<li><strong>Desfase de Consumo:</strong> Puntos con alta rotación se quedaban cortos de producto y requerían despachos de emergencia, mientras que tiendas de menor venta acumulaban exceso de stock y mermas.</li>
+				<li><strong>Edición Lenta y Manual:</strong> El despachador debía editar fila por fila sin saber si un ítem ya llevaba cantidad o si requería empaques especiales.</li>
+			</ul>
+
+			<table class="comp-table">
+				<thead>
+					<tr>
+						<th style="width: 25%;">Característica</th>
+						<th style="width: 37.5%;">Versión Clásica (Anterior)</th>
+						<th style="width: 37.5%;">Nueva Versión (Inteligente 2.0)</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td><strong>Cálculo del Sugerido</strong></td>
+						<td><span class="pill-tag pill-red">Fijo y Estático</span> Parametrizado manualmente hace meses o años.</td>
+						<td><span class="pill-tag pill-green">Dinámico (4 Semanas)</span> Aprende del promedio real despachado a la tienda en las últimas 4 semanas.</td>
+					</tr>
+					<tr>
+						<td><strong>Control de Vigencia</strong></td>
+						<td>No existía. El sistema usaba siempre el mismo dato sin avisar.</td>
+						<td><span class="pill-tag pill-blue">Semáforo Inteligente</span> Avisa si el sugerido está vigente o si requiere recálculo automático.</td>
+					</tr>
+					<tr>
+						<td><strong>Identificación Visual</strong></td>
+						<td>Todas las filas se veían exactamente iguales.</td>
+						<td><span class="pill-tag pill-green">Fondo Verde Interactivo</span> Resalta en verde brillante los insumos con cantidad &gt; 0.</td>
+					</tr>
+					<tr>
+						<td><strong>Cálculo de Empaques</strong></td>
+						<td>Conteo mental o manual por fuera de pantalla.</td>
+						<td><span class="pill-tag pill-yellow">Automático</span> Calcula cuántas canastas, cajas y paquetes se ocupan en tiempo real.</td>
+					</tr>
+					<tr>
+						<td><strong>Filtros y Agilidad</strong></td>
+						<td>Scroll largo por cientos de insumos.</td>
+						<td><span class="pill-tag pill-blue">Búsqueda en Vivo</span> y botón "Solo con Despacho" para revisar en 2 segundos.</td>
+					</tr>
+					<tr>
+						<td><strong>Seguridad Operativa</strong></td>
+						<td>Riesgo de despachar en blanco por error.</td>
+						<td>Modal de confirmación con doble chequeo, resumen y campo de observaciones.</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+
+		<!-- 2. PASO A PASO OPERATIVO -->
+		<div class="manual-card">
+			<h2><i class="fas fa-list-ol"></i> 2. Guía Paso a Paso: Cómo Realizar un Despacho</h2>
+
+			<!-- Paso 1 -->
+			<div class="paso-box">
+				<div class="paso-header">
+					<span class="paso-num">1</span>
+					<h3 class="paso-title">Seleccionar Fecha y Tienda Destino</h3>
+				</div>
+				<p>
+					Al ingresar a <a href="DespacharInventarioNuevo.html"><strong>Despachar Inventario Tiendas (Nueva Versión)</strong></a>, verás en la parte superior el panel de selección:
+				</p>
+				<ul>
+					<li><strong>Fecha a Surtir:</strong> El sistema preselecciona la fecha de hoy. Puedes cambiarla haciendo clic en el campo calendario.</li>
+					<li><strong>Tienda Destino:</strong> Elige en el menú desplegable la tienda a surtir (Manrique, Bello, América, Calasanz, Itagüí, La Mota, Envigado, Pilarica, San Antonio, Piloto, Niquía).</li>
+					<li>Haz clic en el botón azul <strong class="text-primary"><i class="fas fa-search"></i> Cargar / Calcular Despacho</strong>.</li>
+				</ul>
+			</div>
+
+			<!-- Paso 2 -->
+			<div class="paso-box paso-control">
+				<div class="paso-header">
+					<span class="paso-num">2</span>
+					<h3 class="paso-title">Control y Aprendizaje de las Últimas 4 Semanas</h3>
+				</div>
+				<p>
+					Una vez cargada la tienda, el sistema examina la fecha del último recálculo del sugerido predictivo:
+				</p>
+				<ul>
+					<li>
+						<strong>Banner Verde (Vigente):</strong> Significa que el sugerido está al día (menos de 28 días desde su última calibración). El sistema te informa el rango de fechas analizado.
+					</li>
+					<li>
+						<strong>Banner Ámbar (Desactualizado):</strong> Si han transcurrido más de 4 semanas sin actualizar, el sistema avisa con un mensaje: <em>"Atención: Este sugerido tiene más de 4 semanas sin recalibrar"</em>.
+					</li>
+					<li>
+						<strong>Botón "Recalcular 4 Semanas":</strong> Puedes hacer clic en <strong class="text-info"><i class="fas fa-sync-alt"></i> Recalcular 4 Semanas</strong> en cualquier momento. El sistema consultará los últimos 4 períodos de despachos reales de esa tienda, recalculará el promedio por insumo y actualizará el sugerido en pantalla al instante.
+					</li>
+				</ul>
+				<div class="callout callout-info" style="margin-bottom: 0;">
+					<i class="fas fa-lightbulb mr-1"></i> <strong>Nota Importante:</strong> El recálculo toma solo unos segundos y aprende del consumo de la tienda sin alterar la parametrización de las demás.
+				</div>
+			</div>
+
+			<!-- Paso 3 -->
+			<div class="paso-box">
+				<div class="paso-header">
+					<span class="paso-num">3</span>
+					<h3 class="paso-title">Monitoreo con Tarjetas de Control (KPIs)</h3>
+				</div>
+				<p>Inmediatamente debajo del banner, 4 tarjetas resumen el estado del pedido:</p>
+				<div class="row">
+					<div class="col-md-3 col-sm-6" style="margin-bottom: 10px;">
+						<div style="background:#F0FDF4; border:1px solid #BBF7D0; border-left:4px solid #16704F; padding:10px 12px; border-radius:6px;">
+							<div style="font-size:11px; font-weight:700; color:#166534; text-transform:uppercase;">Ítems a Despachar</div>
+							<div style="font-size:18px; font-weight:800; color:#14532D;">Cantidad &gt; 0</div>
+							<div style="font-size:11px; color:#475569;">Insumos con despacho activo</div>
+						</div>
+					</div>
+					<div class="col-md-3 col-sm-6" style="margin-bottom: 10px;">
+						<div style="background:#FFFBEB; border:1px solid #FDE68A; border-left:4px solid #D97706; padding:10px 12px; border-radius:6px;">
+							<div style="font-size:11px; font-weight:700; color:#92400E; text-transform:uppercase;">Total Empaques</div>
+							<div style="font-size:18px; font-weight:800; color:#78350F;">Canastas / Cajas</div>
+							<div style="font-size:11px; color:#475569;">Cálculo de volumen</div>
+						</div>
+					</div>
+					<div class="col-md-3 col-sm-6" style="margin-bottom: 10px;">
+						<div style="background:#F8FAFC; border:1px solid #E2E8F0; border-left:4px solid #102F6F; padding:10px 12px; border-radius:6px;">
+							<div style="font-size:11px; font-weight:700; color:#334155; text-transform:uppercase;">Catálogo Activo</div>
+							<div style="font-size:18px; font-weight:800; color:#0F172A;">Total Insumos</div>
+							<div style="font-size:11px; color:#475569;">Insumos disponibles</div>
+						</div>
+					</div>
+					<div class="col-md-3 col-sm-6" style="margin-bottom: 10px;">
+						<div style="background:#EFF6FF; border:1px solid #BFDBFE; border-left:4px solid #3B82F6; padding:10px 12px; border-radius:6px;">
+							<div style="font-size:11px; font-weight:700; color:#1E40AF; text-transform:uppercase;">Base Histórica</div>
+							<div style="font-size:18px; font-weight:800; color:#1E3A8A;">4 Semanas</div>
+							<div style="font-size:11px; color:#475569;">Despachos analizados</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Paso 4 -->
+			<div class="paso-box paso-destacado">
+				<div class="paso-header">
+					<span class="paso-num">4</span>
+					<h3 class="paso-title">Buscador en Vivo, Filtros y Herramientas Rápidas</h3>
+				</div>
+				<p>La barra de herramientas te permite encontrar y preparar pedidos a máxima velocidad:</p>
+				<ul>
+					<li><strong>Buscador en Vivo:</strong> Escribe cualquier texto (ej. <em>"queso"</em>, <em>"caja"</em>, <em>"harina"</em>, <em>"tocineta"</em>) y la tabla filtrará automáticamente las filas mientras escribes.</li>
+					<li><strong>Filtro "Solo con Despacho (&gt; 0)":</strong> Al hacer clic en esta píldora, la pantalla ocultará todos los insumos que están en cero y te mostrará únicamente lo que vas a despachar. Ideal para auditar el camión antes de salir.</li>
+					<li><strong>Filtros por Categoría:</strong> Botones rápidos para ver sólo Alimentos, Empaques, Aseo, etc.</li>
+					<li><strong>Botón "Cargar Todo el Sugerido":</strong> Rellena automáticamente la columna <em>Cantidad a Surtir</em> con el promedio de 4 semanas de cada producto.</li>
+					<li><strong>Botón "Poner Todo en Cero":</strong> Limpia todas las cantidades si prefieres armar el pedido desde cero.</li>
+				</ul>
+			</div>
+
+			<!-- Paso 5 -->
+			<div class="paso-box">
+				<div class="paso-header">
+					<span class="paso-num">5</span>
+					<h3 class="paso-title">Edición Interactiva con Steppers y Colores Inteligentes</h3>
+				</div>
+				<p>Cada fila de la tabla muestra:</p>
+				<table class="table table-bordered table-condensed" style="background:#fff; font-size:13px;">
+					<thead>
+						<tr style="background:#F1F5F9;">
+							<th>Columna</th>
+							<th>Significado y Utilidad</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td><strong>Insumo</strong></td>
+							<td>Nombre del producto, código interno y unidad de medida (Kilos, Gramos, Unidades, Litros).</td>
+						</tr>
+						<tr>
+							<td><strong>Promedio 4 Sem</strong></td>
+							<td>El promedio real consumido por esta tienda en las últimas cuatro semanas.</td>
+						</tr>
+						<tr>
+							<td><strong>Sugerido</strong></td>
+							<td>Cantidad recomendada ajustada al inventario y múltiplos de empaque.</td>
+						</tr>
+						<tr>
+							<td><strong>Stock Tienda</strong></td>
+							<td>Existencias actuales reportadas por el punto de venta.</td>
+						</tr>
+						<tr>
+							<td><strong>Cantidad a Surtir</strong></td>
+							<td>
+								<strong>Control Stepper Interactivo:</strong> Puedes digitar el número directamente o hacer clic en los botones <strong>[ - ]</strong> y <strong>[ + ]</strong> para subir o bajar unidades rápidamente.
+							</td>
+						</tr>
+						<tr>
+							<td><strong>Empaque / Canastas</strong></td>
+							<td>
+								El sistema calcula cuántas canastas o cajas físicas representa la cantidad digitada según la capacidad de empaque del producto.
+							</td>
+						</tr>
+					</tbody>
+				</table>
+
+				<div class="callout callout-success">
+					<i class="fas fa-palette mr-1"></i> <strong>Regla Visual de Colores:</strong>
+					Cuando un insumo tiene cantidad mayor a 0, <strong>la fila completa se ilumina en color verde suave (`#F0FDF4`)</strong> y el número resalta en verde oscuro. Si está en cero, permanece atenuada. Así el despachador identifica de un vistazo qué productos entran al camión y cuáles no.
+				</div>
+			</div>
+
+			<!-- Paso 6 -->
+			<div class="paso-box paso-destacado">
+				<div class="paso-header">
+					<span class="paso-num">6</span>
+					<h3 class="paso-title">Observaciones y Confirmación Segura del Despacho</h3>
+				</div>
+				<p>Al terminar de ajustar las cantidades:</p>
+				<ol>
+					<li>
+						<strong>Observaciones del Despacho (Opcional):</strong> Puedes escribir notas para la tienda o transportador (ej: <em>"Se envía queso bloque por agotado tajado"</em>, <em>"Cajas de pizza en 2 atados"</em>).
+					</li>
+					<li>
+						Verifica en el pie de página el resumen total: <strong>X insumos | Y empaques calculados</strong>.
+					</li>
+					<li>
+						Haz clic en el botón verde destacado: <strong class="text-success"><i class="fas fa-paper-plane"></i> Confirmar y Despachar a Tienda</strong>.
+					</li>
+					<li>
+						Aparecerá una ventana emergente de confirmación con el resumen de ítems y empaques. Al dar clic en <strong>"Sí, Despachar"</strong>, el inventario se registra formalmente en el sistema, descontando de bodega central y programando el ingreso en la tienda.
+					</li>
+				</ol>
+			</div>
+
+		</div>
+
+		<!-- 3. PREGUNTAS FRECUENTES -->
+		<div class="manual-card">
+			<h2><i class="fas fa-question-circle"></i> 3. Preguntas Frecuentes y Buenas Prácticas</h2>
+
+			<div style="margin-bottom: 18px;">
+				<h4 style="font-size: 15px; font-weight: 700; color: #102F6F;">
+					<i class="fas fa-check-circle text-success mr-1"></i> ¿Qué ocurre con la pantalla anterior ("Despachar Inventario Tiendas")?
+				</h4>
+				<p style="font-size: 13.5px; color: #334155;">
+					La pantalla anterior sigue funcionando exactamente igual en <a href="CalcularInventario.html"><code>CalcularInventario.html</code></a>. Ambas pantallas operan sobre las mismas tablas de despacho de la base de datos, por lo que puedes usar la nueva versión con total tranquilidad sin temor a alterar procesos históricos.
+				</p>
+			</div>
+
+			<div style="margin-bottom: 18px;">
+				<h4 style="font-size: 15px; font-weight: 700; color: #102F6F;">
+					<i class="fas fa-check-circle text-success mr-1"></i> ¿Cada cuánto se debe recalcular el histórico de 4 semanas?
+				</h4>
+				<p style="font-size: 13.5px; color: #334155;">
+					El sistema controla las fechas automáticamente. Cuando pasan 28 días desde la última calibración de una tienda, el banner se pondrá en color ámbar avisando que es momento de actualizar. Si deseas actualizar antes (por ejemplo, después de una temporada alta o de promociones especiales), basta con hacer clic en el botón <strong>"Recalcular 4 Semanas"</strong>.
+				</p>
+			</div>
+
+			<div style="margin-bottom: 18px;">
+				<h4 style="font-size: 15px; font-weight: 700; color: #102F6F;">
+					<i class="fas fa-check-circle text-success mr-1"></i> ¿Puedo modificar manualmente las cantidades sugeridas?
+				</h4>
+				<p style="font-size: 13.5px; color: #334155;">
+					<strong>Sí, 100% editable.</strong> El sugerido es una guía predictiva inteligente para ahorrar tiempo y evitar olvidos, pero el responsable de despacho tiene la potestad de subir, bajar o dejar en cero cualquier insumo según el criterio operativo del día.
+				</p>
+			</div>
+
+			<div>
+				<h4 style="font-size: 15px; font-weight: 700; color: #102F6F;">
+					<i class="fas fa-check-circle text-success mr-1"></i> ¿Cómo auditar rápidamente lo que se va a despachar?
+				</h4>
+				<p style="font-size: 13.5px; color: #334155;">
+					Usa la píldora de filtro <strong>"Solo con Despacho (&gt; 0)"</strong> en la barra de herramientas. La tabla esconderá los productos que no se van a surtir, dejando una lista limpia y concisa con solo lo que debe cargarse físicamente al camión.
+				</p>
+			</div>
+		</div>
+
+		<!-- 4. RESUMEN DE NAVEGACIÓN -->
+		<div class="manual-card" style="border-top: 3px solid var(--pa-navy);">
+			<h2><i class="fas fa-sitemap"></i> 4. Ubicación en el Menú del Sistema</h2>
+			<p>Esta funcionalidad está disponible desde cualquier pantalla a través del menú superior:</p>
+			<div style="background:#F1F5F9; border-radius:8px; padding:15px 20px; font-size:14px;">
+				<i class="fas fa-bars mr-2 text-primary"></i> <strong>Menú Principal</strong> &rarr; 
+				<strong>Funciones</strong> &rarr; 
+				<a href="DespacharInventarioNuevo.html" style="font-weight:700; color:#16704F;">
+					<i class="fas fa-truck mr-1 text-success"></i> Despachar Inventario Tiendas (Nueva Versión)
+				</a>
+			</div>
+		</div>
+
+		<!-- Footer -->
+		<div class="text-center" style="font-size: 12px; color: #94A3B8; padding: 20px 0;">
+			PIZZA AMERICANA &copy; 2026 &bull; Manual Oficial de Procedimientos de Despacho e Inventario &bull; Departamento de Tecnología y Operaciones
+		</div>
+
+	</div>
+
+</body>
+</html>
