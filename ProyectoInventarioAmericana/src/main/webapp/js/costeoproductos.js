@@ -27,17 +27,19 @@ var STUDIO_STATE = {
 var LIBRE_ESCOGIDOS = [];
 
 $(document).ready(function () {
-	// Fecha para impresión
-	var hoy = new Date();
-	var fechaStr = hoy.getDate() + '/' + (hoy.getMonth() + 1) + '/' + hoy.getFullYear();
-	$('#print-fecha').text(fechaStr);
+	Gerencia.proteger('ger-contenido', function () {
+		// Fecha para impresión
+		var hoy = new Date();
+		var fechaStr = hoy.getDate() + '/' + (hoy.getMonth() + 1) + '/' + hoy.getFullYear();
+		$('#print-fecha').text(fechaStr);
 
-	cargarCatalogo();
-	cargarTiendas();
+		cargarCatalogo();
+		cargarTiendas();
 
-	// Confirmación de réplica
-	$('#confirmaReplica').on('input', function () {
-		$('#btnReplicar').prop('disabled', $(this).val().trim().toUpperCase() !== 'REPLICAR');
+		// Confirmación de réplica
+		$('#confirmaReplica').on('input', function () {
+			$('#btnReplicar').prop('disabled', $(this).val().trim().toUpperCase() !== 'REPLICAR');
+		});
 	});
 });
 

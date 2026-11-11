@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<title>Composición de Productos & Ficha Técnica | Pizza Americana</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<link href="css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+	<link href="css/all.min.css" rel="stylesheet" type="text/css" />
+	<link rel="stylesheet" type="text/css" href="css/jquery.dataTables.min.css">
+	<link rel="stylesheet" href="css/jquery-confirm.min.css">
+	<script type="text/javascript" src="js/jquery-1.11.0.min.js"></script>
+	<script type="text/javascript" src="js/bootstrap.min.js"></script>
+	<script type="text/javascript" charset="utf8" src="js/jquery.dataTables.js"></script>
+	<style type="text/css">
+		:root {
+			--pa-navy: #102F6F;
+			--pa-red: #E42528;
+			--pa-yellow: #FDC806;
+			--pa-green: #16704F;
+			--pa-gray-bg: #F4F6F9;
+			--pa-border: #DDE2EB;
+		}
+
+		body {
+			background-color: #F4F6F9;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+			color: #2D3748;
+		}
+
+		.cp-header {
+			background: linear-gradient(135deg, #102F6F 0%, #1A4499 100%);
+			color: #FFFFFF;
+			padding: 16px 20px;
+			border-radius: 8px;
+			margin-bottom: 18px;
+			box-shadow: 0 4px 12px rgba(16, 47, 111, 0.15);
+		}
+		.cp-header h3 { margin: 0 0 4px; font-weight: 700; font-size: 22px; }
+		.cp-header p { margin: 0; font-size: 13px; opacity: 0.9; }
+
+		.nav-tabs {
+			border-bottom: 2px solid #DDE2EB;
+			margin-bottom: 18px;
+		}
+		.nav-tabs > li > a {
+			font-size: 14px;
+			font-weight: 600;
+			color: #5A6A85;
+			border-radius: 6px 6px 0 0;
+			padding: 10px 18px;
+		}
+		.nav-tabs > li.active > a,
+		.nav-tabs > li.active > a:focus,
+		.nav-tabs > li.active > a:hover {
+			color: #102F6F;
+			border: 2px solid #DDE2EB;
+			border-bottom-color: transparent;
+			background-color: #FFFFFF;
+			font-weight: 700;
+		}
+
+		.cp-box {
+			background: #FFFFFF;
+			border: 1px solid #E2E6EC;
+			border-radius: 8px;
+			padding: 18px 20px;
+			margin-bottom: 18px;
+			box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+		}
+		.cp-box-titulo {
+			font-size: 16px;
+			font-weight: 700;
+			color: #102F6F;
+			margin-bottom: 12px;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+		}
+		.cp-box-titulo i { margin-right: 8px; color: #E42528; }
+
+		.size-cards-grid {
+			display: grid;
+			grid-template-columns: repeat(4, 1fr);
+			gap: 12px;
+			margin-bottom: 14px;
+		}
+		@media (max-width: 991px) {
+			.size-cards-grid { grid-template-columns: repeat(2, 1fr); }
+		}
+		.size-card {
+			background: #FFFFFF;
+			border: 2px solid #E2E6EC;
+			border-radius: 8px;
+			padding: 12px 14px;
+			cursor: pointer;
+			transition: all 0.2s ease-in-out;
+			position: relative;
+			text-align: center;
+		}
+		.size-card:hover {
+			border-color: #102F6F;
+			box-shadow: 0 4px 10px rgba(16, 47, 111, 0.12);
+			transform: translateY(-2px);
+		}
+		.size-card.active {
+			border-color: #102F6F;
+			background: #F0F4FC;
+			box-shadow: 0 4px 12px rgba(16, 47, 111, 0.2);
+		}
+		.size-card.active::after {
+			content: "\f058";
+			font-family: "Font Awesome 5 Free";
+			font-weight: 900;
+			position: absolute;
+			top: 8px;
+			right: 10px;
+			color: #102F6F;
+			font-size: 16px;
+		}
+		.size-code { font-size: 18px; font-weight: 800; color: #102F6F; }
+		.size-name { font-size: 13px; font-weight: 600; color: #2D3748; margin-top: 2px; }
+		.size-info { font-size: 11.5px; color: #718096; margin-top: 2px; }
+
+		.flavor-pill {
+			display: inline-block;
+			padding: 7px 14px;
+			margin: 4px;
+			background: #F8FAFC;
+			border: 1.5px solid #CBD5E1;
+			border-radius: 20px;
+			font-size: 13px;
+			font-weight: 600;
+			color: #334155;
+			cursor: pointer;
+			transition: all 0.15s;
+		}
+		.flavor-pill:hover {
+			border-color: #E42528;
+			color: #E42528;
+			background: #FFF5F5;
+		}
+		.flavor-pill.active {
+			background: #E42528;
+			border-color: #E42528;
+			color: #FFFFFF;
+			box-shadow: 0 2px 6px rgba(228, 37, 40, 0.3);
+		}
+
+		.kpi-grid {
+			display: grid;
+			grid-template-columns: repeat(4, 1fr);
+			gap: 12px;
+			margin-bottom: 14px;
+		}
+		@media (max-width: 991px) {
+			.kpi-grid { grid-template-columns: repeat(2, 1fr); }
+		}
+		.kpi-card {
+			background: #FFFFFF;
+			border: 1px solid #E2E8F0;
+			border-left: 4px solid #102F6F;
+			border-radius: 6px;
+			padding: 12px 14px;
+			box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+		}
+		.kpi-card.kpi-peso { border-left-color: #102F6F; }
+		.kpi-card.kpi-masa { border-left-color: #D97706; }
+		.kpi-card.kpi-queso { border-left-color: #F59E0B; }
+		.kpi-card.kpi-toppings { border-left-color: #16704F; }
+		.kpi-label {
+			font-size: 11px;
+			text-transform: uppercase;
+			font-weight: 700;
+			letter-spacing: 0.5px;
+			color: #64748B;
+			margin-bottom: 4px;
+		}
+		.kpi-val { font-size: 20px; font-weight: 800; color: #1E293B; }
+		.kpi-sub { font-size: 11.5px; color: #64748B; margin-top: 2px; }
+
+		.table-tech thead th {
+			background-color: #F1F5F9;
+			color: #334155;
+			font-size: 12px;
+			text-transform: uppercase;
+			font-weight: 700;
+			border-bottom: 2px solid #CBD5E1 !important;
+		}
+		.table-tech tbody td {
+			font-size: 13px;
+			vertical-align: middle !important;
+		}
+
+		.input-gramaje {
+			width: 80px;
+			text-align: right;
+			font-weight: 700;
+			font-size: 13px;
+			padding: 3px 6px;
+			border: 1.5px solid #CBD5E1;
+			border-radius: 4px;
+			color: #102F6F;
+		}
+		.input-gramaje:focus {
+			border-color: #102F6F;
+			outline: none;
+			box-shadow: 0 0 0 2px rgba(16, 47, 111, 0.15);
+		}
+
+		.badge-tech {
+			display: inline-block;
+			padding: 3px 8px;
+			border-radius: 12px;
+			font-size: 11px;
+			font-weight: 700;
+		}
+
+		@media print {
+			.no-print, #cargarMenu, .navbar { display: none !important; }
+			body { background-color: #FFFFFF !important; font-size: 12pt; }
+			.print-header { display: block !important; margin-bottom: 15px; }
+			.cp-box { box-shadow: none !important; border: 1px solid #CBD5E1 !important; page-break-inside: avoid; }
+		}
+		.print-header { display: none; }
+	</style>
+</head>
+<body>
+
+	<div id="cargarMenu"></div>
+
+	<script type="text/javascript">
+		var server = window.location.protocol + '//' + window.location.host
+			+ window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+		var respuesta = '';
+		$.ajax({
+			url: server + 'ValidarUsuarioAplicacion',
+			dataType: 'text',
+			type: 'post',
+			async: false,
+			success: function (data) { respuesta = data; }
+		});
+		switch (respuesta) {
+			case 'OK':
+				$('#cargarMenu').load("Menu.html");
+				break;
+			case 'OKA':
+				$('#cargarMenu').load("MenuAdm.html");
+				break;
+			default:
+				location.href = server + "Index.html";
+				break;
+		}
+	</script>
+
+	<!-- Encabezado de Impresión para Ficha Técnica -->
+	<div class="print-header">
+		<div style="display:flex; justify-content:space-between; align-items:center;">
+			<div>
+				<h2 style="margin:0; color:#102F6F; font-weight:800;">PIZZA AMERICANA</h2>
+				<h4 style="margin:4px 0 0; color:#4A5568;">FICHA TÉCNICA ESTÁNDAR DE PRODUCCIÓN</h4>
+			</div>
+			<div style="text-align:right; font-size:12px; color:#718096;">
+				<div>Fecha: <b id="print-fecha"></b></div>
+				<div>Versión: 2.0 (Receta Central - Calidad)</div>
+			</div>
+		</div>
+		<div style="margin-top:12px; padding:10px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:6px; display:flex; justify-content:space-between;">
+			<div>Producto: <b id="print-producto-nombre">-</b></div>
+			<div>Tamaño: <b id="print-producto-tamano">-</b></div>
+			<div>Porciones: <b id="print-producto-porciones">-</b></div>
+			<div>Peso Estándar: <b id="print-producto-peso">-</b></div>
+		</div>
+	</div>
+
+	<div class="container-fluid" style="max-width:1550px; padding-top:15px;">
+
+		<!-- Header Banner -->
+		<div class="cp-header no-print">
+			<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+				<div>
+					<h3><i class="fas fa-clipboard-list" style="color:var(--pa-yellow); margin-right:8px;"></i> Composición de Productos & Ficha Técnica</h3>
+					<p>Diseño de recetas, gramajes estándar, insumos y homologación por tienda (Calidad y Logística).</p>
+				</div>
+				<div style="margin-top:8px;">
+					<button class="btn btn-warning btn-sm" onclick="imprimirFichaTecnica()" style="font-weight:700; box-shadow:0 2px 6px rgba(0,0,0,0.2);">
+						<i class="fas fa-print"></i> Imprimir Ficha Técnica
+					</button>
+				</div>
+			</div>
+		</div>
+
+		<!-- Pestañas de Navegación -->
+		<ul class="nav nav-tabs no-print">
+			<li class="active"><a href="#tab-pizza-studio" data-toggle="tab"><i class="fas fa-magic" style="color:#E42528;"></i> Pizza Studio (Armador Visual)</a></li>
+			<li><a href="#tab-costear-libre" data-toggle="tab"><i class="fas fa-boxes" style="color:#102F6F;"></i> Catálogo de Recetas</a></li>
+			<li><a href="#tab-composicion" data-toggle="tab"><i class="fas fa-store" style="color:#16704F;"></i> Composición por Tienda</a></li>
+		</ul>
+
+		<div class="tab-content">
+
+			<!-- PESTAÑA 1: PIZZA STUDIO -->
+			<div class="tab-pane active" id="tab-pizza-studio">
+
+				<!-- PASO 1: SELECCIÓN DE TAMAÑO -->
+				<div class="cp-box no-print">
+					<div class="cp-box-titulo">
+						<span><i class="fas fa-circle-notch"></i> 1. Seleccione el Tamaño (Masa Base + Caja)</span>
+						<span style="font-size:12px; font-weight:normal; color:#718096;">Haga clic en una base para cargar sus gramajes estándar</span>
+					</div>
+					<div class="size-cards-grid">
+						<div class="size-card active" onclick="seleccionarTamano('XL')" id="card-tamano-XL">
+							<div class="size-code">XL</div>
+							<div class="size-name">Extra Grande (40 cm)</div>
+							<div class="size-info">10 a 12 Porciones</div>
+						</div>
+						<div class="size-card" onclick="seleccionarTamano('GD')" id="card-tamano-GD">
+							<div class="size-code">GD</div>
+							<div class="size-name">Grande (35 cm)</div>
+							<div class="size-info">8 a 10 Porciones</div>
+						</div>
+						<div class="size-card" onclick="seleccionarTamano('MD')" id="card-tamano-MD">
+							<div class="size-code">MD</div>
+							<div class="size-name">Mediana (30 cm)</div>
+							<div class="size-info">6 a 8 Porciones</div>
+						</div>
+						<div class="size-card" onclick="seleccionarTamano('PZ')" id="card-tamano-PZ">
+							<div class="size-code">PZ</div>
+							<div class="size-name">Personal (22 cm)</div>
+							<div class="size-info">4 Porciones</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- PASO 2: SELECCIÓN DE SABOR -->
+				<div class="cp-box no-print">
+					<div class="cp-box-titulo">
+						<span><i class="fas fa-pizza-slice"></i> 2. Seleccione el Sabor de Pizza</span>
+						<span style="font-size:12px; font-weight:normal; color:#718096;" id="info-tamano-sabor">Cargando pizzas tamaño XL...</span>
+					</div>
+					<div id="pills-sabores-container" style="max-height:160px; overflow-y:auto; padding:4px 0;">
+						<span style="color:#718096; font-size:13px;"><i class="fas fa-spinner fa-spin"></i> Cargando catálogo de sabores...</span>
+					</div>
+				</div>
+
+				<!-- PASO 3: SIMULADOR DE GRAMAJES Y RECETA TÉCNICA -->
+				<div class="row">
+					<div class="col-md-7">
+						<div class="cp-box">
+							<div class="cp-box-titulo">
+								<span><i class="fas fa-list-ol"></i> Insumos de la Receta (Gramajes Estándar)</span>
+								<div>
+									<button class="btn btn-default btn-xs" onclick="restablecerReceta()" title="Restablecer gramajes estándar del POS">
+										<i class="fas fa-undo"></i> Restablecer
+									</button>
+								</div>
+							</div>
+
+							<div class="table-responsive">
+								<table class="table table-bordered table-hover table-tech" id="tabla-receta-studio">
+									<thead>
+										<tr>
+											<th>Insumo</th>
+											<th>Categoría</th>
+											<th class="text-right">Gramaje / Cantidad</th>
+											<th>Unidad</th>
+											<th class="text-center">Ajuste</th>
+										</tr>
+									</thead>
+									<tbody id="tbody-receta-studio">
+										<tr>
+											<td colspan="5" class="text-center" style="padding:20px; color:#718096;">
+												Seleccione un sabor para visualizar su composición técnica.
+											</td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+
+							<!-- Adiciones Disponibles -->
+							<div style="margin-top:14px; border-top:1px dashed #CBD5E1; padding-top:12px;" class="no-print">
+								<label style="font-size:12px; text-transform:uppercase; color:#64748B;">
+									<i class="fas fa-plus-circle" style="color:#102F6F;"></i> Agregar Topping / Adición a la Receta
+								</label>
+								<div class="row">
+									<div class="col-sm-8">
+										<select id="select-adicion" class="form-control input-sm"></select>
+									</div>
+									<div class="col-sm-4">
+										<button class="btn btn-primary btn-sm btn-block" onclick="agregarAdicion()">
+											<i class="fas fa-plus"></i> Añadir Insumo
+										</button>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<!-- Resumen Técnico -->
+					<div class="col-md-5">
+						<div class="cp-box" style="border-top: 4px solid #102F6F;">
+							<div class="cp-box-titulo">
+								<span><i class="fas fa-clipboard-check"></i> Especificaciones Técnicas de la Receta</span>
+								<span id="tag-simulacion-activa" style="display:none;" class="label label-warning">
+									<i class="fas fa-sliders-h"></i> Gramajes Modificados
+								</span>
+							</div>
+
+							<!-- KPIs Técnicos -->
+							<div class="kpi-grid">
+								<div class="kpi-card kpi-peso">
+									<div class="kpi-label">Peso Total</div>
+									<div class="kpi-val" id="kpi-peso-total">0 g</div>
+									<div class="kpi-sub">Total producto armado</div>
+								</div>
+								<div class="kpi-card kpi-masa">
+									<div class="kpi-label">Masa Base</div>
+									<div class="kpi-val" id="kpi-peso-masa">0 g</div>
+									<div class="kpi-sub" id="kpi-tipo-masa">Base estándar</div>
+								</div>
+								<div class="kpi-card kpi-queso">
+									<div class="kpi-label">Queso Mozzarella</div>
+									<div class="kpi-val" id="kpi-peso-queso">0 g</div>
+									<div class="kpi-sub">Cobertura estándar</div>
+								</div>
+								<div class="kpi-card kpi-toppings">
+									<div class="kpi-label">Toppings & Carnes</div>
+									<div class="kpi-val" id="kpi-peso-toppings">0 g</div>
+									<div class="kpi-sub" id="kpi-cant-toppings">0 ingredientes</div>
+								</div>
+							</div>
+
+							<!-- Ficha Detallada -->
+							<div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:6px; padding:12px; margin-top:12px;">
+								<div style="font-size:12px; font-weight:700; color:#334155; margin-bottom:6px;">
+									<i class="fas fa-info-circle text-info"></i> Parámetros de Calidad & Cocina
+								</div>
+								<table class="table table-condensed" style="font-size:12px; margin:0;">
+									<tr><td>Tamaño:</td><td class="text-right"><strong id="info-tamano-txt">Extra Grande (40 cm)</strong></td></tr>
+									<tr><td>Porciones sugeridas:</td><td class="text-right"><strong id="info-porciones-txt">10 a 12 Porciones</strong></td></tr>
+									<tr><td>Empaque oficial:</td><td class="text-right"><strong id="info-empaque-txt">Caja Pizza XL</strong></td></tr>
+									<tr><td>Salsa base estándar:</td><td class="text-right"><strong id="info-salsa-txt">Pasta de Tomate</strong></td></tr>
+								</table>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- PESTAÑA 2: CATÁLOGO DE RECETAS -->
+			<div class="tab-pane" id="tab-costear-libre">
+				<div class="cp-box">
+					<div class="cp-box-titulo">
+						<span><i class="fas fa-book"></i> Catálogo Completo de Fichas Técnicas</span>
+					</div>
+					<p style="font-size:13px; color:#718096;">
+						Consulta las recetas técnicas e ingredientes configurados para cualquier pizza o producto del catálogo central.
+					</p>
+
+					<div class="row" style="margin-bottom:14px;">
+						<div class="col-md-5">
+							<input type="text" id="buscar-catalogo" class="form-control" placeholder="Buscar producto por nombre o tamaño..." oninput="filtrarCatalogo()">
+						</div>
+						<div class="col-md-3">
+							<select id="filtro-tipo" class="form-control" onchange="filtrarCatalogo()">
+								<option value="">Todos los Tipos</option>
+								<option value="PIZZA">Pizzas</option>
+								<option value="ADICION">Adiciones</option>
+							</select>
+						</div>
+					</div>
+
+					<div class="table-responsive">
+						<table class="table table-bordered table-hover table-tech" id="tabla-catalogo-completo">
+							<thead>
+								<tr>
+									<th>Código</th>
+									<th>Producto</th>
+									<th>Tamaño</th>
+									<th>Tipo</th>
+									<th>Insumos Asignados</th>
+									<th class="text-center">Acción</th>
+								</tr>
+							</thead>
+							<tbody id="tbody-catalogo-completo"></tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+
+			<!-- PESTAÑA 3: COMPOSICIÓN POR TIENDA -->
+			<div class="tab-pane" id="tab-composicion">
+				<div class="cp-box">
+					<div class="cp-box-titulo">
+						<span><i class="fas fa-database"></i> Maestro Central de Composición</span>
+					</div>
+					<p style="font-size:13px; color:#718096;">
+						Composición de referencia técnica del servidor central. Las tiendas POS tienen cada una su copia local para control de calidad e inventario.
+					</p>
+					<div class="row">
+						<div class="col-md-4">
+							<label style="font-size:11px; text-transform:uppercase; color:#718096;">Filas en Maestro Central</label>
+							<div style="font-size:24px; font-weight:800; color:#102F6F;" id="res-maestro">0</div>
+						</div>
+						<div class="col-md-5">
+							<label style="font-size:11px; text-transform:uppercase; color:#718096;">Traer composición desde una tienda</label>
+							<select id="selectTiendaTraer" class="form-control"></select>
+						</div>
+						<div class="col-md-3" style="margin-top:22px;">
+							<button class="btn btn-default btn-block" onclick="traerDeTienda()">
+								<i class="fas fa-file-import"></i> Actualizar Maestro
+							</button>
+						</div>
+					</div>
+					<div id="cp-aviso-maestro" style="margin-top:10px; display:none;" class="alert"></div>
+				</div>
+
+				<!-- Comparación -->
+				<div class="cp-box">
+					<div class="cp-box-titulo">
+						<span><i class="fas fa-balance-scale"></i> Comparar Tienda con el Maestro</span>
+						<span id="resumen-diferencias" style="font-size:12.5px; font-weight:600; color:#102F6F;"></span>
+					</div>
+					<p style="font-size:13px; color:#718096;">
+						Verifica si la tienda tiene ingredientes faltantes, sobrantes o con gramajes distintos al estándar central de calidad.
+					</p>
+					<div class="row">
+						<div class="col-md-5">
+							<label style="font-size:11px; text-transform:uppercase; color:#718096;">Seleccione Tienda para Comparar</label>
+							<select id="selectTiendaComparar" class="form-control"></select>
+						</div>
+						<div class="col-md-3" style="margin-top:22px;">
+							<button class="btn btn-primary btn-block" id="btnComparar" onclick="compararTienda()">
+								<i class="fas fa-search"></i> Comparar Recetas
+							</button>
+						</div>
+					</div>
+					<div style="margin-top:16px;">
+						<table id="grid-diferencias" class="table table-bordered table-hover table-condensed" style="font-size:12.5px; width:100%;">
+							<thead style="background:#F1F5F9;">
+								<tr>
+									<th>Producto</th>
+									<th>Insumo</th>
+									<th>Diagnóstico</th>
+									<th class="text-right">Cantidad Maestro</th>
+									<th class="text-right">Cantidad Tienda</th>
+								</tr>
+							</thead>
+							<tbody></tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+
+		</div>
+	</div>
+
+</body>
+<script src="js/composicionproductos.js" type="text/javascript"></script>
+<script src="js/jquery-confirm.min.js"></script>
+</html>
