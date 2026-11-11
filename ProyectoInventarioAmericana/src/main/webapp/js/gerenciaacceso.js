@@ -184,12 +184,132 @@ var Gerencia = (function () {
 		return ('$ ' + Math.round(valor).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.'));
 	}
 
+	/** Formato entero con separadores de miles con puntos (ej: 1100000 -> 1.100.000). */
+	function miles(valor) {
+		if (valor === null || valor === undefined || isNaN(valor)) {
+			return ('');
+		}
+		return (Math.round(valor).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.'));
+	}
+
 	/**
-	 * Lee un numero digitado, aceptando coma o punto.
+	 * Formatea en tiempo real un campo input mientras el usuario escribe,
+	 * completando automáticamente con separadores de miles y preservando
+	 * la posición del cursor de manera natural.
+	 */
+	function formatearMilesInput(input) {
+		if (!input) return;
+		var val = input.value;
+		var pos = input.selectionStart;
+
+		// Contar cuántos dígitos numéricos había antes de la posición del cursor
+		var digitosAntes = (val.slice(0, pos).match(/\d/g) || []).length;
+
+		// Extraer solo dígitos
+		var soloDigitos = val.replace(/\D/g, '');
+		if (soloDigitos === '') {
+			input.value = '';
+			return;
+		}
+
+		// Quitar ceros a la izquierda sobrantes (ej: 05 -> 5)
+		soloDigitos = soloDigitos.replace(/^0+(?=\d)/, '');
+
+		// Formatear con puntos de miles
+		var conMiles = soloDigitos.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+		input.value = conMiles;
+
+		// Recalcular la posición exacta del cursor
+		var nuevaPos = 0;
+		var cuenta = 0;
+		for (var i = 0; i < conMiles.length; i++) {
+			if (/\d/.test(conMiles[i])) {
+				cuenta++;
+			}
+			if (cuenta === digitosAntes) {
+				nuevaPos = i + 1;
+				break;
+			}
+		}
+		if (cuenta < digitosAntes) {
+			nuevaPos = conMiles.length;
+		}
+
+		try {
+			input.setSelectionRange(nuevaPos, nuevaPos);
+		} catch (e) {}
+	}
+
+	/**
+	 * Atajos de teclado para agilizar el ingreso de datos numéricos en gastos:
+	 * - 'k' o 'K': completa con tres ceros (miles, ej: 5287k -> 5.287.000)
+	 * - 'm' o 'M': completa con seis ceros (millones, ej: 1m -> 1.000.000)
+	 * - Flecha abajo o Enter: pasa al siguiente input de la columna/tabla
+	 * - Flecha arriba: pasa al input anterior
+	 * - Backspace antes de un punto: borra el número antes del separador
+	 */
+	function manejarTeclasMiles(input, e, selectorColeccion) {
+		if (e.key === 'k' || e.key === 'K') {
+			e.preventDefault();
+			var dig = input.value.replace(/\D/g, '');
+			if (dig.length > 0) {
+				input.value = dig + '000';
+				formatearMilesInput(input);
+				$(input).trigger('input');
+			}
+			return;
+		}
+		if (e.key === 'm' || e.key === 'M') {
+			e.preventDefault();
+			var digM = input.value.replace(/\D/g, '');
+			if (digM.length > 0) {
+				input.value = digM + '000000';
+				formatearMilesInput(input);
+				$(input).trigger('input');
+			}
+			return;
+		}
+		if (e.key === 'Backspace') {
+			var p = input.selectionStart;
+			if (p === input.selectionEnd && p > 0 && input.value[p - 1] === '.') {
+				e.preventDefault();
+				var v = input.value;
+				input.value = v.slice(0, p - 2) + v.slice(p);
+				try { input.setSelectionRange(p - 2, p - 2); } catch (ex) {}
+				formatearMilesInput(input);
+				$(input).trigger('input');
+				return;
+			}
+		}
+		if (e.keyCode === 38) { // Flecha arriba
+			e.preventDefault();
+			moverFocoInputs(input, -1, selectorColeccion);
+			return;
+		}
+		if (e.keyCode === 40 || e.keyCode === 13) { // Flecha abajo o Enter
+			e.preventDefault();
+			moverFocoInputs(input, 1, selectorColeccion);
+			return;
+		}
+	}
+
+	function moverFocoInputs(actual, delta, selector) {
+		var inputs = $(selector || '.ger-entrada:visible, .bolsa:visible');
+		var idx = inputs.index(actual);
+		if (idx >= 0) {
+			var next = idx + delta;
+			if (next >= 0 && next < inputs.length) {
+				inputs.eq(next).focus().select();
+			}
+		}
+	}
+
+	/**
+	 * Lee un numero digitado, aceptando coma o punto como separador de miles.
+	 * En Colombia y en la aplicacion, los montos en pesos usan el punto como
+	 * separador de miles (ej: 1.100.000, 5.287.100, 645.000).
 	 *
 	 * Devuelve null cuando no se entiende, y quien llama tiene que rechazarlo.
-	 * Convertir lo que no se entiende en cero es como se cuelan los ceros que
-	 * despues nadie sabe de donde salieron.
 	 */
 	function numero(texto) {
 		if (texto === null || texto === undefined) {
@@ -201,9 +321,18 @@ var Gerencia = (function () {
 		}
 		var coma = limpio.lastIndexOf(',');
 		var punto = limpio.lastIndexOf('.');
+		// Si tiene coma y está después del punto: formato 1.234.567,89
 		if (coma >= 0 && coma > punto) {
 			limpio = limpio.replace(/\./g, '').replace(',', '.');
+		} else if (punto >= 0 && punto > coma && coma >= 0) {
+			// Formato anglosajón raro con coma de miles y punto decimal: 1,234,567.89
+			limpio = limpio.replace(/,/g, '');
+		} else if (punto >= 0) {
+			// Solo tiene puntos: en pesos colombianos los puntos son separadores de miles
+			// (ejemplos: "5.287.100" -> 5287100, "1.000.000" -> 1000000, "645.000" -> 645000)
+			limpio = limpio.replace(/\./g, '');
 		} else {
+			// Solo dígitos o comas
 			limpio = limpio.replace(/,/g, '');
 		}
 		if (!/^\d+(\.\d+)?$/.test(limpio)) {
@@ -218,6 +347,9 @@ var Gerencia = (function () {
 		respondio: respondio,
 		avisar: avisar,
 		pesos: pesos,
+		miles: miles,
+		formatearMilesInput: formatearMilesInput,
+		manejarTeclasMiles: manejarTeclasMiles,
 		numero: numero,
 		quien: function () { return (quien); }
 	};

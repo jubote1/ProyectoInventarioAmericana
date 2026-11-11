@@ -64,12 +64,15 @@ function pintarBolsas() {
 			+ '</div></div>';
 	}
 	$('#bolsas').html(html);
-	$('.bolsa').on('input', calcularReparto);
-	$('.bolsa').on('blur', function () {
-		var n = Gerencia.numero($(this).val());
-		if (n !== null && n > 0) {
-			$(this).val(milesE(n));
-		}
+	$('.bolsa').on('input', function () {
+		Gerencia.formatearMilesInput(this);
+		calcularReparto();
+	});
+	$('.bolsa').on('keydown', function (e) {
+		Gerencia.manejarTeclasMiles(this, e, '.bolsa:visible');
+	});
+	$('.bolsa').on('focus', function () {
+		this.select();
 	});
 }
 
@@ -269,11 +272,21 @@ function pintarNomina() {
 	$('#tablaNomina tbody').html(html);
 
 	$('.celda-nomina').on('input', function () {
+		var campo = $(this).data('campo');
+		if (campo !== 'empleados') {
+			Gerencia.formatearMilesInput(this);
+		}
 		var idtienda = $(this).data('tienda');
 		cambiosNomina[idtienda] = true;
 		$(this).addClass('ger-sucio');
 		recalcularFila(idtienda);
 		contarNomina();
+	});
+	$('.celda-nomina').on('keydown', function (e) {
+		Gerencia.manejarTeclasMiles(this, e, '.celda-nomina:visible');
+	});
+	$('.celda-nomina').on('focus', function () {
+		this.select();
 	});
 }
 

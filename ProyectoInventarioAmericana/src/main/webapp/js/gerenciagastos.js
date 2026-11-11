@@ -157,10 +157,40 @@ function pintarFijos() {
 	}
 	$('#tablaFijos tbody').html(cuerpo);
 
-	$('.celda-fijo').on('input', function () { marcar($(this), cambiosFijos); });
+	$('.celda-fijo').on('input', function () {
+		Gerencia.formatearMilesInput(this);
+		marcar($(this), cambiosFijos);
+		actualizarTotalFilaFijos($(this).closest('tr'));
+	});
+	$('.celda-fijo').on('keydown', function (e) {
+		Gerencia.manejarTeclasMiles(this, e, '.celda-fijo:visible');
+	});
+	$('.celda-fijo').on('focus', function () {
+		this.select();
+	});
 	$('.celda-fijo').on('dblclick', function () {
 		verHistoria($(this).data('tienda'), $(this).data('concepto'), $(this).data('nombre'));
 	});
+}
+
+function actualizarTotalFilaFijos($tr) {
+	if (!$tr || $tr.length === 0) return;
+	var $totalCell = $tr.find('.total-fijo-fila strong');
+	if ($totalCell.length === 0 || $totalCell.text() === '—' || $totalCell.text() === '&mdash;') return;
+	var suma = 0;
+	$tr.find('.celda-fijo').each(function () {
+		var n = Gerencia.numero($(this).val());
+		if (n !== null) {
+			suma += n;
+		} else {
+			var ph = $(this).attr('placeholder');
+			if (ph) {
+				var nph = Gerencia.numero(ph);
+				if (nph !== null) suma += nph;
+			}
+		}
+	});
+	$totalCell.text(Gerencia.pesos(suma));
 }
 
 /**
@@ -219,7 +249,7 @@ function filaFijos(tienda, conceptos, esGeneral) {
 			+ ' value="' + (valor === 0 ? '' : miles(valor)) + '" />'
 			+ subtexto + '</td>';
 	}
-	return (fila + '<td class="ger-num"><strong>'
+	return (fila + '<td class="ger-num total-fijo-fila"><strong>'
 		+ (esGeneral ? '&mdash;' : Gerencia.pesos(total)) + '</strong></td></tr>');
 }
 
@@ -280,7 +310,16 @@ function pintarAreas() {
 	}
 	$('#tablaAreas tbody').html(cuerpo);
 
-	$('.celda-area').on('input', function () { marcar($(this), cambiosAreas); });
+	$('.celda-area').on('input', function () {
+		Gerencia.formatearMilesInput(this);
+		marcar($(this), cambiosAreas);
+	});
+	$('.celda-area').on('keydown', function (e) {
+		Gerencia.manejarTeclasMiles(this, e, '.celda-area:visible');
+	});
+	$('.celda-area').on('focus', function () {
+		this.select();
+	});
 	$('.celda-area').on('dblclick', function () {
 		verHistoriaArea($(this).data('concepto'), $(this).data('nombre'));
 	});
@@ -495,7 +534,16 @@ function pintarServicios() {
 	}
 	$('#tablaServicios tbody').html(cuerpo);
 
-	$('.celda-servicio').on('input', function () { marcar($(this), cambiosServicios); });
+	$('.celda-servicio').on('input', function () {
+		Gerencia.formatearMilesInput(this);
+		marcar($(this), cambiosServicios);
+	});
+	$('.celda-servicio').on('keydown', function (e) {
+		Gerencia.manejarTeclasMiles(this, e, '.celda-servicio:visible');
+	});
+	$('.celda-servicio').on('focus', function () {
+		this.select();
+	});
 }
 
 function filaServicio(idtienda, idconcepto) {
