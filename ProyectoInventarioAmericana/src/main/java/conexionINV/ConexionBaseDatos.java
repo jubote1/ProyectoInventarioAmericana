@@ -43,7 +43,7 @@ public class ConexionBaseDatos {
 
 			con = DriverManager.getConnection(
 		            "jdbc:mysql://" + hostBD() + "/general?"
-		            + "user=root&password=4m32017&serverTimezone=UTC");
+		            + "user=root&password=4m32017&serverTimezone=America/Bogota");
 			
 //			con = DriverManager.getConnection(
 //		            "jdbc:mysql://192.168.0.25/general?"
@@ -89,7 +89,7 @@ public class ConexionBaseDatos {
 			 */
 			con = DriverManager.getConnection(
 		            "jdbc:mysql://" + hostBD() + "/inventarioamericana?"
-		            + "user=root&password=4m32017&serverTimezone=UTC");
+		            + "user=root&password=4m32017&serverTimezone=America/Bogota");
 			
 //			con = DriverManager.getConnection(
 //		            "jdbc:mysql://172.19.0.25/inventarioamericana?"
@@ -129,7 +129,7 @@ public class ConexionBaseDatos {
 
 			con = DriverManager.getConnection(
 		            "jdbc:mysql://" + hostBD() + "/general?"
-		            + "user=root&password=4m32017&serverTimezone=UTC");
+		            + "user=root&password=4m32017&serverTimezone=America/Bogota");
 			
 			//con = DriverManager.getConnection(
 		    //        "jdbc:mysql://192.168.0.25/general?"
@@ -170,7 +170,7 @@ public class ConexionBaseDatos {
 			
 			con = DriverManager.getConnection(
 		            "jdbc:mysql://" + hostBD() + "/pizzaamericana?"
-		            + "user=root&password=4m32017&serverTimezone=UTC");
+		            + "user=root&password=4m32017&serverTimezone=America/Bogota");
 			
 //			con = DriverManager.getConnection(
 //		            "jdbc:mysql://192.168.0.25/pizzaamericana?"
@@ -207,7 +207,7 @@ public class ConexionBaseDatos {
 			DriverManager.setLoginTimeout(10);
 			con = DriverManager.getConnection(
 		            "jdbc:mysql://" + url + "/tiendaamericana?"
-		            + "user=root&password=4m32017&serverTimezone=UTC");
+		            + "user=root&password=4m32017&serverTimezone=America/Bogota");
 
 		    // Otros y operaciones sobre la base de datos...
 
@@ -242,7 +242,7 @@ public class ConexionBaseDatos {
 			
 			con = DriverManager.getConnection(
 		            "jdbc:mysql://localhost/tiendaamericana?"
-		            + "user=root&password=4m32017&serverTimezone=UTC");
+		            + "user=root&password=4m32017&serverTimezone=America/Bogota");
 			
 //			con = DriverManager.getConnection(
 //		            "jdbc:mysql://192.168.0.25/pizzaamericana?"
@@ -284,7 +284,7 @@ public class ConexionBaseDatos {
 
 			con = DriverManager.getConnection(
 		            "jdbc:mysql://" + hostBD() + "/datamart?"
-		            + "user=root&password=4m32017&serverTimezone=UTC");
+		            + "user=root&password=4m32017&serverTimezone=America/Bogota");
 
 		} catch (SQLException ex) {
 

@@ -625,7 +625,10 @@ public class GerenciaNominaCalculoDAO {
 		final boolean esAdminTienda = e.idTipoEmpleado == 2 || cargoLower.contains("administrador");
 		final boolean esSupernumerario = e.esSupernumerario || cargoLower.contains("supernumerario");
 		final boolean esLiderZona = e.idTipoEmpleado == 24 || e.idEmpleado == 21 || e.idEmpleado == 270;
-		final boolean sinHorasExtras = esAdministrativo || esAdminTienda || esSupernumerario || esLiderZona;
+		final boolean esLiderOConductor = cargoLower.contains("logistica") || cargoLower.contains("conductor")
+				|| cargoLower.contains("supervisor") || cargoLower.contains("lider")
+				|| cargoLower.contains("director");
+		final boolean sinHorasExtras = esAdministrativo || esAdminTienda || esSupernumerario || esLiderZona || esLiderOConductor;
 
 		double recargoNocturno = 0;
 		double recargoDominical = 0;
