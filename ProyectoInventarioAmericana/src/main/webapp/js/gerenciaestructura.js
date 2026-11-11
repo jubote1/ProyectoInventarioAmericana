@@ -105,9 +105,19 @@ function consultarE() {
 // BOLSAS Y REPARTO
 // =========================================================================
 
+function parsearMonto(crudo) {
+	if (crudo === null || crudo === undefined) return 0;
+	var n = Gerencia.numero(crudo);
+	if (n !== null) return n;
+	// Fallback de contingencia: extraer todos los dígitos numéricos
+	var d = String(crudo).replace(/\D/g, '');
+	if (d === '') return 0;
+	var f = parseFloat(d);
+	return isNaN(f) ? 0 : f;
+}
+
 function valorBolsa(tipo) {
-	var v = Gerencia.numero($('#bolsa_' + tipo).val());
-	return (v === null ? 0 : v);
+	return parsearMonto($('#bolsa_' + tipo).val());
 }
 
 function calcularReparto() {
@@ -179,12 +189,12 @@ function guardarPools() {
 	var pendientes = [];
 	for (var i = 0; i < BOLSAS.length; i++) {
 		var crudo = $('#bolsa_' + BOLSAS[i].tipo).val();
-		var valor = Gerencia.numero(crudo);
-		if (valor === null && $.trim(crudo) !== '') {
+		var valor = parsearMonto(crudo);
+		if (valor === null || isNaN(valor)) {
 			Gerencia.avisar('El valor de ' + BOLSAS[i].nombre + ' no se entiende. Escriba solo numeros.');
 			return;
 		}
-		pendientes.push({ tipo: BOLSAS[i].tipo, nombre: BOLSAS[i].nombre, valor: (valor === null ? 0 : valor) });
+		pendientes.push({ tipo: BOLSAS[i].tipo, nombre: BOLSAS[i].nombre, valor: valor });
 	}
 
 	$('#btnGuardarPools').prop('disabled', true);
@@ -302,8 +312,7 @@ function celdaNomina(idtienda, campo, valor, entero) {
 
 function leerCampo(idtienda, campo) {
 	var celda = $('.celda-nomina[data-tienda="' + idtienda + '"][data-campo="' + campo + '"]');
-	var v = Gerencia.numero(celda.val());
-	return (v === null ? 0 : v);
+	return parsearMonto(celda.val());
 }
 
 function recalcularFila(idtienda) {

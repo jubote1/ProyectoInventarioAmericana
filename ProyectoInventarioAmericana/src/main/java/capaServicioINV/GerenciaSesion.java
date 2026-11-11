@@ -75,7 +75,7 @@ public final class GerenciaSesion {
 	 * Un valor en pesos de la request.
 	 *
 	 * Acepta coma o punto como decimal y quita los separadores de miles, porque
-	 * quien digita un arriendo lo escribe como lo lee: 3.885.000 o 3885000,50.
+	 * quien digita un gasto o una bolsa lo escribe como lo lee: 120.553.529 o 3.885.000.
 	 * Si no se entiende devuelve -1 y el servlet lo rechaza, en vez de guardar
 	 * un cero que despues nadie sabe si era cero de verdad.
 	 */
@@ -87,10 +87,18 @@ public final class GerenciaSesion {
 		String limpio = crudo.trim().replace(" ", "").replace("$", "");
 		final int ultimaComa = limpio.lastIndexOf(',');
 		final int ultimoPunto = limpio.lastIndexOf('.');
-		//El separador decimal es el ultimo que aparezca; el otro es de miles.
+		// Si tiene coma y está después del punto: formato colombiano 1.234.567,89
 		if (ultimaComa >= 0 && ultimaComa > ultimoPunto) {
 			limpio = limpio.replace(".", "").replace(',', '.');
+		} else if (ultimoPunto >= 0 && ultimoPunto > ultimaComa && ultimaComa >= 0) {
+			// Formato anglosajón raro con coma de miles y punto decimal: 1,234,567.89
+			limpio = limpio.replace(",", "");
+		} else if (ultimoPunto >= 0) {
+			// Solo tiene puntos: en pesos colombianos los puntos son separadores de miles
+			// (ejemplos: "120.553.529" -> 120553529, "35.420.844" -> 35420844)
+			limpio = limpio.replace(".", "");
 		} else {
+			// Solo dígitos o comas
 			limpio = limpio.replace(",", "");
 		}
 		try {
