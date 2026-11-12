@@ -3,6 +3,7 @@ package capaDAOINV;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -11,6 +12,7 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 
 import conexionINV.ConexionBaseDatos;
@@ -170,6 +172,66 @@ public class GerenciaNominaCalculoDAO {
 		public double dispersion;
 		public boolean seAplica;
 		public String porQueNo = "";
+	}
+
+	public static class FilaConciliacion {
+		public int idEmpleado;
+		public String cedula = "";
+		public String nombre = "";
+		public String cargo = "";
+		public String tienda = "";
+		public int idTienda = 0;
+
+		public double horasBio = 0;
+		public double basicoBio = 0;
+		public double variableBio = 0;
+		public double auxilioBio = 0;
+		public double segSocialBio = 0;
+		public double liquidacionBio = 0;
+		public double costoBio = 0;
+		public boolean tieneBiometria = false;
+
+		public int idCargue = 0;
+		public double horasReal = 0;
+		public double totalPagadoReal = 0;
+		public String origenReal = "";
+		public String fechaCargue = "";
+		public String observacion = "";
+		public String estado = "PENDIENTE";
+		public boolean tieneReal = false;
+
+		public double diffHoras = 0;
+		public double diffPesos = 0;
+		public double diffPct = 0;
+		public String semaforo = "VERDE";
+		public String diagnostico = "";
+		public boolean esSena = false;
+	}
+
+	public static class ResumenConciliacion {
+		public String modo = "QUINCENA";
+		public int idPeriodo = 0;
+		public String periodoTexto = "";
+		public String fechaDesde = "";
+		public String fechaHasta = "";
+		public ArrayList<String> domingos = new ArrayList<String>();
+
+		public double totalRealPagado = 0;
+		public double totalBiometria = 0;
+		public double diffPesos = 0;
+		public double diffPct = 0;
+
+		public double horasTotalesReal = 0;
+		public double horasTotalesBio = 0;
+		public double diffHoras = 0;
+
+		public int totalEmpleados = 0;
+		public int cantCuadrados = 0;
+		public int cantDiferencias = 0;
+		public int cantSoloReal = 0;
+		public int cantSoloBio = 0;
+
+		public ArrayList<FilaConciliacion> filas = new ArrayList<FilaConciliacion>();
 	}
 
 	/** Un turno cerrado: cuando entro, cuando salio, y donde. */
@@ -1497,6 +1559,8 @@ public class GerenciaNominaCalculoDAO {
 		public int cargados;
 		public int noEncontrados;
 		public int ilegibles;
+		public double totalPesos = 0;
+		public double totalHoras = 0;
 		public final ArrayList<String> problemas = new ArrayList<String>();
 	}
 
@@ -1588,6 +1652,8 @@ public class GerenciaNominaCalculoDAO {
 			return (r);
 		}
 		try {
+			final String origenLimpio = (origen != null && origen.length() > 20) ? origen.substring(0, 20)
+					: (origen != null && !origen.trim().isEmpty() ? origen.trim() : "EXCEL");
 			final HashMap<String, EmpleadoInfo> mapaEmp = mapaEmpleadosPorIdent();
 			final Parametros params = parametrosAl(cn, domingos.get(0));
 			final double smlv = params.de("SMLV", 1300000);
@@ -1789,6 +1855,665 @@ public class GerenciaNominaCalculoDAO {
 			cerrar(cn);
 		}
 		return (lista);
+	}
+
+	public static ResumenConciliacion consultarConciliacion(final String modo, final int idPeriodo, final int anio, final int mes) {
+		final ResumenConciliacion res = new ResumenConciliacion();
+		res.modo = (modo != null && "MES".equalsIgnoreCase(modo)) ? "MES" : "QUINCENA";
+		res.idPeriodo = idPeriodo;
+
+		final ConexionBaseDatos conGen = new ConexionBaseDatos();
+		final Connection cnGen = conGen.obtenerConexionBDGeneral();
+		final ConexionBaseDatos con = new ConexionBaseDatos();
+		final Connection cn = con.obtenerConexionBDPrincipalLocal();
+
+		if (cnGen == null || cn == null) {
+			cerrar(cnGen);
+			cerrar(cn);
+			return (res);
+		}
+
+		try {
+			if ("QUINCENA".equalsIgnoreCase(res.modo) && idPeriodo > 0) {
+				final PreparedStatement ps = cnGen.prepareStatement("SELECT fecha_inferior, fecha_superior FROM periodo_nomina WHERE idperiodo = ?");
+				ps.setInt(1, idPeriodo);
+				final ResultSet rs = ps.executeQuery();
+				if (rs.next()) {
+					res.fechaDesde = texto(rs.getString("fecha_inferior"));
+					res.fechaHasta = texto(rs.getString("fecha_superior"));
+					res.periodoTexto = "Quincena " + idPeriodo + " (" + res.fechaDesde + " al " + res.fechaHasta + ")";
+				}
+				rs.close();
+				ps.close();
+
+				if (res.fechaDesde.length() == 10 && res.fechaHasta.length() == 10) {
+					final LocalDate ini = LocalDate.parse(res.fechaDesde);
+					final LocalDate fin = LocalDate.parse(res.fechaHasta);
+					LocalDate cur = ini;
+					while (!cur.isAfter(fin)) {
+						if (cur.getDayOfWeek() == DayOfWeek.SUNDAY) {
+							res.domingos.add(cur.toString());
+						}
+						cur = cur.plusDays(1);
+					}
+				}
+			} else {
+				// Modo MES
+				final int a = (anio >= 2020 && anio <= 2040) ? anio : Calendar.getInstance().get(Calendar.YEAR);
+				final int m = (mes >= 1 && mes <= 12) ? mes : Calendar.getInstance().get(Calendar.MONTH) + 1;
+				res.fechaDesde = String.format("%04d-%02d-01", Integer.valueOf(a), Integer.valueOf(m));
+				final LocalDate ini = LocalDate.parse(res.fechaDesde);
+				final LocalDate fin = ini.withDayOfMonth(ini.lengthOfMonth());
+				res.fechaHasta = fin.toString();
+				res.periodoTexto = "Mes " + m + "/" + a + " (" + res.fechaDesde + " al " + res.fechaHasta + ")";
+
+				final PreparedStatement psSem = cn.prepareStatement(
+						"SELECT fecha_fin FROM gerencia_semana WHERE anio = ? AND mes = ? ORDER BY numero");
+				psSem.setInt(1, a);
+				psSem.setInt(2, m);
+				final ResultSet rsSem = psSem.executeQuery();
+				while (rsSem.next()) {
+					res.domingos.add(rsSem.getString("fecha_fin"));
+				}
+				rsSem.close();
+				psSem.close();
+
+				if (res.domingos.isEmpty()) {
+					LocalDate cur = ini;
+					while (!cur.isAfter(fin)) {
+						if (cur.getDayOfWeek() == DayOfWeek.SUNDAY) {
+							res.domingos.add(cur.toString());
+						}
+						cur = cur.plusDays(1);
+					}
+				}
+			}
+
+			if (res.domingos.isEmpty()) {
+				return (res);
+			}
+
+			final StringBuilder inClause = new StringBuilder();
+			for (int i = 0; i < res.domingos.size(); i++) {
+				if (i > 0) {
+					inClause.append(',');
+				}
+				inClause.append('\'').append(res.domingos.get(i)).append('\'');
+			}
+
+			final LinkedHashMap<Integer, FilaConciliacion> mapa = new LinkedHashMap<Integer, FilaConciliacion>();
+
+			// 1. Biometría de las semanas
+			final String sqlBio = "SELECT e.idempleado, emp.nombre AS cedula, emp.nombre_largo, IFNULL(t.descripcion, '') AS cargo, "
+					+ " SUM(e.horas_totales) AS tot_horas, "
+					+ " SUM(e.sueldo_basico) AS tot_basico, "
+					+ " SUM(e.sueldo_variable) AS tot_variable, "
+					+ " SUM(e.auxilio_transporte) AS tot_auxilio, "
+					+ " SUM(e.seguridad_social) AS tot_seg_social, "
+					+ " SUM(e.liquidacion) AS tot_liquidacion, "
+					+ " SUM(e.costo_total) AS tot_costo, "
+					+ " MAX(CASE WHEN e.aviso LIKE '%SENA%' THEN 1 ELSE 0 END) AS es_sena, "
+					+ " IFNULL((SELECT tnd.nombre FROM gerencia_nomina_empleado_tienda_semana r "
+					+ "         JOIN inventarioamericana.tienda tnd ON tnd.idtienda = r.idtienda "
+					+ "         WHERE r.idempleado = e.idempleado AND r.semana IN (" + inClause + ") "
+					+ "         ORDER BY r.minutos DESC LIMIT 1), 'Sin Asignar') AS tienda, "
+					+ " IFNULL((SELECT r.idtienda FROM gerencia_nomina_empleado_tienda_semana r "
+					+ "         WHERE r.idempleado = e.idempleado AND r.semana IN (" + inClause + ") "
+					+ "         ORDER BY r.minutos DESC LIMIT 1), 0) AS idtienda "
+					+ " FROM gerencia_nomina_estimado e "
+					+ " JOIN general.empleado emp ON emp.id = e.idempleado "
+					+ " LEFT JOIN general.tipo_empleado t ON t.idtipoempleado = emp.idtipoempleado "
+					+ " WHERE e.semana IN (" + inClause + ") "
+					+ " GROUP BY e.idempleado, emp.nombre, emp.nombre_largo, t.descripcion";
+
+			final Statement st = cn.createStatement();
+			final ResultSet rsBio = st.executeQuery(sqlBio);
+			while (rsBio.next()) {
+				final int idEmp = rsBio.getInt("idempleado");
+				final FilaConciliacion f = new FilaConciliacion();
+				f.idEmpleado = idEmp;
+				f.cedula = texto(rsBio.getString("cedula"));
+				f.nombre = texto(rsBio.getString("nombre_largo"));
+				f.cargo = texto(rsBio.getString("cargo"));
+				f.tienda = texto(rsBio.getString("tienda"));
+				f.idTienda = rsBio.getInt("idtienda");
+
+				f.horasBio = redondear(rsBio.getDouble("tot_horas"));
+				f.basicoBio = redondear(rsBio.getDouble("tot_basico"));
+				f.variableBio = redondear(rsBio.getDouble("tot_variable"));
+				f.auxilioBio = redondear(rsBio.getDouble("tot_auxilio"));
+				f.segSocialBio = redondear(rsBio.getDouble("tot_seg_social"));
+				f.liquidacionBio = redondear(rsBio.getDouble("tot_liquidacion"));
+				f.costoBio = redondear(rsBio.getDouble("tot_costo"));
+				f.esSena = rsBio.getInt("es_sena") == 1;
+				f.tieneBiometria = (f.costoBio > 0 || f.horasBio > 0);
+
+				mapa.put(Integer.valueOf(idEmp), f);
+			}
+			rsBio.close();
+
+			// 2. Real cargado en gerencia_nomina_real_cargue
+			final PreparedStatement psReal = cn.prepareStatement(
+					"SELECT idcargue, idempleado, cedula, nombre, total_pagado, horas_reales, origen, "
+					+ " observacion_conciliacion, estado_conciliacion, fecha_registro "
+					+ " FROM gerencia_nomina_real_cargue "
+					+ " WHERE tipo_periodo = ? AND (idperiodo = ? OR (fecha_desde = ? AND fecha_hasta = ?))");
+			psReal.setString(1, res.modo);
+			psReal.setInt(2, res.idPeriodo);
+			psReal.setString(3, res.fechaDesde);
+			psReal.setString(4, res.fechaHasta);
+			final ResultSet rsReal = psReal.executeQuery();
+			boolean hayCargue = false;
+			while (rsReal.next()) {
+				hayCargue = true;
+				final int idEmp = rsReal.getInt("idempleado");
+				FilaConciliacion f = mapa.get(Integer.valueOf(idEmp));
+				if (f == null) {
+					f = new FilaConciliacion();
+					f.idEmpleado = idEmp;
+					f.cedula = texto(rsReal.getString("cedula"));
+					f.nombre = texto(rsReal.getString("nombre"));
+					f.tienda = "Solo en Nómina";
+					mapa.put(Integer.valueOf(idEmp), f);
+				}
+				f.idCargue = rsReal.getInt("idcargue");
+				f.horasReal = redondear(rsReal.getDouble("horas_reales"));
+				f.totalPagadoReal = redondear(rsReal.getDouble("total_pagado"));
+				f.origenReal = texto(rsReal.getString("origen"));
+				f.observacion = texto(rsReal.getString("observacion_conciliacion"));
+				f.estado = texto(rsReal.getString("estado_conciliacion"));
+				f.fechaCargue = texto(rsReal.getString("fecha_registro"));
+				f.tieneReal = true;
+			}
+			rsReal.close();
+			psReal.close();
+
+			// Si aún no se ha cargado en gerencia_nomina_real_cargue, consultar gerencia_nomina_empleado_semana
+			if (!hayCargue) {
+				final String sqlSem = "SELECT n.idempleado, SUM(n.sueldo_basico + n.sueldo_variable + n.seguridad_social + n.liquidacion) as tot_real, "
+						+ " SUM(IFNULL(n.horas, 0)) as tot_horas_real, MAX(n.origen) as origen "
+						+ " FROM gerencia_nomina_empleado_semana n "
+						+ " WHERE n.semana IN (" + inClause + ") AND n.origen <> 'ESTIMADO' "
+						+ " GROUP BY n.idempleado";
+				final ResultSet rsSemReal = st.executeQuery(sqlSem);
+				while (rsSemReal.next()) {
+					final int idEmp = rsSemReal.getInt("idempleado");
+					final FilaConciliacion f = mapa.get(Integer.valueOf(idEmp));
+					if (f != null) {
+						f.totalPagadoReal = redondear(rsSemReal.getDouble("tot_real"));
+						f.horasReal = redondear(rsSemReal.getDouble("tot_horas_real"));
+						f.origenReal = texto(rsSemReal.getString("origen"));
+						f.tieneReal = true;
+					}
+				}
+				rsSemReal.close();
+			}
+			st.close();
+
+			// 3. Comparación y Diagnóstico
+			for (final FilaConciliacion f : mapa.values()) {
+				f.diffHoras = redondear(f.horasReal - f.horasBio);
+				f.diffPesos = redondear(f.totalPagadoReal - f.costoBio);
+				if (f.costoBio > 0) {
+					f.diffPct = redondear((f.diffPesos / f.costoBio) * 100.0);
+				}
+
+				if (f.tieneReal && !f.tieneBiometria) {
+					f.semaforo = "AZUL_SOLO_REAL";
+					f.diagnostico = "Liquidado en n\u00f3mina sin registros en reloj biom\u00e9trico (personal administrativo, incapacidad o ausencia).";
+					res.cantSoloReal++;
+				} else if (!f.tieneReal && f.tieneBiometria) {
+					f.semaforo = "AZUL_SOLO_BIO";
+					f.diagnostico = "Marc\u00f3 " + String.format(Locale.US, "%.1f", Double.valueOf(f.horasBio))
+							+ " hrs en tienda pero no aparece en el archivo de n\u00f3mina cargado.";
+					res.cantSoloBio++;
+				} else if (f.tieneReal && f.tieneBiometria) {
+					final double absDifPesos = Math.abs(f.diffPesos);
+					final double absDifHoras = Math.abs(f.diffHoras);
+
+					if (absDifPesos <= 25000 && (f.horasReal == 0 || absDifHoras <= 2.0)) {
+						f.semaforo = "VERDE";
+						f.diagnostico = "Cuadrado: diferencia menor al 1% o margen de centavos.";
+						res.cantCuadrados++;
+					} else if (absDifPesos <= 95000 || Math.abs(f.diffPct) <= 5.0) {
+						f.semaforo = "AMARILLO";
+						if (absDifHoras > 3.0 && f.horasReal > 0) {
+							f.diagnostico = "Diferencia leve: n\u00f3mina registra "
+									+ String.format(Locale.US, "%+.1f", Double.valueOf(f.diffHoras))
+									+ " hrs vs reloj.";
+						} else {
+							f.diagnostico = "Diferencia moderada en valor ("
+									+ String.format(Locale.US, "%+.1f%%", Double.valueOf(f.diffPct))
+									+ "). Variaci\u00f3n en recargos o bonificaci\u00f3n.";
+						}
+						res.cantDiferencias++;
+					} else {
+						f.semaforo = "ROJO";
+						if (absDifHoras >= 5.0 && f.horasReal > 0) {
+							f.diagnostico = "Descuadre por horas: brecha de "
+									+ String.format(Locale.US, "%+.1f", Double.valueOf(f.diffHoras))
+									+ " horas (" + (f.diffHoras > 0 ? "n\u00f3mina pag\u00f3 m\u00e1s horas" : "biometr\u00eda marc\u00f3 m\u00e1s horas")
+									+ ").";
+						} else {
+							f.diagnostico = "Descuadre en valor: diferencia de $"
+									+ String.format(Locale.US, "%,.0f", Double.valueOf(f.diffPesos))
+									+ " (" + String.format(Locale.US, "%+.1f%%", Double.valueOf(f.diffPct))
+									+ "). Verificar salario o liquidaci\u00f3n.";
+						}
+						res.cantDiferencias++;
+					}
+				}
+
+				res.totalRealPagado += f.totalPagadoReal;
+				res.totalBiometria += f.costoBio;
+				res.horasTotalesReal += f.horasReal;
+				res.horasTotalesBio += f.horasBio;
+
+				res.filas.add(f);
+			}
+
+			res.totalRealPagado = redondear(res.totalRealPagado);
+			res.totalBiometria = redondear(res.totalBiometria);
+			res.horasTotalesReal = redondear(res.horasTotalesReal);
+			res.horasTotalesBio = redondear(res.horasTotalesBio);
+			res.diffPesos = redondear(res.totalRealPagado - res.totalBiometria);
+			res.diffHoras = redondear(res.horasTotalesReal - res.horasTotalesBio);
+			if (res.totalBiometria > 0) {
+				res.diffPct = redondear((res.diffPesos / res.totalBiometria) * 100.0);
+			}
+			res.totalEmpleados = res.filas.size();
+
+		} catch (final Exception e) {
+			System.out.println("GerenciaNominaCalculoDAO.consultarConciliacion: " + e.toString());
+		} finally {
+			cerrar(cnGen);
+			cerrar(cn);
+		}
+		return (res);
+	}
+
+	public static ResultadoCarga guardarCargueConciliacion(final String modo, final int idPeriodo, final int anio,
+			final int mes, final String pegado, final String tipoValor, final String origen, final String usuario) {
+		final ResultadoCarga r = new ResultadoCarga();
+		final ArrayList<String> domingos = new ArrayList<String>();
+		String fechaDesde = "";
+		String fechaHasta = "";
+		String periodoTexto = "";
+
+		final ConexionBaseDatos conGen = new ConexionBaseDatos();
+		final Connection cnGen = conGen.obtenerConexionBDGeneral();
+		if (cnGen == null) {
+			r.problemas.add("Sin conexion a la base general.");
+			return (r);
+		}
+
+		final String modoLimpio = (modo != null && "MES".equalsIgnoreCase(modo)) ? "MES" : "QUINCENA";
+
+		try {
+			if ("QUINCENA".equalsIgnoreCase(modoLimpio) && idPeriodo > 0) {
+				final PreparedStatement ps = cnGen.prepareStatement(
+						"SELECT fecha_inferior, fecha_superior FROM periodo_nomina WHERE idperiodo = ?");
+				ps.setInt(1, idPeriodo);
+				final ResultSet rs = ps.executeQuery();
+				if (rs.next()) {
+					fechaDesde = texto(rs.getString("fecha_inferior"));
+					fechaHasta = texto(rs.getString("fecha_superior"));
+					periodoTexto = "Quincena " + idPeriodo + " (" + fechaDesde + " al " + fechaHasta + ")";
+				}
+				rs.close();
+				ps.close();
+
+				if (fechaDesde.length() == 10 && fechaHasta.length() == 10) {
+					final LocalDate ini = LocalDate.parse(fechaDesde);
+					final LocalDate fin = LocalDate.parse(fechaHasta);
+					LocalDate cur = ini;
+					while (!cur.isAfter(fin)) {
+						if (cur.getDayOfWeek() == DayOfWeek.SUNDAY) {
+							domingos.add(cur.toString());
+						}
+						cur = cur.plusDays(1);
+					}
+				}
+			} else {
+				// MES
+				final int a = (anio >= 2020 && anio <= 2040) ? anio : Calendar.getInstance().get(Calendar.YEAR);
+				final int m = (mes >= 1 && mes <= 12) ? mes : Calendar.getInstance().get(Calendar.MONTH) + 1;
+				fechaDesde = String.format("%04d-%02d-01", Integer.valueOf(a), Integer.valueOf(m));
+				final LocalDate ini = LocalDate.parse(fechaDesde);
+				final LocalDate fin = ini.withDayOfMonth(ini.lengthOfMonth());
+				fechaHasta = fin.toString();
+				periodoTexto = "Mes " + m + "/" + a + " (" + fechaDesde + " al " + fechaHasta + ")";
+
+				final ConexionBaseDatos conAux = new ConexionBaseDatos();
+				final Connection cnAux = conAux.obtenerConexionBDPrincipalLocal();
+				if (cnAux != null) {
+					final PreparedStatement psSem = cnAux.prepareStatement(
+							"SELECT fecha_fin FROM gerencia_semana WHERE anio = ? AND mes = ? ORDER BY numero");
+					psSem.setInt(1, a);
+					psSem.setInt(2, m);
+					final ResultSet rsSem = psSem.executeQuery();
+					while (rsSem.next()) {
+						domingos.add(rsSem.getString("fecha_fin"));
+					}
+					rsSem.close();
+					psSem.close();
+					cerrar(cnAux);
+				}
+				if (domingos.isEmpty()) {
+					LocalDate cur = ini;
+					while (!cur.isAfter(fin)) {
+						if (cur.getDayOfWeek() == DayOfWeek.SUNDAY) {
+							domingos.add(cur.toString());
+						}
+						cur = cur.plusDays(1);
+					}
+				}
+			}
+		} catch (final Exception e) {
+			System.out.println("GerenciaNominaCalculoDAO.guardarCargueConciliacion periodo: " + e.toString());
+		} finally {
+			cerrar(cnGen);
+		}
+
+		if (domingos.isEmpty()) {
+			r.problemas.add("No se encontraron domingos de cierre para el periodo seleccionado.");
+			return (r);
+		}
+
+		final ConexionBaseDatos con = new ConexionBaseDatos();
+		final Connection cn = con.obtenerConexionBDPrincipalLocal();
+		if (cn == null) {
+			r.problemas.add("Sin conexion a la base principal.");
+			return (r);
+		}
+
+		try {
+			final String origenLimpio = (origen != null && origen.length() > 20) ? origen.substring(0, 20)
+					: (origen != null && !origen.trim().isEmpty() ? origen.trim() : "EXCEL");
+			final HashMap<String, EmpleadoInfo> mapaEmp = mapaEmpleadosPorIdent();
+			final Parametros params = parametrosAl(cn, domingos.get(0));
+			final double smlv = params.de("SMLV", 1300000);
+			final double auxilioMensual = params.de("AUXILIO_TRANSPORTE", 162000);
+
+			final PreparedStatement psCargue = cn.prepareStatement(
+					"INSERT INTO gerencia_nomina_real_cargue "
+					+ " (tipo_periodo, idperiodo, periodo_texto, fecha_desde, fecha_hasta, idempleado, "
+					+ "  cedula, nombre, total_pagado, horas_reales, origen, usuario) "
+					+ " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+					+ " ON DUPLICATE KEY UPDATE "
+					+ "   total_pagado = ?, horas_reales = ?, origen = ?, usuario = ?");
+
+			final PreparedStatement psSem = cn.prepareStatement(
+					"INSERT INTO gerencia_nomina_empleado_semana "
+					+ " (idempleado, semana, sueldo_basico, sueldo_variable, seguridad_social, "
+					+ "  liquidacion, horas, origen, usuario) "
+					+ " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) "
+					+ " ON DUPLICATE KEY UPDATE "
+					+ "   sueldo_basico = ?, sueldo_variable = ?, seguridad_social = ?, "
+					+ "   liquidacion = ?, horas = ?, origen = ?, usuario = ?");
+
+			final String[] lineas = partirLineas(pegado);
+			final int numSemanas = domingos.size();
+
+			for (int i = 0; i < lineas.length; i++) {
+				final String linea = lineas[i].trim();
+				if (linea.isEmpty()) {
+					continue;
+				}
+
+				final ParsedLinea pl = parsearLineaCargue(linea, i, mapaEmp);
+				if (pl == null || pl.esEncabezado) {
+					continue;
+				}
+
+				if (pl.cedula.isEmpty() || pl.valor <= 0) {
+					r.ilegibles++;
+					r.problemas.add("Línea " + (i + 1) + ": no se identificó documento o valor válido -> " + recorte(linea));
+					continue;
+				}
+
+				final EmpleadoInfo emp = mapaEmp.get(pl.cedula);
+				if (emp == null) {
+					r.noEncontrados++;
+					r.problemas.add("Línea " + (i + 1) + ": el documento '" + pl.cedula
+							+ "' no existe en el maestro de empleados.");
+					continue;
+				}
+
+				final String nomReal = (pl.nombre != null && !pl.nombre.isEmpty()) ? pl.nombre : emp.nombreLargo;
+
+				// 1. Guardar en gerencia_nomina_real_cargue
+				int k = 1;
+				psCargue.setString(k++, modoLimpio);
+				psCargue.setInt(k++, idPeriodo);
+				psCargue.setString(k++, periodoTexto);
+				psCargue.setString(k++, fechaDesde);
+				psCargue.setString(k++, fechaHasta);
+				psCargue.setInt(k++, emp.id);
+				psCargue.setString(k++, pl.cedula);
+				psCargue.setString(k++, nomReal);
+				psCargue.setDouble(k++, pl.valor);
+				psCargue.setDouble(k++, pl.horas);
+				psCargue.setString(k++, origenLimpio);
+				psCargue.setString(k++, usuario);
+				// UPDATE
+				psCargue.setDouble(k++, pl.valor);
+				psCargue.setDouble(k++, pl.horas);
+				psCargue.setString(k++, origenLimpio);
+				psCargue.setString(k++, usuario);
+				psCargue.addBatch();
+
+				// 2. Distribuir a gerencia_nomina_empleado_semana
+				final boolean esVariableSolo = "VARIABLE".equalsIgnoreCase(tipoValor);
+				for (int s = 0; s < numSemanas; s++) {
+					final String sem = domingos.get(s);
+					final double basicoSem = redondear(emp.salario * SEMANA_DEL_MES);
+					double varSem = 0;
+					if (esVariableSolo) {
+						varSem = redondear(pl.valor / (double) numSemanas);
+					} else {
+						final double totalBasicoPeriodo = basicoSem * numSemanas;
+						final double varCalc = Math.max(0, pl.valor - totalBasicoPeriodo);
+						varSem = redondear(varCalc / (double) numSemanas);
+					}
+					final double auxSem = (emp.salario <= smlv * 2) ? redondear(auxilioMensual * SEMANA_DEL_MES) : 0;
+					final double segSem = redondear((basicoSem + varSem) * 0.205);
+					final double liqSem = redondear((basicoSem + varSem + auxSem) * 0.2183);
+					final double horasSem = (pl.horas > 0) ? redondear(pl.horas / (double) numSemanas) : 0;
+
+					int ks = 1;
+					psSem.setInt(ks++, emp.id);
+					psSem.setString(ks++, sem);
+					psSem.setDouble(ks++, basicoSem);
+					psSem.setDouble(ks++, varSem);
+					psSem.setDouble(ks++, segSem);
+					psSem.setDouble(ks++, liqSem);
+					psSem.setDouble(ks++, horasSem);
+					psSem.setString(ks++, origenLimpio);
+					psSem.setString(ks++, usuario);
+					// UPDATE
+					psSem.setDouble(ks++, basicoSem);
+					psSem.setDouble(ks++, varSem);
+					psSem.setDouble(ks++, segSem);
+					psSem.setDouble(ks++, liqSem);
+					psSem.setDouble(ks++, horasSem);
+					psSem.setString(ks++, origenLimpio);
+					psSem.setString(ks++, usuario);
+					psSem.addBatch();
+				}
+
+				r.cargados++;
+				r.totalPesos += pl.valor;
+				r.totalHoras += pl.horas;
+			}
+
+			psCargue.executeBatch();
+			psCargue.close();
+
+			psSem.executeBatch();
+			psSem.close();
+
+			// Medir desviaciones contra lo estimado para actualizar calibración
+			for (int s = 0; s < domingos.size(); s++) {
+				registrarDesviacion(domingos.get(s));
+			}
+
+		} catch (final Exception e) {
+			System.out.println("GerenciaNominaCalculoDAO.guardarCargueConciliacion: " + e.toString());
+			r.problemas.add("Error guardando conciliacion: " + e.toString());
+		} finally {
+			cerrar(cn);
+		}
+
+		return (r);
+	}
+
+	public static String guardarNotaConciliacion(final int idCargue, final String observacion,
+			final String estado, final String usuario) {
+		if (idCargue <= 0) {
+			return ("{\"respuesta\":\"INVALIDO\",\"detalle\":\"ID de registro inválido\"}");
+		}
+		final ConexionBaseDatos con = new ConexionBaseDatos();
+		final Connection cn = con.obtenerConexionBDPrincipalLocal();
+		if (cn == null) {
+			return ("{\"respuesta\":\"NOK\",\"detalle\":\"Sin conexion a la base\"}");
+		}
+		try {
+			final PreparedStatement ps = cn.prepareStatement(
+					"UPDATE gerencia_nomina_real_cargue "
+					+ " SET observacion_conciliacion = ?, estado_conciliacion = ?, usuario = ? "
+					+ " WHERE idcargue = ?");
+			ps.setString(1, texto(observacion));
+			ps.setString(2, (estado != null && !estado.isEmpty()) ? estado : "CONCILIADO");
+			ps.setString(3, texto(usuario));
+			ps.setInt(4, idCargue);
+			final int filas = ps.executeUpdate();
+			ps.close();
+			if (filas > 0) {
+				return ("{\"respuesta\":\"OK\",\"filas\":" + filas + "}");
+			}
+			return ("{\"respuesta\":\"NOK\",\"detalle\":\"No se encontro el registro a actualizar\"}");
+		} catch (final Exception e) {
+			System.out.println("GerenciaNominaCalculoDAO.guardarNotaConciliacion: " + e.toString());
+			return ("{\"respuesta\":\"NOK\",\"detalle\":\"" + e.getMessage() + "\"}");
+		} finally {
+			cerrar(cn);
+		}
+	}
+
+	private static class ParsedLinea {
+		String cedula = "";
+		String nombre = "";
+		double valor = 0;
+		double horas = 0;
+		boolean esEncabezado = false;
+	}
+
+	private static ParsedLinea parsearLineaCargue(final String linea, final int indiceLinea, final HashMap<String, EmpleadoInfo> mapaEmp) {
+		if (linea == null || linea.trim().isEmpty()) {
+			return (null);
+		}
+		final String[] tokens = partirCampos(linea);
+		if (tokens.length == 0) {
+			return (null);
+		}
+
+		final ParsedLinea res = new ParsedLinea();
+		String candidateCedula = null;
+		final StringBuilder nameBuilder = new StringBuilder();
+
+		for (int i = 0; i < tokens.length; i++) {
+			final String t = tokens[i].trim();
+			if (t.isEmpty()) {
+				continue;
+			}
+
+			if ("CC".equalsIgnoreCase(t) || "CE".equalsIgnoreCase(t) || "TI".equalsIgnoreCase(t)
+					|| "CD".equalsIgnoreCase(t) || "PT".equalsIgnoreCase(t) || "NIT".equalsIgnoreCase(t)) {
+				continue;
+			}
+
+			String numClean = t.replace(".", "").replace(",", "").replace("$", "").replace("\"", "").trim();
+			if (t.contains("E") || t.contains("e")) {
+				try {
+					final double d = Double.parseDouble(t);
+					final long l = (long) d;
+					numClean = String.valueOf(l);
+				} catch (final Exception ignored) {
+				}
+			}
+
+			if (esSoloDigitos(numClean)) {
+				try {
+					final long valLong = Long.parseLong(numClean);
+					if (candidateCedula == null && numClean.length() >= 6 && numClean.length() <= 11 && valLong > 100000) {
+						if (mapaEmp != null && mapaEmp.containsKey(numClean)) {
+							candidateCedula = numClean;
+						} else if (candidateCedula == null && valLong < 2000000000L) {
+							candidateCedula = numClean;
+						}
+					} else if (valLong >= 5000) {
+						res.valor = valLong;
+					} else if (valLong > 0 && valLong <= 500) {
+						res.horas = valLong;
+					}
+				} catch (final Exception ignored) {
+				}
+			} else {
+				try {
+					final double d = Double.parseDouble(t.replace("$", "").replace(",", "."));
+					if (d >= 5000) {
+						res.valor = d;
+					} else if (d > 0 && d <= 500) {
+						res.horas = d;
+					}
+				} catch (final Exception ex) {
+					if (!"CA".equalsIgnoreCase(t) && !"CC".equalsIgnoreCase(t) && !"AH".equalsIgnoreCase(t)) {
+						if (nameBuilder.length() > 0) {
+							nameBuilder.append(' ');
+						}
+						nameBuilder.append(t);
+					}
+				}
+			}
+		}
+
+		if (candidateCedula == null && tokens.length >= 2) {
+			final String primerCampo = tokens[0].trim().replace(".", "").replace(",", "").replace("\"", "");
+			if (esSoloDigitos(primerCampo) && primerCampo.length() >= 6) {
+				candidateCedula = primerCampo;
+				if (tokens.length >= 3 && !esSoloDigitos(tokens[1].trim())) {
+					res.valor = pesos(tokens[2]);
+					if (tokens.length >= 4) {
+						res.horas = pesos(tokens[3]);
+					}
+				} else {
+					res.valor = pesos(tokens[1]);
+					if (tokens.length >= 3) {
+						res.horas = pesos(tokens[2]);
+					}
+				}
+			}
+		}
+
+		res.cedula = (candidateCedula != null ? candidateCedula : "");
+		res.nombre = nameBuilder.toString();
+		if (indiceLinea == 0 && res.cedula.isEmpty() && res.valor == 0) {
+			res.esEncabezado = true;
+		}
+		return (res);
+	}
+
+	private static boolean esSoloDigitos(final String s) {
+		if (s == null || s.isEmpty()) {
+			return (false);
+		}
+		for (int i = 0; i < s.length(); i++) {
+			if (!Character.isDigit(s.charAt(i))) {
+				return (false);
+			}
+		}
+		return (true);
 	}
 
 	private static boolean esNumero(final String s) {

@@ -214,6 +214,98 @@ public class GerenciaNominaCalculoCtrl {
 		return (consultarEstimados(semana));
 	}
 
+	public String consultarConciliacion(final String modo, final int idPeriodo, final int anio, final int mes) {
+		final GerenciaNominaCalculoDAO.ResumenConciliacion r =
+				GerenciaNominaCalculoDAO.consultarConciliacion(modo, idPeriodo, anio, mes);
+
+		final StringBuilder sb = new StringBuilder("{\"respuesta\":\"OK\"");
+		sb.append(",\"modo\":\"").append(esc(r.modo)).append('"');
+		sb.append(",\"idperiodo\":").append(r.idPeriodo);
+		sb.append(",\"periodo_texto\":\"").append(esc(r.periodoTexto)).append('"');
+		sb.append(",\"fecha_desde\":\"").append(esc(r.fechaDesde)).append('"');
+		sb.append(",\"fecha_hasta\":\"").append(esc(r.fechaHasta)).append('"');
+		sb.append(",\"semanas\":[");
+		for (int i = 0; i < r.domingos.size(); i++) {
+			if (i > 0) sb.append(',');
+			sb.append('"').append(esc(r.domingos.get(i))).append('"');
+		}
+		sb.append(']');
+		sb.append(",\"total_real\":").append(num(r.totalRealPagado));
+		sb.append(",\"total_biometria\":").append(num(r.totalBiometria));
+		sb.append(",\"diff_pesos\":").append(num(r.diffPesos));
+		sb.append(",\"diff_pct\":").append(num(r.diffPct));
+		sb.append(",\"horas_real\":").append(num(r.horasTotalesReal));
+		sb.append(",\"horas_biometria\":").append(num(r.horasTotalesBio));
+		sb.append(",\"diff_horas\":").append(num(r.diffHoras));
+		sb.append(",\"total_empleados\":").append(r.totalEmpleados);
+		sb.append(",\"cant_cuadrados\":").append(r.cantCuadrados);
+		sb.append(",\"cant_diferencias\":").append(r.cantDiferencias);
+		sb.append(",\"cant_solo_real\":").append(r.cantSoloReal);
+		sb.append(",\"cant_solo_bio\":").append(r.cantSoloBio);
+
+		sb.append(",\"filas\":[");
+		for (int i = 0; i < r.filas.size(); i++) {
+			final GerenciaNominaCalculoDAO.FilaConciliacion f = r.filas.get(i);
+			if (i > 0) sb.append(',');
+			sb.append("{\"idempleado\":").append(f.idEmpleado);
+			sb.append(",\"cedula\":\"").append(esc(f.cedula)).append('"');
+			sb.append(",\"nombre\":\"").append(esc(f.nombre)).append('"');
+			sb.append(",\"cargo\":\"").append(esc(f.cargo)).append('"');
+			sb.append(",\"tienda\":\"").append(esc(f.tienda)).append('"');
+			sb.append(",\"idtienda\":").append(f.idTienda);
+			sb.append(",\"horas_bio\":").append(num(f.horasBio));
+			sb.append(",\"basico_bio\":").append(num(f.basicoBio));
+			sb.append(",\"variable_bio\":").append(num(f.variableBio));
+			sb.append(",\"auxilio_bio\":").append(num(f.auxilioBio));
+			sb.append(",\"seg_social_bio\":").append(num(f.segSocialBio));
+			sb.append(",\"provisiones_bio\":").append(num(f.liquidacionBio));
+			sb.append(",\"costo_bio\":").append(num(f.costoBio));
+			sb.append(",\"tiene_biometria\":").append(f.tieneBiometria);
+			sb.append(",\"idcargue\":").append(f.idCargue);
+			sb.append(",\"horas_real\":").append(num(f.horasReal));
+			sb.append(",\"total_real\":").append(num(f.totalPagadoReal));
+			sb.append(",\"origen_real\":\"").append(esc(f.origenReal)).append('"');
+			sb.append(",\"fecha_cargue\":\"").append(esc(f.fechaCargue)).append('"');
+			sb.append(",\"observacion\":\"").append(esc(f.observacion)).append('"');
+			sb.append(",\"estado\":\"").append(esc(f.estado)).append('"');
+			sb.append(",\"tiene_real\":").append(f.tieneReal);
+			sb.append(",\"diff_horas\":").append(num(f.diffHoras));
+			sb.append(",\"diff_pesos\":").append(num(f.diffPesos));
+			sb.append(",\"diff_pct\":").append(num(f.diffPct));
+			sb.append(",\"semaforo\":\"").append(esc(f.semaforo)).append('"');
+			sb.append(",\"diagnostico\":\"").append(esc(f.diagnostico)).append('"');
+			sb.append(",\"es_sena\":").append(f.esSena).append('}');
+		}
+		sb.append(']');
+		return (sb.append('}').toString());
+	}
+
+	public String guardarCargueConciliacion(final String modo, final int idPeriodo, final int anio, final int mes,
+			final String pegado, final String tipoValor, final String origen, final String usuario) {
+		final GerenciaNominaCalculoDAO.ResultadoCarga r =
+				GerenciaNominaCalculoDAO.guardarCargueConciliacion(modo, idPeriodo, anio, mes, pegado, tipoValor, origen, usuario);
+
+		final StringBuilder sb = new StringBuilder("{\"respuesta\":\"OK\"");
+		sb.append(",\"cargados\":").append(r.cargados);
+		sb.append(",\"no_encontrados\":").append(r.noEncontrados);
+		sb.append(",\"ilegibles\":").append(r.ilegibles);
+		sb.append(",\"total_pesos\":").append(num(r.totalPesos));
+		sb.append(",\"total_horas\":").append(num(r.totalHoras));
+		sb.append(",\"problemas\":[");
+		final int tope = Math.min(r.problemas.size(), 50);
+		for (int i = 0; i < tope; i++) {
+			if (i > 0) sb.append(',');
+			sb.append('"').append(esc(r.problemas.get(i))).append('"');
+		}
+		sb.append(']');
+		sb.append(",\"problemas_totales\":").append(r.problemas.size());
+		return (sb.append('}').toString());
+	}
+
+	public String guardarNotaConciliacion(final int idCargue, final String observacion, final String estado, final String usuario) {
+		return (GerenciaNominaCalculoDAO.guardarNotaConciliacion(idCargue, observacion, estado, usuario));
+	}
+
 	private static String num(final double d) {
 		if (Double.isNaN(d) || Double.isInfinite(d)) {
 			return ("0");

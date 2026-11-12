@@ -65,6 +65,14 @@ public class GerenciaNominaCalculo extends HttpServlet {
 				out.write(ctrl.consultarPeriodos());
 				return;
 			}
+			if ("conciliacion".equals(que)) {
+				final String modo = GerenciaSesion.texto(request, "modo");
+				final int idPeriodo = (int) GerenciaSesion.valor(request, "idperiodo");
+				final int anio = GerenciaSesion.entero(request, "anio", java.util.Calendar.getInstance().get(java.util.Calendar.YEAR));
+				final int mes = GerenciaSesion.entero(request, "mes", java.util.Calendar.getInstance().get(java.util.Calendar.MONTH) + 1);
+				out.write(ctrl.consultarConciliacion(modo, idPeriodo, anio, mes));
+				return;
+			}
 
 			final String semana = GerenciaSesion.texto(request, "semana");
 			if (!esFecha(semana)) {
@@ -119,6 +127,33 @@ public class GerenciaNominaCalculo extends HttpServlet {
 				out.write(ctrl.guardarParametro(codigo, valor,
 						GerenciaSesion.texto(request, "desde"),
 						GerenciaSesion.texto(request, "observacion"), usuario));
+				return;
+			}
+
+			if ("cargar_conciliacion".equals(que)) {
+				final String pegado = request.getParameter("datos");
+				if (pegado == null || pegado.trim().isEmpty()) {
+					out.write("{\"respuesta\":\"INVALIDO\",\"detalle\":\"No vino nada que cargar\"}");
+					return;
+				}
+				final String modo = GerenciaSesion.texto(request, "modo");
+				final int idPeriodo = (int) GerenciaSesion.valor(request, "idperiodo");
+				final int anio = GerenciaSesion.entero(request, "anio", java.util.Calendar.getInstance().get(java.util.Calendar.YEAR));
+				final int mes = GerenciaSesion.entero(request, "mes", java.util.Calendar.getInstance().get(java.util.Calendar.MONTH) + 1);
+				final String tipoValor = GerenciaSesion.texto(request, "tipo_valor");
+				String origen = GerenciaSesion.texto(request, "origen");
+				if (origen == null || origen.trim().isEmpty()) {
+					origen = "EXCEL";
+				}
+				out.write(ctrl.guardarCargueConciliacion(modo, idPeriodo, anio, mes, pegado, tipoValor, origen, usuario));
+				return;
+			}
+
+			if ("nota_conciliacion".equals(que)) {
+				final int idCargue = (int) GerenciaSesion.valor(request, "idcargue");
+				final String observacion = GerenciaSesion.texto(request, "observacion");
+				final String estado = GerenciaSesion.texto(request, "estado");
+				out.write(ctrl.guardarNotaConciliacion(idCargue, observacion, estado, usuario));
 				return;
 			}
 

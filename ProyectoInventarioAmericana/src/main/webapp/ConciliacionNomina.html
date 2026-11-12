@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<title>Conciliaci&oacute;n de N&oacute;mina | Real vs Biometr&iacute;a</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<link href="css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+	<link href="css/all.min.css" rel="stylesheet" type="text/css" />
+	<link href="css/gerencia.css" rel="stylesheet" type="text/css" />
+	<script type="text/javascript" src="js/jquery-1.11.0.min.js"></script>
+	<script type="text/javascript" src="js/bootstrap.min.js"></script>
+	<style>
+		.ger-tabla-sticky-wrapper {
+			max-height: 72vh;
+			overflow-y: auto;
+			overflow-x: auto;
+			border: 1px solid #D6DCE5;
+			border-radius: 6px;
+			background: #fff;
+			box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+		}
+		#tablaConciliacion {
+			margin-bottom: 0 !important;
+		}
+		#tablaConciliacion thead th {
+			position: sticky;
+			top: 0;
+			background: #102F6F !important;
+			color: #ffffff !important;
+			z-index: 20;
+			border-top: none !important;
+			border-bottom: 2px solid #081B44 !important;
+			box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+			white-space: nowrap;
+			vertical-align: middle;
+			font-size: 11.5px;
+		}
+		#tablaConciliacion thead th .th-sub {
+			display: block;
+			font-size: 10px;
+			font-weight: normal;
+			color: #DDE7FA;
+			letter-spacing: 0.3px;
+		}
+		#tablaConciliacion tfoot th {
+			position: sticky;
+			bottom: 0;
+			background: #0E275C !important;
+			color: #ffffff !important;
+			z-index: 15;
+			box-shadow: 0 -2px 4px rgba(0,0,0,0.12);
+		}
+		.badge-cuadrado { background: #dcfce7; color: #15803d; border: 1px solid #86efac; font-weight: 700; padding: 3px 8px; border-radius: 12px; }
+		.badge-alerta { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-weight: 700; padding: 3px 8px; border-radius: 12px; }
+		.badge-descuadre { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; font-weight: 700; padding: 3px 8px; border-radius: 12px; }
+		.badge-solo-real { background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; font-weight: 700; padding: 3px 8px; border-radius: 12px; }
+		.badge-solo-bio { background: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe; font-weight: 700; padding: 3px 8px; border-radius: 12px; }
+		
+		.kpi-card {
+			background: #ffffff;
+			border: 1px solid #E2E8F0;
+			border-radius: 8px;
+			padding: 12px 16px;
+			box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+			margin-bottom: 12px;
+			transition: all 0.2s ease-in-out;
+		}
+		.kpi-card:hover {
+			border-color: #102F6F;
+			box-shadow: 0 3px 8px rgba(16,47,111,0.12);
+		}
+		.kpi-title {
+			font-size: 11px;
+			text-transform: uppercase;
+			color: #64748B;
+			font-weight: 700;
+			letter-spacing: 0.5px;
+			margin-bottom: 4px;
+		}
+		.kpi-value {
+			font-size: 20px;
+			font-weight: 800;
+			color: #0F172A;
+			line-height: 1.2;
+		}
+		.kpi-sub {
+			font-size: 11.5px;
+			color: #64748B;
+			margin-top: 4px;
+		}
+		.filtro-pill {
+			cursor: pointer;
+			border-radius: 20px;
+			padding: 4px 12px;
+			font-size: 12px;
+			font-weight: 600;
+			margin-right: 6px;
+			display: inline-block;
+			border: 1px solid #CBD5E1;
+			background: #fff;
+			color: #475569;
+			transition: all 0.15s ease-in-out;
+		}
+		.filtro-pill:hover, .filtro-pill.activa {
+			background: #102F6F;
+			color: #fff;
+			border-color: #102F6F;
+		}
+		.drawer-cargue {
+			background: #F8FAFC;
+			border: 2px dashed #94A3B8;
+			border-radius: 8px;
+			padding: 16px;
+			margin-bottom: 16px;
+		}
+	</style>
+</head>
+<body>
+
+	<div id="cargarMenu"></div>
+
+	<script type="text/javascript">
+		var server = window.location.protocol + '//' + window.location.host
+			+ window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+		var respuesta = '';
+		$.ajax({
+			url: server + 'ValidarUsuarioAplicacion',
+			dataType: 'text',
+			type: 'post',
+			async: false,
+			success: function (data) { respuesta = data; }
+		});
+		switch (respuesta) {
+			case 'OK':
+				$('#cargarMenu').load("Menu.html");
+				break;
+			case 'OKA':
+				$('#cargarMenu').load("MenuAdm.html");
+				break;
+			default:
+				location.href = server + "Index.html";
+				break;
+		}
+	</script>
+
+	<div class="container-fluid" style="max-width:1700px;">
+
+		<div class="row" style="margin-top: 14px; margin-bottom: 8px; align-items: center;">
+			<div class="col-md-8 col-sm-7">
+				<h3 class="ger-h1" style="margin-top:0;">Conciliaci&oacute;n de N&oacute;mina <small style="color:#64748b; font-size:16px;">(Real vs Biometr&iacute;a)</small></h3>
+				<p class="ger-sub" style="margin-bottom:0;">
+					Auditor&iacute;a gerencial cruzada: compara lo efectivamente pagado en n&oacute;mina (SIIGO / dispersi&oacute;n bancaria) 
+					contra el estimado calculado por biometr&iacute;a. Permite cargar por <strong>quincena</strong> o por <strong>mes completo</strong>,
+					detectar diferencias en horas o tarifas y conciliar novedades.
+				</p>
+			</div>
+			<div class="col-md-4 col-sm-5 text-right">
+				<a href="NominaCalculo.html" class="btn btn-default btn-sm" style="margin-right:4px;">
+					<i class="fas fa-calculator mr-1"></i> C&aacute;lculo Biometr&iacute;a
+				</a>
+				<a href="CierreGerencia.html" class="btn btn-default btn-sm" style="margin-right:4px;">
+					<i class="fas fa-check-double mr-1"></i> Cierre Gerencial
+				</a>
+				<a href="Rentabilidad.html" class="btn btn-default btn-sm">
+					<i class="fas fa-chart-line mr-1"></i> Rentabilidad
+				</a>
+			</div>
+		</div>
+
+		<!-- Reja de acceso a Gerencia -->
+		<div id="ger-reja" style="display:none;" class="ger-acceso">
+			<div class="ger-acceso-caja">
+				<h4>Identif&iacute;quese en Gerencia</h4>
+				<p class="ger-acceso-nota">
+					El acceso a n&oacute;mina y conciliaci&oacute;n es restringido. Ingrese su usuario y clave del sistema central.
+				</p>
+				<div id="ger-reja-mensaje" class="ger-mensaje" style="display:none;"></div>
+				<form id="formAcceso" onsubmit="return false;">
+					<div class="ger-campo">
+						<label>Usuario</label>
+						<input type="text" id="ger-usuario" class="form-control" autocomplete="username" />
+					</div>
+					<div class="ger-campo">
+						<label>Clave</label>
+						<input type="password" id="ger-clave" class="form-control" autocomplete="current-password" />
+					</div>
+					<button type="submit" id="btnEntrarGerencia" class="btn btn-primary btn-block" style="margin-top:12px;">
+						<i class="fas fa-key"></i> Entrar a Gerencia
+					</button>
+				</form>
+			</div>
+		</div>
+
+		<!-- Contenido Principal -->
+		<div id="ger-contenido" style="display:none;">
+
+			<!-- Barra de sesión -->
+			<div class="ger-barra" style="margin-top:4px; margin-bottom:12px;">
+				<span class="ger-barra-rotulo">GERENCIA</span>
+				<span class="ger-barra-quien" id="ger-usuario-activo"></span>
+				<a href="#" id="btnSalirGerencia" class="ger-barra-salir">Cerrar Gerencia</a>
+			</div>
+
+			<!-- Panel de Selección de Período y Acciones -->
+			<div class="ger-panel">
+				<div class="row" style="align-items: center;">
+					<div class="col-md-3 col-sm-4">
+						<div class="ger-campo">
+							<label>Modalidad de Cargue / Consulta</label>
+							<div class="btn-group btn-group-sm btn-group-justified" id="grupoModalidad">
+								<a href="#" class="btn btn-primary active" id="btnModoQuincena" data-modo="QUINCENA">
+									<i class="fas fa-calendar-day mr-1"></i> Por Quincena
+								</a>
+								<a href="#" class="btn btn-default" id="btnModoMes" data-modo="MES">
+									<i class="fas fa-calendar-alt mr-1"></i> Mes Completo
+								</a>
+							</div>
+						</div>
+					</div>
+
+					<!-- Selector Quincena -->
+					<div class="col-md-4 col-sm-5" id="bloqueQuincena">
+						<div class="ger-campo">
+							<label>Seleccionar Quincena (Per&iacute;odo de N&oacute;mina)</label>
+							<select id="selPeriodoNomina" class="form-control input-sm"></select>
+						</div>
+					</div>
+
+					<!-- Selector Mes Completo -->
+					<div class="col-md-4 col-sm-5" id="bloqueMes" style="display:none;">
+						<div class="row">
+							<div class="col-xs-5">
+								<div class="ger-campo">
+									<label>A&ntilde;o</label>
+									<select id="selAnioMes" class="form-control input-sm">
+										<option value="2026" selected>2026</option>
+										<option value="2025">2025</option>
+										<option value="2024">2024</option>
+									</select>
+								</div>
+							</div>
+							<div class="col-xs-7">
+								<div class="ger-campo">
+									<label>Mes</label>
+									<select id="selMes" class="form-control input-sm">
+										<option value="1">Enero</option>
+										<option value="2">Febrero</option>
+										<option value="3">Marzo</option>
+										<option value="4">Abril</option>
+										<option value="5">Mayo</option>
+										<option value="6">Junio</option>
+										<option value="7">Julio</option>
+										<option value="8">Agosto</option>
+										<option value="9">Septiembre</option>
+										<option value="10" selected>Octubre</option>
+										<option value="11">Noviembre</option>
+										<option value="12">Diciembre</option>
+									</select>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="col-md-5 col-sm-3 text-right" style="padding-top:12px;">
+						<button id="btnConsultar" class="btn btn-primary btn-sm" style="font-weight:600;">
+							<i class="fas fa-sync-alt mr-1"></i> Consultar
+						</button>
+						<button id="btnAbrirCargue" class="btn btn-success btn-sm" style="font-weight:600; margin-left:4px;">
+							<i class="fas fa-upload mr-1"></i> Cargar N&oacute;mina Real
+						</button>
+						<button id="btnExportarExcel" class="btn btn-default btn-sm" style="font-weight:600; margin-left:4px;">
+							<i class="fas fa-file-excel mr-1 text-success"></i> Excel
+						</button>
+					</div>
+				</div>
+
+				<div id="infoPeriodo" style="margin-top:6px; font-size:12px; color:#475569;">
+					<i class="fas fa-info-circle mr-1 text-info"></i>
+					<span id="txtInfoPeriodo">Cargando informaci&oacute;n del per&iacute;odo...</span>
+				</div>
+			</div>
+
+			<!-- Drawer / Panel Colapsable de Cargue de Nómina Real -->
+			<div id="panelCargueDrawer" class="drawer-cargue" style="display:none;">
+				<div class="row" style="margin-bottom:8px; align-items:center;">
+					<div class="col-md-8">
+						<h4 style="margin:0; font-size:16px; font-weight:bold; color:#102F6F;">
+							<i class="fas fa-file-import mr-1"></i> Cargar Archivo de N&oacute;mina Real para Conciliaci&oacute;n
+						</h4>
+						<p style="margin:4px 0 0 0; font-size:12px; color:#64748B;">
+							Copie las filas de su archivo de Excel (SIIGO, Bancolombia o resumen interno) y p&eacute;guelas directamente en el cuadro inferior.
+						</p>
+					</div>
+					<div class="col-md-4 text-right">
+						<button type="button" class="close" id="btnCerrarDrawer" aria-label="Cerrar" style="font-size:24px;">&times;</button>
+					</div>
+				</div>
+
+				<div class="alert alert-info" style="font-size:11.5px; padding:8px 12px; margin-bottom:10px;">
+					<strong>Formatos reconocidos autom&aacute;ticamente:</strong>
+					<br/>
+					&bull; <code>C&eacute;dula &nbsp; Total Pagado ($) &nbsp; Horas</code> &nbsp;&nbsp;|&nbsp;&nbsp;
+					&bull; <code>C&eacute;dula &nbsp; Total Pagado ($)</code> &nbsp;&nbsp;|&nbsp;&nbsp;
+					&bull; <code>C&eacute;dula &nbsp; Nombre &nbsp; Total Pagado ($) &nbsp; Horas</code> &nbsp;&nbsp;|&nbsp;&nbsp;
+					&bull; <strong>Plano de Bancolombia PAB:</strong> <code>Tipo &nbsp; C&eacute;dula &nbsp; Nombre &nbsp; Apellido &nbsp; Cuenta &nbsp; Valor</code>
+					<br/>
+					<em>El sistema limpia autom&aacute;ticamente puntos de miles (ej: <code>1.250.000</code>), comas, signos de pesos y espacios.</em>
+				</div>
+
+				<div class="row">
+					<div class="col-md-4 col-sm-6">
+						<div class="ger-campo">
+							<label>&iquest;Qu&eacute; representa el valor pegado?</label>
+							<select id="selTipoValor" class="form-control input-sm">
+								<option value="TOTAL" selected>Total Pagado / Devengado (N&oacute;mina Completa)</option>
+								<option value="VARIABLE">Solo Salario Variable (Recargos, Extras y Bonos)</option>
+							</select>
+						</div>
+					</div>
+					<div class="col-md-4 col-sm-6">
+						<div class="ger-campo">
+							<label>Origen del archivo</label>
+							<select id="selOrigenCargue" class="form-control input-sm">
+								<option value="SIIGO">Exportaci&oacute;n SIIGO</option>
+								<option value="BANCOLOMBIA">Dispersi&oacute;n Bancolombia (PAB)</option>
+								<option value="MANUAL">Digitaci&oacute;n Manual / Otro</option>
+							</select>
+						</div>
+					</div>
+					<div class="col-md-4 col-sm-12 text-right" style="padding-top:20px;">
+						<button id="btnPrevisualizar" class="btn btn-info btn-sm">
+							<i class="fas fa-eye mr-1"></i> Previsualizar Pegado
+						</button>
+						<button id="btnGuardarCargue" class="btn btn-primary btn-sm" style="font-weight:700;">
+							<i class="fas fa-save mr-1"></i> Guardar N&oacute;mina Real
+						</button>
+					</div>
+				</div>
+
+				<div class="ger-campo" style="margin-top:8px;">
+					<textarea id="txtPegadoReal" class="form-control" rows="8"
+						placeholder="Pegue aqu&iacute; las filas copiadas desde Excel..."
+						style="font-family:monospace; font-size:12px;"></textarea>
+				</div>
+
+				<div id="resumenPrevisualizacion" style="margin-top:6px;"></div>
+			</div>
+
+			<!-- Tarjetas de Resumen KPI -->
+			<div class="row">
+				<div class="col-md-2 col-sm-4 col-xs-6">
+					<div class="kpi-card">
+						<div class="kpi-title"><i class="fas fa-money-check-alt mr-1 text-primary"></i> Real Pagado</div>
+						<div class="kpi-value" id="kpiTotalReal">$ 0</div>
+						<div class="kpi-sub" id="kpiSubReal">0 personas con real</div>
+					</div>
+				</div>
+				<div class="col-md-2 col-sm-4 col-xs-6">
+					<div class="kpi-card">
+						<div class="kpi-title"><i class="fas fa-calculator mr-1 text-info"></i> Biometr&iacute;a Est.</div>
+						<div class="kpi-value" id="kpiTotalBio">$ 0</div>
+						<div class="kpi-sub" id="kpiSubBio">Costo estimado de ley</div>
+					</div>
+				</div>
+				<div class="col-md-3 col-sm-4 col-xs-6">
+					<div class="kpi-card">
+						<div class="kpi-title"><i class="fas fa-balance-scale mr-1 text-warning"></i> Diferencia Neta ($ y %)</div>
+						<div class="kpi-value" id="kpiDiffPesos">$ 0</div>
+						<div class="kpi-sub" id="kpiDiffPct">0.0% variaci&oacute;n</div>
+					</div>
+				</div>
+				<div class="col-md-2 col-sm-4 col-xs-6">
+					<div class="kpi-card">
+						<div class="kpi-title"><i class="fas fa-user-clock mr-1 text-success"></i> Horas Totales</div>
+						<div class="kpi-value" id="kpiHorasTotales">0 vs 0</div>
+						<div class="kpi-sub" id="kpiSubHoras">Real vs Biometr&iacute;a</div>
+					</div>
+				</div>
+				<div class="col-md-3 col-sm-8 col-xs-12">
+					<div class="kpi-card">
+						<div class="kpi-title"><i class="fas fa-tasks mr-1 text-danger"></i> Estado de Auditor&iacute;a</div>
+						<div class="kpi-value" id="kpiEstadoAuditoria">0 / 0</div>
+						<div class="kpi-sub" id="kpiSubAuditoria">Cuadrados vs Con diferencias</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Barra de Filtros Rápidos y Búsqueda -->
+			<div class="ger-panel" style="padding:10px 14px;">
+				<div class="row" style="align-items: center;">
+					<div class="col-md-8 col-sm-7">
+						<div class="filtro-pill activa" data-filtro="todos">
+							Todos (<span id="cntTodos">0</span>)
+						</div>
+						<div class="filtro-pill" data-filtro="diferencias">
+							<i class="fas fa-exclamation-circle text-danger mr-1"></i> Con Diferencia (<span id="cntDiferencias">0</span>)
+						</div>
+						<div class="filtro-pill" data-filtro="cuadrados">
+							<i class="fas fa-check-circle text-success mr-1"></i> Cuadrados (<span id="cntCuadrados">0</span>)
+						</div>
+						<div class="filtro-pill" data-filtro="solo_real">
+							<i class="fas fa-file-invoice text-info mr-1"></i> Solo en N&oacute;mina (<span id="cntSoloReal">0</span>)
+						</div>
+						<div class="filtro-pill" data-filtro="solo_bio">
+							<i class="fas fa-fingerprint text-purple mr-1"></i> Solo en Biometr&iacute;a (<span id="cntSoloBio">0</span>)
+						</div>
+					</div>
+
+					<div class="col-md-2 col-sm-2">
+						<select id="selFiltroTienda" class="form-control input-sm">
+							<option value="">Todas las Tiendas</option>
+						</select>
+					</div>
+
+					<div class="col-md-2 col-sm-3">
+						<div class="input-group input-group-sm">
+							<input type="text" id="txtBuscarEmpleado" class="form-control" placeholder="Buscar empleado o cédula..." />
+							<span class="input-group-addon"><i class="fas fa-search"></i></span>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Tabla de Conciliación -->
+			<div class="ger-tabla-sticky-wrapper">
+				<table class="ger-tabla" id="tablaConciliacion">
+					<thead>
+						<tr>
+							<th style="min-width:220px;">Empleado / Cargo</th>
+							<th style="min-width:110px;">Tienda</th>
+							<th class="ger-num" style="min-width:120px;" title="Horas registradas en biometría vs horas reportadas en nómina">
+								Horas (Bio vs Real)
+								<span class="th-sub">Biometr&iacute;a &middot; Real &middot; &Delta;</span>
+							</th>
+							<th class="ger-num" style="min-width:130px;" title="Costo estimado por biometría con prestaciones de ley">
+								Biometr&iacute;a Est.
+								<span class="th-sub">Costo total calculado</span>
+							</th>
+							<th class="ger-num" style="min-width:130px;" title="Total liquidado o pagado en nómina real">
+								N&oacute;mina Real
+								<span class="th-sub">Total pagado / dispersado</span>
+							</th>
+							<th class="ger-num" style="min-width:130px;" title="Diferencia: Real menos Biometría">
+								Diferencia
+								<span class="th-sub">&Delta; Pesos &middot; %</span>
+							</th>
+							<th style="text-align:center; min-width:105px;">Sem&aacute;foro</th>
+							<th style="min-width:280px;" title="Explicación automática basada en horas, salarios y ausencias">
+								&iquest;Por qu&eacute; est&aacute; diferente?
+								<span class="th-sub">Diagn&oacute;stico autom&aacute;tico</span>
+							</th>
+							<th style="text-align:center; min-width:90px;">Acci&oacute;n</th>
+						</tr>
+					</thead>
+					<tbody id="tbodyConciliacion">
+						<tr>
+							<td colspan="9" class="text-center" style="padding:30px; color:#64748B;">
+								<i class="fas fa-spinner fa-spin fa-2x"></i>
+								<div style="margin-top:8px;">Cargando conciliaci&oacute;n de n&oacute;mina...</div>
+							</td>
+						</tr>
+					</tbody>
+					<tfoot>
+						<tr id="tfootConciliacion" style="font-weight:bold;">
+							<th>TOTALES</th>
+							<th id="tfTiendas">-</th>
+							<th class="ger-num" id="tfHoras">0 vs 0</th>
+							<th class="ger-num" id="tfTotalBio">$ 0</th>
+							<th class="ger-num" id="tfTotalReal">$ 0</th>
+							<th class="ger-num" id="tfDiff">$ 0</th>
+							<th style="text-align:center;" id="tfSemaforo">-</th>
+							<th id="tfDiagnostico">-</th>
+							<th>&nbsp;</th>
+						</tr>
+					</tfoot>
+				</table>
+			</div>
+
+		</div>
+	</div>
+
+	<!-- Modal Observación / Nota de Conciliación -->
+	<div class="modal fade" id="modalNota" tabindex="-1" role="dialog" aria-labelledby="modalNotaLabel">
+		<div class="modal-dialog" role="document">
+			<div class="modal-content">
+				<div class="modal-header" style="background:#102F6F; color:#fff;">
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color:#fff;">&times;</button>
+					<h4 class="modal-title" id="modalNotaLabel">
+						<i class="fas fa-edit mr-1"></i> Conciliar Empleado
+					</h4>
+				</div>
+				<div class="modal-body">
+					<div id="modalNotaInfo" style="margin-bottom:12px; font-size:13px;"></div>
+					<div class="ger-campo">
+						<label>Estado de Conciliaci&oacute;n</label>
+						<select id="modalSelEstado" class="form-control">
+							<option value="CONCILIADO">Conciliado (Diferencia aceptada / explicada)</option>
+							<option value="PENDIENTE">Pendiente (Requiere revisi&oacute;n con RRHH / L&iacute;der)</option>
+							<option value="AJUSTADO">Ajustado en n&oacute;mina posterior</option>
+						</select>
+					</div>
+					<div class="ger-campo">
+						<label>Justificaci&oacute;n / Observaci&oacute;n de Gerencia</label>
+						<textarea id="modalTxtObservacion" class="form-control" rows="4"
+							placeholder="Ej: Se acordó pago de retroactivo del mes pasado autorizado por Gerencia..."></textarea>
+					</div>
+					<input type="hidden" id="modalIdCargue" value="0" />
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-default" data-dismiss="modal">Cancelar</button>
+					<button type="button" class="btn btn-primary" id="btnGuardarNota">
+						<i class="fas fa-save mr-1"></i> Guardar Conciliaci&oacute;n
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script type="text/javascript" src="js/gerenciaconciliacion.js"></script>
+</body>
+</html>
