@@ -54,9 +54,18 @@ import conexionINV.ConexionBaseDatos;
  *    no dia a dia. La ley las mira tambien por dia; una semana de 40 horas con
  *    un dia de 12 aqui no genera extra y en SIIGO si. Es justo el tipo de sesgo
  *    que la calibracion contra el real termina corrigiendo.
- * 2. El recargo de extra se reparte entre diurno y nocturno en la misma
- *    proporcion que tuvo la semana, no identificando cual hora concreta fue la
- *    que excedio.
+ * 2. La hora extra ordinaria va a una sola tasa, 125%, sin separar diurna de
+ *    nocturna: las horas de noche ya cobran su 35% aparte. La extra FESTIVA si
+ *    sigue repartiendose por proporcion, pero ese factor esta por definir -ver
+ *    el comentario donde se calcula- y por eso sale con aviso.
+ *
+ * EL VALOR DE LA HORA, QUE ES DE DONDE SALE TODO
+ *
+ * valor hora = salario mensual / 30 / horas al dia, o sea salario / HORAS_MES_
+ * LIQUIDACION, que es JORNADA_SEMANAL x 5: 42 h/semana -> 210. Estuvo en 240
+ * -la jornada vieja de 48 h- hasta el 2026-11-13, y por eso TODO el variable
+ * salia 14,3% corto. Si algun dia cambia la jornada hay que mover las dos
+ * filas de parametro, no una.
  * 3. Las ausencias no se descuentan: quien no marco queda con su basico y sin
  *    recargos, y con un aviso. Descontarselo seria peor, porque no sabemos si
  *    fue vacaciones, incapacidad o un huellero dañado.
@@ -726,6 +735,7 @@ public class GerenciaNominaCalculoDAO {
 		double horasExtraFest = 0;
 		double recargoExtraOrd = 0;
 		double recargoExtraFest = 0;
+		boolean extraFestivaPendiente = false;
 
 		if (!esAdministrativo) {
 			// Recargo nocturno: franja 19:00 a 06:00 (ordinarias, dominicales y festivas)
@@ -752,18 +762,42 @@ public class GerenciaNominaCalculoDAO {
 				horasExtraFest = Math.min(horasExtraFest, totalExtra - horasExtraOrd);
 
 				if (horasExtraOrd > 0) {
-					final double propNocOrd = hOrdSem > 0 ? (h.nocturnas / hOrdSem) : 0;
-					final double tasaOrd = p.de("EXTRA_NOCTURNA", 75) * propNocOrd
-							+ p.de("EXTRA_DIURNA", 25) * (1 - propNocOrd);
-					recargoExtraOrd = horasExtraOrd * vh * tasaOrd / 100.0;
+					//LA HORA EXTRA SE PAGA COMPLETA, NO SOLO EL RECARGO.
+					//
+					//Un RECARGO -nocturno, dominical- va sobre una hora que el
+					//sueldo mensual YA cubrio: solo se debe el 35% o el 90%. Una
+					//HORA EXTRA es una hora que el sueldo NO cubrio, asi que se
+					//debe la hora entera mas su recargo: 125%.
+					//
+					//Antes aqui iba solo el 25%, y por eso las extras salian por
+					//la quinta parte. Lo confirma el cuadro de Contabilidad
+					//(HORAS.xlsx): con hora de $10.476, HEO vale $13.095, que es
+					//la hora x 1,25 y no el 25% de la hora.
+					//
+					//Y va UNA SOLA TASA, no el reparto diurno/nocturno que habia:
+					//en el modelo de la compania las horas de noche ya cobran su
+					//35% aparte, en recargoNocturno, sean ordinarias o extras.
+					recargoExtraOrd = horasExtraOrd * vh * p.de("EXTRA_ORDINARIA", 125) / 100.0;
 				}
 
 				if (horasExtraFest > 0) {
+					//PENDIENTE: ESTA PARTE SE SABE MAL Y LA DEFINE JUAN DAVID.
+					//
+					//El cuadro de Contabilidad trae HEF en 1,75 y HEFD en 2,00,
+					//fijos, sin moverse cuando el dominical pasa de 80% a 90%, lo
+					//que no cuadra con la ley ni con la formula de aca abajo. El
+					//2026-11-13 se decidio DEJARLA COMO ESTABA mientras se define,
+					//para no cambiar dos cosas a la vez.
+					//
+					//Mientras tanto estas horas salen con un aviso, para que nadie
+					//tome la cifra como buena. NO BORRAR EL AVISO sin que la
+					//definicion este resuelta.
 					final double propNocFest = hDomFes > 0 ? ((h.domNoct + h.festNoct) / hDomFes) : 0;
 					final double tasaFestDiurna = p.de("EXTRA_FESTIVA_DIURNA", p.de("RECARGO_DOMINICAL", 90) + 25);
 					final double tasaFestNocturna = p.de("EXTRA_FESTIVA_NOCTURNA", p.de("RECARGO_DOMINICAL", 90) + 75);
 					final double tasaFest = tasaFestNocturna * propNocFest + tasaFestDiurna * (1 - propNocFest);
 					recargoExtraFest = horasExtraFest * vh * tasaFest / 100.0;
+					extraFestivaPendiente = true;
 				}
 			}
 		}
@@ -873,6 +907,13 @@ public class GerenciaNominaCalculoDAO {
 			e.aviso = (e.aviso.length() > 0 ? e.aviso + " " : "")
 					+ cuantos + " la hora de cierre del punto de venta, con tope de "
 					+ MAX_HORAS_ESTIMADO + " horas. Conviene corregirlo en el huellero.";
+		}
+		//La extra festiva y la festiva dominical estan por definir: se avisa en
+		//cada fila que las tenga, para que la cifra no se tome como cerrada.
+		if (extraFestivaPendiente) {
+			e.aviso = (e.aviso.length() > 0 ? e.aviso + " " : "")
+					+ "Incluye " + redondear(e.horasExtraFestiva)
+					+ " h de extra festiva o dominical: ese factor esta por definir y la cifra es provisional.";
 		}
 	}
 
