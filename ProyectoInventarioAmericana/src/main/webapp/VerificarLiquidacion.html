@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<title>Verificar liquidaci&oacute;n de un empleado</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<link href="css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+	<link href="css/all.min.css" rel="stylesheet" type="text/css" />
+	<link href="css/gerencia.css" rel="stylesheet" type="text/css" />
+	<script type="text/javascript" src="js/jquery-1.11.0.min.js"></script>
+	<script type="text/javascript" src="js/bootstrap.min.js"></script>
+	<style>
+		.vl-tabla-scroll { overflow-x: auto; border: 1px solid #D6DCE5; border-radius: 6px; background: #fff; margin-bottom: 14px; }
+		.vl-tabla { width: 100%; font-size: 12.5px; border-collapse: collapse; }
+		.vl-tabla th { background: #102F6F; color: #fff; padding: 6px 8px; white-space: nowrap; text-align: right; font-weight: 600; }
+		.vl-tabla th.izq, .vl-tabla td.izq { text-align: left; }
+		.vl-tabla td { padding: 5px 8px; border-top: 1px solid #E9EDF3; text-align: right; white-space: nowrap; }
+		.vl-tabla tr.vl-total td { background: #EAEFF8; font-weight: bold; color: #102F6F; border-top: 2px solid #102F6F; }
+		.vl-tabla tr.vl-sub td { background: #F5F7FB; font-weight: 600; }
+		.vl-tabla tr.vl-festivo td { background: #FFF6E0; }
+		.vl-tabla tr.vl-domingo td { background: #EEF4FF; }
+		.vl-tabla tr:hover td { background: #F1F5FD; }
+		.vl-cero { color: #B7BFCC; }
+		.vl-semana { border: 1px solid #D6DCE5; border-radius: 6px; margin-bottom: 12px; background: #fff; }
+		.vl-semana-cab { padding: 10px 14px; cursor: pointer; background: #F5F7FB; border-radius: 6px 6px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+		.vl-semana-cab h4 { margin: 0; font-size: 15px; color: #102F6F; font-weight: bold; }
+		.vl-semana-cuerpo { padding: 12px 14px; display: none; }
+		.vl-semana.abierta .vl-semana-cuerpo { display: block; }
+		.vl-semana.abierta .vl-semana-cab { border-bottom: 1px solid #D6DCE5; }
+		.vl-chip { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
+		.vl-ok { background: #DCF0E6; color: #16704F; }
+		.vl-aviso { background: #FDE9C6; color: #8A6400; }
+		.vl-mal { background: #FADBDB; color: #C21C1F; }
+		.vl-info { background: #E0ECFF; color: #102F6F; }
+		.vl-persona { display: flex; flex-wrap: wrap; gap: 18px; align-items: baseline; }
+		.vl-persona .nombre { font-size: 20px; font-weight: bold; color: #102F6F; }
+		.vl-persona .dato { font-size: 13px; color: #44505F; }
+		.vl-persona .dato b { color: #102F6F; }
+		.vl-h5 { font-size: 13px; font-weight: bold; color: #102F6F; margin: 14px 0 6px; text-transform: uppercase; letter-spacing: .04em; }
+		.vl-formula { white-space: normal !important; text-align: left !important; min-width: 340px; color: #44505F; }
+		.vl-nota { font-size: 12px; color: #6C7482; margin: 4px 0 10px; }
+		.vl-tabla tr.vl-fila-info td { color: #6C7482; font-style: italic; }
+		.vl-tabla tr.vl-fila-novedad td { background: #FFF1DA; }
+	</style>
+</head>
+<body>
+
+	<div id="cargarMenu"></div>
+
+	<script type="text/javascript">
+		var server = window.location.protocol + '//' + window.location.host
+			+ window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+		var respuesta = '';
+		$.ajax({
+			url: server + 'ValidarUsuarioAplicacion',
+			dataType: 'text',
+			type: 'post',
+			async: false,
+			success: function (data) { respuesta = data; }
+		});
+		switch (respuesta) {
+			case 'OK':
+				$('#cargarMenu').load("Menu.html");
+				break;
+			case 'OKA':
+				$('#cargarMenu').load("MenuAdm.html");
+				break;
+			default:
+				location.href = server + "Index.html";
+				break;
+		}
+	</script>
+
+	<div class="container-fluid" style="max-width:1700px;">
+
+		<h3 class="ger-h1">Verificar la liquidaci&oacute;n de un empleado</h3>
+		<p class="ger-sub">
+			Escoja una persona y un grupo de semanas: la pantalla muestra, semana a semana, los turnos que marc&oacute;,
+			c&oacute;mo cay&oacute; cada hora (ordinaria, nocturna, dominical, festiva), las horas extra y c&oacute;mo se lleg&oacute; a cada valor,
+			para poder revisar si la liquidaci&oacute;n est&aacute; bien. <strong>Solo consulta: no guarda ni cambia nada.</strong>
+		</p>
+
+		<div id="ger-contenido">
+
+			<div class="ger-panel">
+				<div class="row">
+					<div class="col-md-4 col-sm-12">
+						<div class="ger-campo">
+							<label>Empleado</label>
+							<input type="text" id="buscarEmp" class="form-control input-sm" placeholder="Escriba parte del nombre o del cargo para filtrar..." autocomplete="off" />
+							<select id="empleado" class="form-control" size="1" style="margin-top:4px;"></select>
+							<div class="vl-nota" id="contadorEmp"></div>
+						</div>
+					</div>
+					<div class="col-md-2 col-sm-6">
+						<div class="ger-campo">
+							<label>Desde la semana</label>
+							<select id="semDesde" class="form-control"></select>
+						</div>
+					</div>
+					<div class="col-md-2 col-sm-6">
+						<div class="ger-campo">
+							<label>Hasta la semana</label>
+							<select id="semHasta" class="form-control"></select>
+						</div>
+					</div>
+					<div class="col-md-4 col-sm-12">
+						<div class="ger-campo">
+							<label>&nbsp;</label>
+							<div>
+								<button id="btnVer" class="btn btn-primary"><i class="fas fa-search"></i> Ver liquidaci&oacute;n</button>
+								<span class="btn-group btn-group-sm" style="margin-left:8px;">
+									<button type="button" class="btn btn-default btn-rapido" data-n="1">1 semana</button>
+									<button type="button" class="btn btn-default btn-rapido" data-n="2">2</button>
+									<button type="button" class="btn btn-default btn-rapido" data-n="3">3</button>
+									<button type="button" class="btn btn-default btn-rapido" data-n="4">4</button>
+								</span>
+							</div>
+							<div class="vl-nota">Las semanas son de lunes a domingo; se identifican por su domingo de cierre. M&aacute;ximo 8 semanas.</div>
+						</div>
+					</div>
+				</div>
+				<div id="mensaje"></div>
+			</div>
+
+			<div id="resultado" style="display:none;">
+
+				<div class="ger-panel" id="panelPersona"></div>
+
+				<div class="ger-panel">
+					<h4 class="ger-titulo">Resumen del grupo de semanas</h4>
+					<p class="ger-sub" style="margin-bottom:6px;">Haga clic en una semana para ir a su detalle.</p>
+					<div class="vl-h5" style="margin-top:4px;">Horas por franja</div>
+					<div class="vl-tabla-scroll"><table class="vl-tabla" id="tablaHoras"></table></div>
+					<div class="vl-nota">Las horas extra <b>ya est&aacute;n dentro</b> del total: son las que pasan de la jornada semanal. Los turnos que cruzan la medianoche se cuentan por el d&iacute;a de entrada.</div>
+					<div class="vl-h5">Valores en pesos</div>
+					<div class="vl-tabla-scroll"><table class="vl-tabla" id="tablaPesos"></table></div>
+				</div>
+
+				<div style="margin-bottom:8px;">
+					<button class="btn btn-default btn-sm" id="btnAbrirTodo"><i class="fas fa-angle-double-down"></i> Abrir todas las semanas</button>
+					<button class="btn btn-default btn-sm" id="btnCerrarTodo"><i class="fas fa-angle-double-up"></i> Cerrar todas</button>
+					<button class="btn btn-default btn-sm" id="btnLey"><i class="fas fa-gavel"></i> Ver la ley aplicada</button>
+				</div>
+
+				<div id="panelLey" class="ger-panel" style="display:none;"></div>
+				<div id="semanas"></div>
+			</div>
+
+		</div>
+	</div>
+
+	<script type="text/javascript" src="js/gerenciaacceso.js?v=20261113a"></script>
+	<script type="text/javascript" src="js/gerenciaverificar.js?v=20261113a"></script>
+</body>
+</html>

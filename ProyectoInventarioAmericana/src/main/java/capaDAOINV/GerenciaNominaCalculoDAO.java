@@ -526,6 +526,17 @@ public class GerenciaNominaCalculoDAO {
 
 	private static Horas clasificar(final ArrayList<Turno> turnos, final HashSet<String> festivos,
 			final Parametros p, final boolean horasEnteras) {
+		return (clasificar(turnos, festivos, p, horasEnteras, null));
+	}
+
+	/**
+	 * Lo mismo que clasificar, y ademas deja en traza -si no es null- como quedo cada dia:
+	 * los minutos por categoria y las horas que de verdad se pagan despues del redondeo.
+	 * Es lo que usa la pantalla de verificacion. La traza solo OBSERVA: no cambia ninguna
+	 * cuenta, asi que el resultado es el mismo con o sin ella.
+	 */
+	private static Horas clasificar(final ArrayList<Turno> turnos, final HashSet<String> festivos,
+			final Parametros p, final boolean horasEnteras, final ArrayList<DiaDet> traza) {
 		final Horas h = new Horas();
 		final int nocIni = (int) p.de("HORA_NOCTURNA_INICIO", 19);
 		final int nocFin = (int) p.de("HORA_NOCTURNA_FIN", 6);
@@ -594,22 +605,26 @@ public class GerenciaNominaCalculoDAO {
 			// PUNTO DE VENTA: Regla de aproximacion diaria a enteros sin decimales (Math.round).
 			// Ej: 3.2 horas -> 3 horas, 3.7 horas -> 4 horas.
 			// El total semanal es la suma de los dias ya redondeados a enteros.
-			for (final AcumuladoDia dia : dias.values()) {
+			for (final Map.Entry<String, AcumuladoDia> enDia : dias.entrySet()) {
+				final AcumuladoDia dia = enDia.getValue();
 				final double minutosTot = dia.minutosTotales();
-				if (minutosTot <= 0) {
-					continue;
-				}
-				final long horasDia = Math.round(minutosTot / 60.0);
-				if (horasDia <= 0) {
-					continue;
-				}
-
+				final long horasDia = minutosTot <= 0 ? 0 : Math.round(minutosTot / 60.0);
 				// Repartir horasDia entre componentes proporcionales
 				final double[] compMin = new double[] {
 						dia.minutosOrdinarios, dia.minutosNocturnos,
 						dia.minutosDominicales, dia.minutosDomNoct,
 						dia.minutosFestivos, dia.minutosFestNoct };
 				final long[] compHoras = repartirHorasEnteras(compMin, horasDia);
+				if (traza != null) {
+					final double[] pagadas = new double[6];
+					for (int c = 0; c < 6; c++) {
+						pagadas[c] = compHoras[c];
+					}
+					traza.add(nuevoDiaDet(enDia.getKey(), compMin, horasDia, pagadas, festivos));
+				}
+				if (minutosTot <= 0 || horasDia <= 0) {
+					continue;
+				}
 
 				h.ordinarias += compHoras[0];
 				h.nocturnas += compHoras[1];
@@ -636,7 +651,19 @@ public class GerenciaNominaCalculoDAO {
 			// BODEGA Y ADMINISTRATIVOS: Conservan los decimales exactos.
 			// Marcan varias entradas/salidas al dia (desayuno, almuerzo, pausas), por lo que
 			// no se redondea a entero diario para no desfigurar la jornada.
-			for (final AcumuladoDia dia : dias.values()) {
+			for (final Map.Entry<String, AcumuladoDia> enDia : dias.entrySet()) {
+				final AcumuladoDia dia = enDia.getValue();
+				if (traza != null) {
+					final double[] compMin = new double[] {
+							dia.minutosOrdinarios, dia.minutosNocturnos,
+							dia.minutosDominicales, dia.minutosDomNoct,
+							dia.minutosFestivos, dia.minutosFestNoct };
+					final double[] pagadas = new double[6];
+					for (int c = 0; c < 6; c++) {
+						pagadas[c] = compMin[c] / 60.0;
+					}
+					traza.add(nuevoDiaDet(enDia.getKey(), compMin, -1, pagadas, festivos));
+				}
 				h.ordinarias += dia.minutosOrdinarios / 60.0;
 				h.nocturnas += dia.minutosNocturnos / 60.0;
 				h.dominicales += dia.minutosDominicales / 60.0;
@@ -2639,6 +2666,591 @@ public class GerenciaNominaCalculoDAO {
 			return ("");
 		}
 		return (s.length() > 60 ? s.substring(0, 60) + "..." : s);
+	}
+
+	// =======================================================================
+	// Verificacion de la liquidacion de UN empleado, semana a semana
+	// =======================================================================
+	//
+	// PARA QUE SIRVE: para poder ver, sin escribir nada, COMO se llego al costo de una persona:
+	// que turnos marco, como cayeron las horas en cada franja, que se pago por cada una y con
+	// que formula. Sirve de apoyo cuando una cifra de la conciliacion no cuadra y hay que
+	// saber si el problema esta en las horas, en el recargo o en la ley aplicada.
+	//
+	// NO DUPLICA LA CUENTA: usa las mismas funciones que calcular (turnosDe, clasificar,
+	// calcularCosto, aplicarNovedad). La explicacion en palabras se arma aparte pero los
+	// numeros que muestra salen del calculo real, y la pantalla lo contrasta contra lo que
+	// hay guardado para avisar si alguien cambio algo despues de calcular.
+
+	private static final String[] DIAS_SEMANA = { "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo" };
+
+	/** Un turno marcado y como cayeron sus horas, en decimales exactos. */
+	public static class TurnoDet {
+		public String dia = "";
+		public String diaSemana = "";
+		public String entra = "";
+		public String sale = "";
+		public int idTienda;
+		public String tienda = "";
+		public boolean estimado;
+		public double horas;
+		/** ordinaria, nocturna, dominical, dominical nocturna, festiva, festiva nocturna. */
+		public double[] cat = new double[6];
+	}
+
+	/** Un dia: los minutos por categoria y las horas que se pagan tras el redondeo. */
+	public static class DiaDet {
+		public String fecha = "";
+		public String diaSemana = "";
+		public boolean festivo;
+		public boolean domingo;
+		public double[] minutos = new double[6];
+		public double horasExactas;
+		public boolean redondeado;
+		public double horasPagadas;
+		public double[] pagadas = new double[6];
+	}
+
+	/** Una linea de la explicacion: concepto, formula en palabras y valor. */
+	public static class FilaExp {
+		public String concepto = "";
+		public String formula = "";
+		public double valor;
+		public boolean conValor = true;
+		/** costo, subtotal, total, info o novedad. */
+		public String tipo = "costo";
+	}
+
+	public static class SemanaDet {
+		public String semana = "";
+		public String desde = "";
+		public String hasta = "";
+		public boolean horasEnteras;
+		public String area = "";
+		public double valorHora;
+		public Estimado calculo;
+		public ArrayList<TurnoDet> turnos = new ArrayList<TurnoDet>();
+		public ArrayList<DiaDet> dias = new ArrayList<DiaDet>();
+		public ArrayList<FilaExp> explicacion = new ArrayList<FilaExp>();
+		public String novedad = "";
+		public double costoSinNovedad;
+		public boolean hayGuardado;
+		public double guardadoCosto;
+		public double guardadoHoras;
+		public String guardadoFecha = "";
+		public String tableroOrigen = "";
+		public double tableroTotal;
+		public boolean hayTablero;
+		public boolean hayReal;
+		public double realTotal;
+		public String realOrigen = "";
+		public String error = "";
+	}
+
+	public static class DatosPersona {
+		public int id;
+		public String cedula = "";
+		public String nombre = "";
+		public String cargo = "";
+		public String area = "";
+		public double salario;
+		public boolean medioTiempo;
+		public boolean activo = true;
+		public boolean esSena;
+		public boolean horasEnteras;
+	}
+
+	public static class Verificacion {
+		public String error = "";
+		public DatosPersona persona = new DatosPersona();
+		public ArrayList<SemanaDet> semanas = new ArrayList<SemanaDet>();
+		/** codigo, valor: la ley con la que se calculo la ultima semana pedida. */
+		public ArrayList<String[]> parametros = new ArrayList<String[]>();
+	}
+
+	/** Las personas que se pueden escoger para verificar: activas con salario. */
+	public static ArrayList<String[]> listarParaVerificar() {
+		final ArrayList<String[]> lista = new ArrayList<String[]>();
+		final ConexionBaseDatos con = new ConexionBaseDatos();
+		final Connection cnG = con.obtenerConexionBDGeneral();
+		if (cnG == null) {
+			return (lista);
+		}
+		try {
+			final PreparedStatement ps = cnG.prepareStatement(
+					"SELECT e.id, e.nombre_largo, IFNULL(t.descripcion,'') AS cargo, e.salario,"
+					+ " IFNULL(e.medio_tiempo,'N') AS mt, e.activo"
+					+ " FROM empleado e LEFT JOIN tipo_empleado t ON t.idtipoempleado = e.idtipoempleado"
+					+ " WHERE e.salario > 0 AND (e.activo = 1 OR EXISTS (SELECT 1 FROM empleado_evento ev"
+					+ "   WHERE ev.id = e.id AND ev.fecha >= DATE_SUB(CURDATE(), INTERVAL 120 DAY)))"
+					+ " ORDER BY e.nombre_largo");
+			final ResultSet rs = ps.executeQuery();
+			while (rs.next()) {
+				lista.add(new String[] { String.valueOf(rs.getInt("id")), texto(rs.getString("nombre_largo")),
+						texto(rs.getString("cargo")), String.valueOf(rs.getDouble("salario")),
+						"S".equals(rs.getString("mt")) ? "S" : "N", rs.getInt("activo") == 1 ? "S" : "N" });
+			}
+			rs.close();
+			ps.close();
+		} catch (final Exception e) {
+			System.out.println("GerenciaNominaCalculoDAO.listarParaVerificar: " + e.toString());
+		} finally {
+			cerrar(cnG);
+		}
+		return (lista);
+	}
+
+	/**
+	 * Calcula, sin guardar nada, la liquidacion de una persona para cada semana pedida y
+	 * devuelve el detalle completo.
+	 *
+	 * @param semanas los domingos de cierre, en el orden que se quieran ver
+	 */
+	public static Verificacion verificarEmpleado(final int idEmpleado, final ArrayList<String> semanas) {
+		final Verificacion v = new Verificacion();
+		if (semanas == null || semanas.isEmpty()) {
+			v.error = "Escoja al menos una semana.";
+			return (v);
+		}
+		final ConexionBaseDatos conL = new ConexionBaseDatos();
+		final ConexionBaseDatos conG = new ConexionBaseDatos();
+		final Connection cn = conL.obtenerConexionBDPrincipalLocal();
+		final Connection cnG = conG.obtenerConexionBDGeneral();
+		if (cn == null || cnG == null) {
+			cerrar(cn);
+			cerrar(cnG);
+			v.error = "No se pudo conectar a la base.";
+			return (v);
+		}
+		try {
+			final Map<Integer, double[]> cargos = cargosConfigurados(cn);
+			final Map<Integer, String> areas = areasCargo(cn);
+			final Map<Integer, String> excepciones = excepcionesPersona(cn);
+			final Map<Integer, String> tiendas = nombresDeTienda(cn);
+
+			final PreparedStatement psE = cnG.prepareStatement(
+					"SELECT e.id, e.nombre, e.nombre_largo, e.salario, e.idtipoempleado,"
+					+ " IFNULL(e.es_sena, 0) AS es_sena, IFNULL(e.es_sena_electiva, 0) AS es_sena_electiva,"
+					+ " IFNULL(e.supernumerario, 0) AS supernumerario, e.activo, e.es_empleado,"
+					+ " IFNULL(t.descripcion,'') AS cargo, IFNULL(e.medio_tiempo,'N') AS mt"
+					+ " FROM empleado e LEFT JOIN tipo_empleado t ON t.idtipoempleado = e.idtipoempleado"
+					+ " WHERE e.id = ?");
+			psE.setInt(1, idEmpleado);
+			final ResultSet rsE = psE.executeQuery();
+			if (!rsE.next()) {
+				rsE.close();
+				psE.close();
+				v.error = "No se encontró el empleado.";
+				return (v);
+			}
+			final double salario = rsE.getDouble("salario");
+			final int idTipo = rsE.getInt("idtipoempleado");
+			final String cargoTxt = texto(rsE.getString("cargo"));
+			final boolean esSena = rsE.getInt("es_sena") == 1;
+			final boolean esSenaElectiva = rsE.getInt("es_sena_electiva") == 1;
+			final boolean esSuper = rsE.getInt("supernumerario") == 1;
+			final boolean inactivo = rsE.getInt("activo") == 0 || rsE.getInt("es_empleado") == 0;
+			final double[] cfg = cargos.get(Integer.valueOf(idTipo));
+			v.persona.id = idEmpleado;
+			v.persona.cedula = texto(rsE.getString("nombre"));
+			v.persona.nombre = texto(rsE.getString("nombre_largo"));
+			v.persona.cargo = cargoTxt;
+			v.persona.salario = salario;
+			v.persona.medioTiempo = "S".equals(rsE.getString("mt"));
+			v.persona.activo = !inactivo;
+			v.persona.esSena = esSena || esSenaElectiva;
+			v.persona.horasEnteras = esHorasEnteras(idEmpleado, idTipo, areas, excepciones);
+			String areaPersona = excepciones.get(Integer.valueOf(idEmpleado));
+			if (areaPersona == null || areaPersona.isEmpty()) {
+				areaPersona = areas.get(Integer.valueOf(idTipo));
+			}
+			v.persona.area = areaPersona == null ? "" : areaPersona;
+			rsE.close();
+			psE.close();
+			if (cfg != null && cfg[2] == 0) {
+				v.error = "El cargo de esta persona está marcado para no calcularse en la nómina estimada.";
+				return (v);
+			}
+
+			final java.text.SimpleDateFormat fm = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm");
+			for (final String semana : semanas) {
+				final SemanaDet s = new SemanaDet();
+				s.semana = semana;
+				final String[] rango = rangoDeLaSemana(semana);
+				if (rango == null) {
+					s.error = "La semana " + semana + " no cae domingo.";
+					v.semanas.add(s);
+					continue;
+				}
+				s.desde = rango[0];
+				s.hasta = rango[1];
+				final Parametros p = parametrosAl(cn, semana);
+				if (p.error.length() > 0) {
+					s.error = p.error;
+					v.semanas.add(s);
+					continue;
+				}
+				final HashSet<String> festivos = festivosDe(cn, rango[0], rango[1]);
+				final ArrayList<Turno> turnos = turnosDe(cnG, idEmpleado, rango[0], rango[1]);
+				final boolean horasEnteras = esHorasEnteras(idEmpleado, idTipo, areas, excepciones);
+				s.horasEnteras = horasEnteras;
+
+				final ArrayList<DiaDet> traza = new ArrayList<DiaDet>();
+				final Horas h = clasificar(turnos, festivos, p, horasEnteras, traza);
+				s.dias = traza;
+
+				final int nocIni = (int) p.de("HORA_NOCTURNA_INICIO", 19);
+				final int nocFin = (int) p.de("HORA_NOCTURNA_FIN", 6);
+				for (final Turno t : turnos) {
+					final TurnoDet d = new TurnoDet();
+					final Calendar c = Calendar.getInstance();
+					c.setTime(t.entra);
+					d.dia = fecha(c);
+					d.diaSemana = DIAS_SEMANA[(c.get(Calendar.DAY_OF_WEEK) + 5) % 7];
+					d.entra = fm.format(t.entra);
+					d.sale = fm.format(t.sale);
+					d.idTienda = t.idTienda;
+					final String nt = tiendas.get(Integer.valueOf(t.idTienda));
+					d.tienda = nt == null ? ("Tienda " + t.idTienda) : nt;
+					d.estimado = t.estimado;
+					d.horas = (t.sale.getTime() - t.entra.getTime()) / 3600000.0;
+					d.cat = categoriasDeTurno(t, festivos, nocIni, nocFin);
+					s.turnos.add(d);
+				}
+
+				final Estimado e = new Estimado();
+				e.idEmpleado = idEmpleado;
+				e.nombre = v.persona.nombre;
+				e.cargo = cargoTxt;
+				e.salarioBase = salario;
+				e.esSena = esSena;
+				e.esSenaElectiva = esSenaElectiva;
+				e.esSupernumerario = esSuper;
+				e.esInactivo = inactivo;
+				e.idTipoEmpleado = idTipo;
+				e.entraTienda = cfg == null || cfg[1] == 1;
+				calcularCosto(e, h, p, cargos, areas, excepciones);
+				s.area = e.area;
+				s.valorHora = p.de("HORAS_MES_LIQUIDACION", 240) > 0
+						? e.salarioBase / p.de("HORAS_MES_LIQUIDACION", 240) : 0;
+				explicarCosto(s, e, h, p);
+				s.costoSinNovedad = e.costoTotal;
+
+				final NovedadReg nov = novedadesVigentes(cn, semana).get(Integer.valueOf(idEmpleado));
+				if (nov != null) {
+					aplicarNovedad(e, nov);
+					s.novedad = nov.tipoNovedad + " / " + nov.accion
+							+ (nov.permanente ? " (permanente)" : "")
+							+ (nov.observacion.length() > 0 ? ": " + nov.observacion : "");
+					final FilaExp f = new FilaExp();
+					f.tipo = "novedad";
+					f.concepto = "Novedad aplicada";
+					f.formula = "Hay una novedad registrada (" + s.novedad + "). Cambió el costo de "
+							+ pesosTxt(s.costoSinNovedad) + " a " + pesosTxt(e.costoTotal) + ". " + e.aviso;
+					f.conValor = false;
+					s.explicacion.add(f);
+				}
+				e.idTiendaPrincipal = tiendaPrincipal(h);
+				final Desviacion d = desviacionesVigentes(cn, p, semana).get(Integer.valueOf(e.idTiendaPrincipal));
+				if (d != null && d.seAplica) {
+					e.factorCorreccion = d.promedio;
+					e.costoCorregido = e.costoTotal * (1 + d.promedio / 100.0);
+				} else {
+					e.factorCorreccion = 0;
+					e.costoCorregido = e.costoTotal;
+				}
+				s.calculo = e;
+
+				// Lo que hay guardado de esa semana, para contrastar.
+				final PreparedStatement psG = cn.prepareStatement(
+						"SELECT costo_total, horas_totales, fecha_calculo FROM gerencia_nomina_estimado"
+						+ " WHERE idempleado = ? AND semana = ?");
+				psG.setInt(1, idEmpleado);
+				psG.setString(2, semana);
+				final ResultSet rsG = psG.executeQuery();
+				if (rsG.next()) {
+					s.hayGuardado = true;
+					s.guardadoCosto = rsG.getDouble("costo_total");
+					s.guardadoHoras = rsG.getDouble("horas_totales");
+					s.guardadoFecha = texto(rsG.getString("fecha_calculo"));
+				}
+				rsG.close();
+				psG.close();
+
+				final PreparedStatement psT = cn.prepareStatement(
+						"SELECT origen, sueldo_basico + sueldo_variable + seguridad_social + liquidacion AS total"
+						+ " FROM gerencia_nomina_empleado_semana WHERE idempleado = ? AND semana = ?"
+						+ " ORDER BY (origen = 'ESTIMADO') ASC, fecha_registro DESC");
+				psT.setInt(1, idEmpleado);
+				psT.setString(2, semana);
+				final ResultSet rsT = psT.executeQuery();
+				if (rsT.next()) {
+					s.hayTablero = true;
+					s.tableroOrigen = texto(rsT.getString("origen"));
+					s.tableroTotal = rsT.getDouble("total");
+					if (!"ESTIMADO".equalsIgnoreCase(s.tableroOrigen)) {
+						s.hayReal = true;
+						s.realOrigen = s.tableroOrigen;
+						s.realTotal = s.tableroTotal;
+					}
+				}
+				rsT.close();
+				psT.close();
+				v.semanas.add(s);
+
+				if (semana.equals(semanas.get(semanas.size() - 1))) {
+					final String[] codigos = { "SMLV", "AUX_TRANSPORTE", "TOPE_AUX_SMLV", "HORAS_MES_LIQUIDACION",
+							"JORNADA_SEMANAL", "HORA_NOCTURNA_INICIO", "HORA_NOCTURNA_FIN", "RECARGO_NOCTURNO",
+							"RECARGO_DOMINICAL", "RECARGO_FESTIVO", "EXTRA_DIURNA", "EXTRA_NOCTURNA",
+							"EXTRA_FESTIVA_DIURNA", "EXTRA_FESTIVA_NOCTURNA", "PENSION_EMPLEADOR",
+							"CAJA_COMPENSACION", "EXONERACION_114_1", "TOPE_EXONERACION_SMLV", "SALUD_EMPLEADOR",
+							"SENA", "ICBF", "CESANTIAS", "INTERES_CESANTIAS", "PRIMA", "VACACIONES" };
+					for (final String cod : codigos) {
+						if (p.tiene(cod)) {
+							v.parametros.add(new String[] { cod, String.valueOf(p.de(cod, 0)) });
+						}
+					}
+				}
+			}
+		} catch (final Exception ex) {
+			System.out.println("GerenciaNominaCalculoDAO.verificarEmpleado: " + ex.toString());
+			v.error = "No se pudo armar la verificación.";
+		} finally {
+			cerrar(cn);
+			cerrar(cnG);
+		}
+		return (v);
+	}
+
+	/** Las horas de un turno por categoria, con las mismas reglas de clasificar. */
+	private static double[] categoriasDeTurno(final Turno t, final HashSet<String> festivos,
+			final int nocIni, final int nocFin) {
+		final double[] min = new double[6];
+		final Calendar cursor = Calendar.getInstance();
+		cursor.setTime(t.entra);
+		final long fin = t.sale.getTime();
+		while (cursor.getTimeInMillis() < fin) {
+			final Calendar siguiente = (Calendar) cursor.clone();
+			siguiente.set(Calendar.MINUTE, 0);
+			siguiente.set(Calendar.SECOND, 0);
+			siguiente.set(Calendar.MILLISECOND, 0);
+			siguiente.add(Calendar.HOUR_OF_DAY, 1);
+			final long hasta = Math.min(siguiente.getTimeInMillis(), fin);
+			final double minutos = (hasta - cursor.getTimeInMillis()) / 60000.0;
+			final int hora = cursor.get(Calendar.HOUR_OF_DAY);
+			final boolean esNoche = hora >= nocIni || hora < nocFin;
+			final boolean esFestivo = festivos.contains(fecha(cursor));
+			final boolean esDomingo = !esFestivo && cursor.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY;
+			if (esFestivo && esNoche) {
+				min[5] += minutos;
+			} else if (esFestivo) {
+				min[4] += minutos;
+			} else if (esDomingo && esNoche) {
+				min[3] += minutos;
+			} else if (esDomingo) {
+				min[2] += minutos;
+			} else if (esNoche) {
+				min[1] += minutos;
+			} else {
+				min[0] += minutos;
+			}
+			cursor.setTimeInMillis(hasta);
+		}
+		for (int i = 0; i < 6; i++) {
+			min[i] = min[i] / 60.0;
+		}
+		return (min);
+	}
+
+	private static DiaDet nuevoDiaDet(final String fechaDia, final double[] minutos, final long horasEntero,
+			final double[] pagadas, final HashSet<String> festivos) {
+		final DiaDet d = new DiaDet();
+		d.fecha = fechaDia;
+		try {
+			final int dow = LocalDate.parse(fechaDia).getDayOfWeek().getValue();
+			d.diaSemana = DIAS_SEMANA[dow - 1];
+			d.domingo = dow == 7;
+		} catch (final Exception e) {
+			d.diaSemana = "";
+		}
+		d.festivo = festivos.contains(fechaDia);
+		double total = 0;
+		double pagado = 0;
+		for (int i = 0; i < 6; i++) {
+			d.minutos[i] = minutos[i];
+			d.pagadas[i] = pagadas[i];
+			total += minutos[i];
+			pagado += pagadas[i];
+		}
+		d.horasExactas = total / 60.0;
+		d.redondeado = horasEntero >= 0;
+		d.horasPagadas = pagado;
+		return (d);
+	}
+
+	private static String pesosTxt(final double v) {
+		return ("$" + String.format(java.util.Locale.US, "%,.0f", Double.valueOf(v)).replace(',', '.'));
+	}
+
+	private static String horasTxt(final double v) {
+		final double r = redondear(v);
+		return (r == Math.rint(r) ? String.valueOf((long) r) : String.format(java.util.Locale.US, "%.2f", Double.valueOf(r)));
+	}
+
+	private static String pctTxt(final double v) {
+		return (v == Math.rint(v) ? String.valueOf((long) v) : String.format(java.util.Locale.US, "%.2f", Double.valueOf(v))) + "%";
+	}
+
+	private static FilaExp fila(final String tipo, final String concepto, final String formula, final double valor,
+			final boolean conValor) {
+		final FilaExp f = new FilaExp();
+		f.tipo = tipo;
+		f.concepto = concepto;
+		f.formula = formula;
+		f.valor = valor;
+		f.conValor = conValor;
+		return (f);
+	}
+
+	/**
+	 * La explicacion en palabras de como se llego a cada valor. Se arma DESPUES de calcularCosto
+	 * y ANTES de aplicar la novedad, con los mismos datos que usa el calculo; los valores que
+	 * muestra son los del calculo, la formula es solo el texto.
+	 */
+	private static void explicarCosto(final SemanaDet s, final Estimado e, final Horas h, final Parametros p) {
+		final ArrayList<FilaExp> x = s.explicacion;
+		final double vh = s.valorHora;
+		final double horasMes = p.de("HORAS_MES_LIQUIDACION", 240);
+		final double jornada = p.de("JORNADA_SEMANAL", 42);
+		final boolean esAdministrativo = "ADMINISTRATIVA".equalsIgnoreCase(e.area);
+		final String cargoLower = e.cargo != null ? e.cargo.toLowerCase() : "";
+		final boolean esAdminTienda = e.idTipoEmpleado == 2 || cargoLower.contains("administrador");
+		final boolean esSuper = e.esSupernumerario || cargoLower.contains("supernumerario");
+		final boolean esLiderZona = e.idTipoEmpleado == 24 || e.idEmpleado == 21 || e.idEmpleado == 270;
+		final boolean esLiderOConductor = cargoLower.contains("logistica") || cargoLower.contains("conductor")
+				|| cargoLower.contains("supervisor") || cargoLower.contains("lider") || cargoLower.contains("director");
+		final boolean sinExtras = esAdministrativo || esAdminTienda || esSuper || esLiderZona || esLiderOConductor;
+
+		x.add(fila("info", "Valor de la hora", "Salario " + pesosTxt(e.salarioBase) + " ÷ " + horasTxt(horasMes)
+				+ " horas del mes (HORAS_MES_LIQUIDACION)", vh, true));
+
+		// Basico
+		if (e.esSenaElectiva) {
+			x.add(fila("costo", "Sueldo básico", "Aprendiz SENA etapa lectiva: salario " + pesosTxt(e.salarioBase)
+					+ " × 75% × 7/30", e.sueldoBasico, true));
+		} else {
+			x.add(fila("costo", "Sueldo básico", "Salario " + pesosTxt(e.salarioBase)
+					+ " × 7/30. No depende de las horas: a quien tiene salario mensual se le paga igual.",
+					e.sueldoBasico, true));
+		}
+
+		// Recargos
+		if (esAdministrativo) {
+			x.add(fila("info", "Recargos", "No aplican: área administrativa (sin recargos ni extras). Las marcaciones son solo de asistencia.", 0, false));
+		}
+		final double noct = h.nocturnas + h.domNoct + h.festNoct;
+		final double dom = h.dominicales + h.domNoct;
+		final double fes = h.festivas + h.festNoct;
+		x.add(fila("costo", "Recargo nocturno", esAdministrativo ? "No aplica."
+				: "(nocturnas " + horasTxt(h.nocturnas) + " + dominicales nocturnas " + horasTxt(h.domNoct)
+				+ " + festivas nocturnas " + horasTxt(h.festNoct) + " = " + horasTxt(noct) + " h) × "
+				+ pesosTxt(vh) + " × " + pctTxt(p.de("RECARGO_NOCTURNO", 35)),
+				e.recargoNocturno, true));
+		x.add(fila("costo", "Recargo dominical", esAdministrativo ? "No aplica."
+				: "(dominicales " + horasTxt(h.dominicales) + " + dominicales nocturnas " + horasTxt(h.domNoct)
+				+ " = " + horasTxt(dom) + " h) × " + pesosTxt(vh) + " × " + pctTxt(p.de("RECARGO_DOMINICAL", 90)),
+				e.recargoDominical, true));
+		x.add(fila("costo", "Recargo festivo", esAdministrativo ? "No aplica."
+				: "(festivas " + horasTxt(h.festivas) + " + festivas nocturnas " + horasTxt(h.festNoct) + " = "
+				+ horasTxt(fes) + " h) × " + pesosTxt(vh) + " × "
+				+ pctTxt(p.de("RECARGO_FESTIVO", p.de("RECARGO_DOMINICAL", 90))),
+				e.recargoFestivo, true));
+
+		// Extras
+		final double total = h.total();
+		if (esAdministrativo) {
+			// ya se dijo arriba
+			x.add(fila("costo", "Horas extra ordinarias", "No aplica.", 0, true));
+			x.add(fila("costo", "Horas extra festivas / dominicales", "No aplica.", 0, true));
+		} else if (sinExtras) {
+			x.add(fila("costo", "Horas extra ordinarias", "No aplica: este cargo no devenga horas extra (administrador de tienda, supernumerario, líder o conductor).", 0, true));
+			x.add(fila("costo", "Horas extra festivas / dominicales", "No aplica por el mismo motivo.", 0, true));
+		} else if (total <= jornada) {
+			x.add(fila("costo", "Horas extra ordinarias", "Sin extras: la semana suma " + horasTxt(total)
+					+ " h y la jornada semanal es de " + horasTxt(jornada) + " h.", 0, true));
+			x.add(fila("costo", "Horas extra festivas / dominicales", "Sin extras (misma razón).", 0, true));
+		} else {
+			final double hOrdSem = h.ordinarias + h.nocturnas;
+			final double propNoc = hOrdSem > 0 ? h.nocturnas / hOrdSem : 0;
+			final double tasaOrd = p.de("EXTRA_NOCTURNA", 75) * propNoc + p.de("EXTRA_DIURNA", 25) * (1 - propNoc);
+			x.add(fila("costo", "Horas extra ordinarias", e.horasExtra > 0
+					? horasTxt(e.horasExtra) + " h × " + pesosTxt(vh) + " × " + pctTxt(redondear(tasaOrd))
+					+ " (mezcla de extra diurna " + pctTxt(p.de("EXTRA_DIURNA", 25)) + " y nocturna "
+					+ pctTxt(p.de("EXTRA_NOCTURNA", 75)) + " según lo nocturno de la semana). Las extras se cuentan lo que pasa de "
+					+ horasTxt(jornada) + " h en la semana."
+					: "Sin extras ordinarias: las horas de lunes a sábado no pasan de " + horasTxt(jornada) + " h.",
+					e.recargoExtra, true));
+			final double hDomFes = h.dominicales + h.domNoct + h.festivas + h.festNoct;
+			final double propNocF = hDomFes > 0 ? (h.domNoct + h.festNoct) / hDomFes : 0;
+			final double tasaF = (p.de("EXTRA_FESTIVA_NOCTURNA", p.de("RECARGO_DOMINICAL", 90) + 75)) * propNocF
+					+ (p.de("EXTRA_FESTIVA_DIURNA", p.de("RECARGO_DOMINICAL", 90) + 25)) * (1 - propNocF);
+			x.add(fila("costo", "Horas extra festivas / dominicales", e.horasExtraFestiva > 0
+					? horasTxt(e.horasExtraFestiva) + " h × " + pesosTxt(vh) + " × " + pctTxt(redondear(tasaF))
+					+ " (extra festiva diurna/nocturna según lo nocturno de domingos y festivos)"
+					: "Sin extras en domingos o festivos.", e.recargoExtraFestiva, true));
+		}
+		x.add(fila("subtotal", "Recargos y extras (variable)", "Suma de los cinco renglones anteriores.", e.sueldoVariable, true));
+
+		// Auxilio
+		final double tope = p.de("TOPE_AUX_SMLV", 2) * p.de("SMLV", 0);
+		if (e.auxilioTransporte > 0) {
+			x.add(fila("costo", "Auxilio de transporte", "Auxilio mensual " + pesosTxt(p.de("AUX_TRANSPORTE", 0))
+					+ " × 7/30. Aplica porque el salario no pasa de " + horasTxt(p.de("TOPE_AUX_SMLV", 2))
+					+ " salarios mínimos (" + pesosTxt(tope) + ").", e.auxilioTransporte, true));
+		} else {
+			x.add(fila("costo", "Auxilio de transporte", e.esSena || e.esSenaElectiva
+					? "No aplica: aprendiz SENA." : "No aplica: el salario supera el tope de " + pesosTxt(tope) + " o no hay salario.",
+					0, true));
+		}
+
+		// Seguridad social
+		final double baseSalarial = e.sueldoBasico + e.sueldoVariable;
+		if (e.esSenaElectiva) {
+			x.add(fila("costo", "Seguridad social", "Aprendiz SENA lectiva: 15% fija sobre el salario × 7/30 ("
+					+ pesosTxt(e.salarioBase * SEMANA_DEL_MES) + ").", e.seguridadSocial, true));
+		} else if (e.esSena) {
+			x.add(fila("costo", "Seguridad social", "Aprendiz SENA práctica: 15% sobre (básico + variable) = "
+					+ pesosTxt(baseSalarial) + ".", e.seguridadSocial, true));
+		} else {
+			final boolean exonera = p.de("EXONERACION_114_1", 0) == 1
+					&& e.salarioBase < p.de("TOPE_EXONERACION_SMLV", 10) * p.de("SMLV", 0);
+			double porc = p.de("PENSION_EMPLEADOR", 12) + p.de("CAJA_COMPENSACION", 4);
+			final StringBuilder partes = new StringBuilder("pensión " + pctTxt(p.de("PENSION_EMPLEADOR", 12))
+					+ " + caja " + pctTxt(p.de("CAJA_COMPENSACION", 4)) + " + ARL");
+			if (!exonera) {
+				porc += p.de("SALUD_EMPLEADOR", 8.5) + p.de("SENA", 2) + p.de("ICBF", 3);
+				partes.append(" + salud + SENA + ICBF");
+			} else {
+				partes.append(" (exonerada de salud, SENA e ICBF por el art. 114-1)");
+			}
+			x.add(fila("costo", "Seguridad social", "(básico + variable = " + pesosTxt(baseSalarial) + ") × el porcentaje del empleador: "
+					+ partes + ". El ARL depende del cargo.", e.seguridadSocial, true));
+		}
+
+		// Liquidacion
+		if (e.esSena || e.esSenaElectiva) {
+			x.add(fila("costo", "Liquidación (prestaciones)", "Aprendiz SENA: 0%, sin prestaciones.", 0, true));
+		} else {
+			x.add(fila("costo", "Liquidación (prestaciones)",
+					"((básico + variable + auxilio) = " + pesosTxt(baseSalarial + e.auxilioTransporte) + ") × (cesantías "
+					+ pctTxt(p.de("CESANTIAS", 8.33)) + " + intereses " + pctTxt(p.de("INTERES_CESANTIAS", 1)) + " + prima "
+					+ pctTxt(p.de("PRIMA", 8.33)) + ") + (básico + variable) × vacaciones " + pctTxt(p.de("VACACIONES", 4.17))
+					+ ". El auxilio cuenta para cesantías y prima, pero no para vacaciones.", e.liquidacion, true));
+		}
+		x.add(fila("total", "Costo de la semana", "Básico + variable + auxilio + seguridad social + liquidación.", e.costoTotal, true));
+		if (e.aviso != null && e.aviso.length() > 0) {
+			x.add(fila("info", "Aviso del cálculo", e.aviso, 0, false));
+		}
 	}
 
 	// =======================================================================

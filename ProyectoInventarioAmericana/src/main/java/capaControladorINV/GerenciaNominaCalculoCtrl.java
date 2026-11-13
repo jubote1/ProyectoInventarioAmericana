@@ -306,6 +306,169 @@ public class GerenciaNominaCalculoCtrl {
 		return (GerenciaNominaCalculoDAO.guardarNotaConciliacion(idCargue, observacion, estado, usuario));
 	}
 
+	/** Las personas que se pueden escoger en la pantalla de verificacion. */
+	public String listarParaVerificar() {
+		final ArrayList<String[]> lista = GerenciaNominaCalculoDAO.listarParaVerificar();
+		final StringBuilder sb = new StringBuilder("{\"respuesta\":\"OK\",\"empleados\":[");
+		for (int i = 0; i < lista.size(); i++) {
+			final String[] f = lista.get(i);
+			if (i > 0) {
+				sb.append(',');
+			}
+			sb.append("{\"id\":").append(f[0]);
+			sb.append(",\"nombre\":\"").append(esc(f[1])).append('"');
+			sb.append(",\"cargo\":\"").append(esc(f[2])).append('"');
+			sb.append(",\"salario\":").append(f[3]);
+			sb.append(",\"medio_tiempo\":\"").append(f[4]).append('"');
+			sb.append(",\"activo\":\"").append(f[5]).append("\"}");
+		}
+		return (sb.append("]}").toString());
+	}
+
+	private static void arreglo(final StringBuilder sb, final double[] v) {
+		sb.append('[');
+		for (int i = 0; i < v.length; i++) {
+			if (i > 0) {
+				sb.append(',');
+			}
+			sb.append(String.valueOf(Math.round(v[i] * 1000) / 1000.0));
+		}
+		sb.append(']');
+	}
+
+	/** El detalle de la liquidacion de una persona, semana a semana. */
+	public String verificarEmpleado(final int idEmpleado, final ArrayList<String> semanas) {
+		final GerenciaNominaCalculoDAO.Verificacion v = GerenciaNominaCalculoDAO.verificarEmpleado(idEmpleado, semanas);
+		if (v.error.length() > 0) {
+			return ("{\"respuesta\":\"NOK\",\"detalle\":\"" + esc(v.error) + "\"}");
+		}
+		final StringBuilder sb = new StringBuilder("{\"respuesta\":\"OK\"");
+		final GerenciaNominaCalculoDAO.DatosPersona p = v.persona;
+		sb.append(",\"persona\":{\"id\":").append(p.id);
+		sb.append(",\"cedula\":\"").append(esc(p.cedula)).append('"');
+		sb.append(",\"nombre\":\"").append(esc(p.nombre)).append('"');
+		sb.append(",\"cargo\":\"").append(esc(p.cargo)).append('"');
+		sb.append(",\"area\":\"").append(esc(p.area)).append('"');
+		sb.append(",\"salario\":").append(num(p.salario));
+		sb.append(",\"medio_tiempo\":").append(p.medioTiempo);
+		sb.append(",\"activo\":").append(p.activo);
+		sb.append(",\"sena\":").append(p.esSena);
+		sb.append(",\"horas_enteras\":").append(p.horasEnteras).append('}');
+		sb.append(",\"parametros\":[");
+		for (int i = 0; i < v.parametros.size(); i++) {
+			if (i > 0) {
+				sb.append(',');
+			}
+			sb.append("{\"codigo\":\"").append(esc(v.parametros.get(i)[0])).append("\",\"valor\":")
+					.append(num(Double.parseDouble(v.parametros.get(i)[1]))).append('}');
+		}
+		sb.append("],\"semanas\":[");
+		for (int i = 0; i < v.semanas.size(); i++) {
+			final GerenciaNominaCalculoDAO.SemanaDet s = v.semanas.get(i);
+			if (i > 0) {
+				sb.append(',');
+			}
+			sb.append("{\"semana\":\"").append(esc(s.semana)).append('"');
+			sb.append(",\"desde\":\"").append(esc(s.desde)).append('"');
+			sb.append(",\"hasta\":\"").append(esc(s.hasta)).append('"');
+			sb.append(",\"error\":\"").append(esc(s.error)).append('"');
+			if (s.error.length() > 0 || s.calculo == null) {
+				sb.append('}');
+				continue;
+			}
+			final GerenciaNominaCalculoDAO.Estimado e = s.calculo;
+			sb.append(",\"horas_enteras\":").append(s.horasEnteras);
+			sb.append(",\"valor_hora\":").append(num(s.valorHora));
+			sb.append(",\"novedad\":\"").append(esc(s.novedad)).append('"');
+			sb.append(",\"costo_sin_novedad\":").append(num(s.costoSinNovedad));
+			sb.append(",\"calculo\":{\"salario\":").append(num(e.salarioBase));
+			sb.append(",\"h_ord\":").append(num(e.horasOrdinarias));
+			sb.append(",\"h_noc\":").append(num(e.horasNocturnas));
+			sb.append(",\"h_dom\":").append(num(e.horasDominicales));
+			sb.append(",\"h_dom_noct\":").append(num(e.horasDomNoct));
+			sb.append(",\"h_fest\":").append(num(e.horasFestivas));
+			sb.append(",\"h_fest_noct\":").append(num(e.horasFestNoct));
+			sb.append(",\"h_extra\":").append(num(e.horasExtra));
+			sb.append(",\"h_extra_fest\":").append(num(e.horasExtraFestiva));
+			sb.append(",\"h_tot\":").append(num(e.horasTotales));
+			sb.append(",\"turnos\":").append(e.turnos);
+			sb.append(",\"basico\":").append(num(e.sueldoBasico));
+			sb.append(",\"rec_noc\":").append(num(e.recargoNocturno));
+			sb.append(",\"rec_dom\":").append(num(e.recargoDominical));
+			sb.append(",\"rec_fest\":").append(num(e.recargoFestivo));
+			sb.append(",\"rec_extra\":").append(num(e.recargoExtra));
+			sb.append(",\"rec_extra_fest\":").append(num(e.recargoExtraFestiva));
+			sb.append(",\"variable\":").append(num(e.sueldoVariable));
+			sb.append(",\"auxilio\":").append(num(e.auxilioTransporte));
+			sb.append(",\"seg_social\":").append(num(e.seguridadSocial));
+			sb.append(",\"liquidacion\":").append(num(e.liquidacion));
+			sb.append(",\"costo\":").append(num(e.costoTotal));
+			sb.append(",\"factor_correccion\":").append(num(e.factorCorreccion));
+			sb.append(",\"costo_corregido\":").append(num(e.costoCorregido));
+			sb.append(",\"aviso\":\"").append(esc(e.aviso)).append("\"}");
+			sb.append(",\"guardado\":{\"hay\":").append(s.hayGuardado);
+			sb.append(",\"costo\":").append(num(s.guardadoCosto));
+			sb.append(",\"horas\":").append(num(s.guardadoHoras));
+			sb.append(",\"fecha\":\"").append(esc(s.guardadoFecha)).append("\"}");
+			sb.append(",\"tablero\":{\"hay\":").append(s.hayTablero);
+			sb.append(",\"origen\":\"").append(esc(s.tableroOrigen)).append('"');
+			sb.append(",\"total\":").append(num(s.tableroTotal)).append('}');
+			sb.append(",\"real\":{\"hay\":").append(s.hayReal);
+			sb.append(",\"origen\":\"").append(esc(s.realOrigen)).append('"');
+			sb.append(",\"total\":").append(num(s.realTotal)).append('}');
+			sb.append(",\"turnos_det\":[");
+			for (int k = 0; k < s.turnos.size(); k++) {
+				final GerenciaNominaCalculoDAO.TurnoDet t = s.turnos.get(k);
+				if (k > 0) {
+					sb.append(',');
+				}
+				sb.append("{\"dia\":\"").append(esc(t.dia)).append('"');
+				sb.append(",\"dia_semana\":\"").append(esc(t.diaSemana)).append('"');
+				sb.append(",\"entra\":\"").append(esc(t.entra)).append('"');
+				sb.append(",\"sale\":\"").append(esc(t.sale)).append('"');
+				sb.append(",\"tienda\":\"").append(esc(t.tienda)).append('"');
+				sb.append(",\"estimado\":").append(t.estimado);
+				sb.append(",\"horas\":").append(num(t.horas));
+				sb.append(",\"cat\":");
+				arreglo(sb, t.cat);
+				sb.append('}');
+			}
+			sb.append("],\"dias_det\":[");
+			for (int k = 0; k < s.dias.size(); k++) {
+				final GerenciaNominaCalculoDAO.DiaDet d = s.dias.get(k);
+				if (k > 0) {
+					sb.append(',');
+				}
+				sb.append("{\"fecha\":\"").append(esc(d.fecha)).append('"');
+				sb.append(",\"dia_semana\":\"").append(esc(d.diaSemana)).append('"');
+				sb.append(",\"festivo\":").append(d.festivo);
+				sb.append(",\"domingo\":").append(d.domingo);
+				sb.append(",\"minutos\":");
+				arreglo(sb, d.minutos);
+				sb.append(",\"horas_exactas\":").append(num(d.horasExactas));
+				sb.append(",\"redondeado\":").append(d.redondeado);
+				sb.append(",\"horas_pagadas\":").append(num(d.horasPagadas));
+				sb.append(",\"pagadas\":");
+				arreglo(sb, d.pagadas);
+				sb.append('}');
+			}
+			sb.append("],\"explicacion\":[");
+			for (int k = 0; k < s.explicacion.size(); k++) {
+				final GerenciaNominaCalculoDAO.FilaExp f = s.explicacion.get(k);
+				if (k > 0) {
+					sb.append(',');
+				}
+				sb.append("{\"tipo\":\"").append(esc(f.tipo)).append('"');
+				sb.append(",\"concepto\":\"").append(esc(f.concepto)).append('"');
+				sb.append(",\"formula\":\"").append(esc(f.formula)).append('"');
+				sb.append(",\"con_valor\":").append(f.conValor);
+				sb.append(",\"valor\":").append(num(f.valor)).append('}');
+			}
+			sb.append("]}");
+		}
+		return (sb.append("]}").toString());
+	}
+
 	private static String num(final double d) {
 		if (Double.isNaN(d) || Double.isInfinite(d)) {
 			return ("0");
